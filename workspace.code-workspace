@@ -1,12 +1,13 @@
 {
   "folders": [
+    { "name": "workspace · main",                "path": "." },
     { "name": "bus · shared-types",              "path": "planes/bus/shared-types" },
     { "name": "services · all MCP servers",      "path": "planes/services" },
-    { "name": "runs · GRID",                     "path": "planes/runs/GRID" },
-    { "name": "runs · DIO",                      "path": "planes/runs/DIO" },
+    { "name": "services · GRID-main",             "path": "planes/services/GRID-main" },
+    { "name": "services · DIO",                  "path": "planes/services/DIO" },
     { "name": "artifacts · GATE",                "path": "planes/artifacts/GATE" },
-    { "name": "surfaces · Vision",               "path": "planes/surfaces/Vision" },
-    { "name": "surfaces · glimpse-engine",       "path": "planes/surfaces/glimpse-engine" },
+    { "name": "services · Vision",               "path": "planes/services/Vision" },
+    { "name": "surfaces · glimpse-engine",       "path": "planes/surfaces/glimpse-engine-app" },
     { "name": "surfaces · glimpse-artifact",     "path": "planes/surfaces/glimpse-artifact" },
     { "name": "surfaces · Hogwarts (board)",     "path": "planes/surfaces/board" },
     { "name": "surfaces · Hogwarts (governors)", "path": "planes/surfaces/governors" },

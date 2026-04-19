@@ -1,0 +1,7 @@
+# This workspace is a view, not a repo. Prevent accidental git-tracking.
+CascadeProjects/
+planes/
+racks/
+design-system/
+hogsmade-design/
+scripts/*.log

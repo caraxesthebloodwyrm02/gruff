@@ -1,0 +1,40 @@
+{
+  "folders": [
+    { "name": "bus · shared-types",              "path": "planes/bus/shared-types" },
+    { "name": "services · all MCP servers",      "path": "planes/services" },
+    { "name": "runs · GRID",                     "path": "planes/runs/GRID" },
+    { "name": "runs · DIO",                      "path": "planes/runs/DIO" },
+    { "name": "artifacts · GATE",                "path": "planes/artifacts/GATE" },
+    { "name": "surfaces · Vision",               "path": "planes/surfaces/Vision" },
+    { "name": "surfaces · glimpse-engine",       "path": "planes/surfaces/glimpse-engine" },
+    { "name": "surfaces · glimpse-artifact",     "path": "planes/surfaces/glimpse-artifact" },
+    { "name": "surfaces · Hogwarts (board)",     "path": "planes/surfaces/board" },
+    { "name": "surfaces · Hogwarts (governors)", "path": "planes/surfaces/governors" },
+    { "name": "surfaces · Hogwarts (nuke)",      "path": "planes/surfaces/nuke" },
+    { "name": "contracts · shared-resilience",   "path": "planes/contracts/shared-resilience" },
+    { "name": "contracts · shared-pipeline",     "path": "planes/contracts/shared-pipeline" },
+    { "name": "infrastructure",                  "path": "planes/infrastructure" },
+    { "name": "racks",                           "path": "racks" },
+    { "name": "design-system (read-only)",       "path": "design-system" },
+    { "name": "hogsmade-design (read-only)",     "path": "hogsmade-design" },
+    { "name": "monorepo · CascadeProjects",      "path": "CascadeProjects" }
+  ],
+  "settings": {
+    "files.readonlyInclude": {
+      "design-system/**": true,
+      "hogsmade-design/**": true
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.venv": true,
+      "**/__pycache__": true,
+      "**/.pytest_cache": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.venv": true,
+      "**/dist": true,
+      "**/build": true
+    }
+  }
+}

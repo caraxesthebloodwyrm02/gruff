@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 ~/workspace/  (prince@Ubuntu; legacy caraxes root archived at /mnt/arch_data/home/caraxes/)
 ├── CascadeProjects/         # Nerve center — hogsmade monorepo
-│   ├── Tools/MCPServers/    # 19 MCP servers (12 TS servers including afloat, echoes, grid, etc., + 7 Python servers)
+│   ├── Tools/MCPServers/    # 21 MCP servers (14 TS servers including afloat, craft, echoes, grid, harness, ori, etc., + 7 Python servers)
 │   ├── Components/          # shared-types, shared-resilience, shared-pipeline, scripts, tests
 │   ├── Applications/        # glimpse-artifact, glimpse-engine, pi-mangrove, bandwidth-equalizer
 │   ├── Projects/            # GRID-main (submodule), DIO, GATE, apiguard, Vision, projects/
@@ -70,11 +70,13 @@ Each active project has its own CLAUDE.md and/or AGENTS.md with project-specific
 - MCP servers in CascadeProjects connect to GRID via `GRID_API_URL=http://localhost:8080`
 - **GRID has two API servers**: Mothership (port 8080, primary) and API Gateway (port 8000, routes to Mothership)
 - **CascadeProjects/overview-server** is an MCP server not listed in build order — has `checkpoint` and `health_check` tools
+- **CascadeProjects/craft-server** — LSP template rendering / context artifact generation (python-craft geometric/transformer outputs)
+- **CascadeProjects/harness-server** — Great League GATE harness pipeline (bastiodon/talonflame/exeggutor-a scenarios, arm/cycle/disarm loop)
 
 ## Build Order & Package Managers
 
 1. `CascadeProjects/shared-types` — `npm install && npm run build`
-2. MCP servers (afloat-server, echoes-server, eligibility-server, glimpse-server, grid-server, lots-server, maintain-server, mangrove-server, ori-server, overview-server, pulse-server, seeds-server) — `npm install`
+2. MCP servers (afloat-server, craft-server, echoes-server, eligibility-server, glimpse-server, grid-server, harness-server, lots-server, maintain-server, mangrove-server, ori-server, overview-server, pulse-server, seeds-server) — `npm install`
 3. `CascadeProjects/glimpse-artifact` — `npm install && npm run build`
 4. `CascadeProjects/Projects/GRID-main` — `uv sync --group dev --group test`
 5. `canopy/afloat` — `npm install`
@@ -147,7 +149,7 @@ Cross-server contracts that must not be broken:
 - **Echoes audit log** (`~/.echoes/audit.ndjson`): All MCP servers use `@cascade/shared-types` `emitAudit` to append `AuditEvent` objects. Fields: `timestamp`, `source`, `tool`, `status`, optional `durationMs`/`metadata`. Do not rename fields.
 - **Seeds snapshots** (`~/.seeds-server/snapshots/snapshot-{timestamp}.json`): seeds-server writes; pulse-server reads latest by filename sort. Required fields: `overallScore` (number) and `repos[].healthScore` (number).
 - **GATE directory** (`CascadeProjects/GATE/`): Runtime envelopes, contracts, and results. Check `GATE/README.md` before restructuring.
-- **shared-types exports**: 7 paths — `.` (types), `./audit-client` (emitAudit), `./security-policy`, `./session-rate-limit`, `./id`, `./mcp-logger`, `./precedent`.
+- **shared-types exports**: 9 paths — `.` (types), `./audit-client` (emitAudit), `./security-policy`, `./session-rate-limit`, `./id`, `./mcp-logger`, `./precedent`, `./trace-context`, `./command-bus`.
 
 ## Shell Aliases
 
@@ -156,6 +158,12 @@ Cross-server contracts that must not be broken:
 ## Shared Development Rules
 
 **Canonical sources**: `~/.dev-rules.md` (TUV-001 + workspace baselines) and `seed/templates/development-contract.md` (full trust contract). For **bounded broad-pass sweeps**, use `seed/templates/gruff-sweep-execution-radius.md`. Editor rule files (`.cursorrules`, `.windsurfrules`, etc.) are compatibility layers aligned to `~/.dev-rules.md`.
+
+**shared-types/command-bus**: `dispatch` / `subscribe` primitive. `CommandEnvelope` and `Namespace` schemas validated with Zod; `runId` must be a valid `RunId` (format: `{service}.{kind}.{uuid}`).
+
+**shared-types/id**: `generateRunId(service, kind)` produces structured run IDs. `parseRunId` / `isRunId` for validation. Both `service` and `kind` must be lowercase-kebab (no dots).
+
+**shared-types test runner**: `.test.mjs` files run via `node --test` (not vitest). `.test.ts` files run via vitest. Run both with `npm test` from the package root.
 
 **Canonical MCP source**: `CascadeProjects/mcp_config.json` — all tool configs are derived from this. Inventory: `CascadeProjects/mcp_inventory.manifest.json`; drift check: `python3 CascadeProjects/scripts/verify_mcp_inventory.py`.
 
@@ -193,6 +201,22 @@ Cross-server contracts that must not be broken:
 - **Scope discipline**: One session = one project, one primary goal. Flag scope expansion before acting.
 - **Partial work**: Never discard partial results silently. If a multi-step task can't complete, save intermediate artifacts and report what remains.
 - **Response verbosity**: Brief by default — answer first, no preamble, no trailing summaries.
+
+---
+
+## Operational Standards
+
+### Known Test Environment Constraints
+
+- **ori-server Fold 1** (executor/registry): 4 tests fail in recursive test environments — `run_tests`, `get_run_result`, `registry health updated after test run` (subprocess cascade), and `discover_tests validates project on disk` (path env coupling). These are expected failures in CI; do not treat as regressions.
+- **ori-server Fold 3** (threat-model): 6 tests fail with `ENOENT` for `/home/caraxes/CascadeProjects/Documentation/docs/CascadeProjects-threat-model.md`. The file doesn't exist at that hardcoded path — fixture-missing, not a code bug.
+- **ori-server Fold 2** (reporter/heatmap/anti-pattern): All green — zero failures expected.
+
+### ori-server Additions
+
+**anticipation engine** — Pipeline failure prediction. Generates `AnticipationSignal` objects from log history and environment state. Three MCP tools: `generate_anticipation_signals`, `get_anticipation_status`, `resolve_anticipation_signal`. Signal shape uses `category`, `confidence`, `horizon`, `evidence[]`, and `resolved` fields — do not rename these.
+
+**envelope.ts** — Phased test pipeline with modulation gates. Exports `envelope()` callable and fold constants `FOLD_1_CORE`, `FOLD_2_ANALYSIS`, `FOLD_3_INTEGRATION`. Phase advancement: fold N passes → fold N+1 unlocks. Hard-halt on critical smoke failures.
 
 ## Custom Skills (Claude Code Commands)
 

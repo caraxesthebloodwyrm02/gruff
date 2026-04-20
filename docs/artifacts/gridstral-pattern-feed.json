@@ -1,0 +1,340 @@
+{
+  "$schema": "../../schemas/gridstral-pattern-v1.schema.json",
+  "schema_version": "gridstral-pattern-v1",
+  "meta": {
+    "pattern_name": "mangrove-composition-cascade",
+    "generated_for": "GRIDSTRAL-compatible feed (load programmatically; auth is out-of-band — never commit tokens)",
+    "source_docs": [
+      "docs/FOURFOLD_NEIGHBORHOOD.md",
+      "docs/SIXTEENFOLD_NEIGHBORHOOD.md",
+      "docs/COMPOSITION_EIGHTFOLD_GAIN.md",
+      "docs/FOUR_ON_THE_FLOOR.md"
+    ]
+  },
+  "axes": {
+    "strata": ["umbrella", "hogsmade", "grid", "operator_overlay"],
+    "archetypes": ["covenant", "cartography", "circuit", "cadence"]
+  },
+  "hub": {
+    "path": "REFERENCE.md",
+    "is_fold": false,
+    "role": "bibliographic_index_one_hop_to_canon"
+  },
+  "fourfold": [
+    {
+      "fold_id": 1,
+      "archetype": "covenant",
+      "path": "LICENSE",
+      "role": "Apache-2.0 umbrella terms; submodule has separate CascadeProjects/LICENSE"
+    },
+    {
+      "fold_id": 2,
+      "archetype": "cartography",
+      "path": "DESIGN.md",
+      "role": "boundaries_umbrella_vs_submodule_vs_grid_pi"
+    },
+    {
+      "fold_id": 3,
+      "archetype": "circuit",
+      "path": "Makefile",
+      "role": "verify-planes_submodule-init_fourfold-snap"
+    },
+    {
+      "fold_id": 4,
+      "archetype": "cadence",
+      "path": "INSTRUCTION.md",
+      "role": "procedures_clone_bump_narrow_grid; ONBOARDING for cadence_context"
+    }
+  ],
+  "strata": {
+    "umbrella": { "git_role": "root_repo", "submodule_path": null },
+    "hogsmade": { "git_role": "submodule", "submodule_path": "CascadeProjects" },
+    "grid": { "git_role": "nested_submodule", "submodule_path": "CascadeProjects/Projects/GRID-main" },
+    "operator_overlay": {
+      "git_role": "umbrella_tracked_paths",
+      "submodule_path": null
+    }
+  },
+  "git_submodule_chain": [
+    { "name": "hogsmade", "path": "CascadeProjects" },
+    { "name": "GRID", "path": "CascadeProjects/Projects/GRID-main" }
+  ],
+  "folds_16": [
+    {
+      "id": 1,
+      "stratum": "umbrella",
+      "archetype": "covenant",
+      "anchors": ["LICENSE"],
+      "voice": "prince-runtime-intel",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 2,
+      "stratum": "umbrella",
+      "archetype": "cartography",
+      "anchors": ["DESIGN.md"],
+      "voice": "hermes",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 3,
+      "stratum": "umbrella",
+      "archetype": "circuit",
+      "anchors": ["Makefile"],
+      "voice": "prince-runtime-intel",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 4,
+      "stratum": "umbrella",
+      "archetype": "cadence",
+      "anchors": ["INSTRUCTION.md", "docs/ONBOARDING.md"],
+      "voice": "hermes",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 5,
+      "stratum": "hogsmade",
+      "archetype": "covenant",
+      "anchors": ["CascadeProjects/LICENSE"],
+      "voice": "hermes",
+      "commit_surface": "hogsmade_remote"
+    },
+    {
+      "id": 6,
+      "stratum": "hogsmade",
+      "archetype": "cartography",
+      "anchors": ["CascadeProjects/AGENTS.md", "Tools/", "Components/", "Applications/"],
+      "voice": "prince-runtime-intel",
+      "commit_surface": "hogsmade_remote"
+    },
+    {
+      "id": 7,
+      "stratum": "hogsmade",
+      "archetype": "circuit",
+      "anchors": ["CascadeProjects/package.json npm scripts", "pre-commit"],
+      "voice": "prince-runtime-intel",
+      "commit_surface": "hogsmade_remote"
+    },
+    {
+      "id": 8,
+      "stratum": "hogsmade",
+      "archetype": "cadence",
+      "anchors": ["CONTRIBUTING.md submodule section"],
+      "voice": "hermes",
+      "commit_surface": "hogsmade_remote_or_pointer_in_umbrella"
+    },
+    {
+      "id": 9,
+      "stratum": "grid",
+      "archetype": "covenant",
+      "anchors": ["CascadeProjects/Projects/GRID-main/AGENTS.md §Security"],
+      "voice": "security_policy",
+      "commit_surface": "grid_remote"
+    },
+    {
+      "id": 10,
+      "stratum": "grid",
+      "archetype": "cartography",
+      "anchors": ["GRID AGENTS §Debugging scope windows"],
+      "voice": "grid_four_windows",
+      "commit_surface": "grid_remote"
+    },
+    {
+      "id": 11,
+      "stratum": "grid",
+      "archetype": "circuit",
+      "anchors": ["make", "uv run pytest", "coverage slices per GRID AGENTS"],
+      "voice": "narrow_gate",
+      "commit_surface": "grid_remote"
+    },
+    {
+      "id": 12,
+      "stratum": "grid",
+      "archetype": "cadence",
+      "anchors": ["GRID AGENTS §Weekly git / coverage audit"],
+      "voice": "subtractive_analyst",
+      "commit_surface": "grid_remote"
+    },
+    {
+      "id": 13,
+      "stratum": "operator_overlay",
+      "archetype": "covenant",
+      "anchors": ["CLAUDE.md", "~/.claude/rules/dev-rules.md via AGENTS"],
+      "voice": "trust_contract",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 14,
+      "stratum": "operator_overlay",
+      "archetype": "cartography",
+      "anchors": ["SPEC.md", "CENTRAL_PLAZA.md", "planes/"],
+      "voice": "plaza_vocabulary",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 15,
+      "stratum": "operator_overlay",
+      "archetype": "circuit",
+      "anchors": ["scripts/verify-*.sh", "bridges/", "schemas/"],
+      "voice": "prince-runtime-intel",
+      "commit_surface": "umbrella"
+    },
+    {
+      "id": 16,
+      "stratum": "operator_overlay",
+      "archetype": "cadence",
+      "anchors": ["WORKSPACE_GATES.md", "docs/the-elevator-ride.md", "racks/"],
+      "voice": "reconcile_lap",
+      "commit_surface": "umbrella"
+    }
+  ],
+  "octants_8": [
+    {
+      "id": "O1",
+      "stack": "product",
+      "archetype": "covenant",
+      "merges_fold_ids": [1, 5],
+      "dry_anchors": ["LICENSE", "CascadeProjects/LICENSE"]
+    },
+    {
+      "id": "O2",
+      "stack": "product",
+      "archetype": "cartography",
+      "merges_fold_ids": [2, 6],
+      "dry_anchors": ["DESIGN.md", "CascadeProjects/AGENTS.md"]
+    },
+    {
+      "id": "O3",
+      "stack": "product",
+      "archetype": "circuit",
+      "merges_fold_ids": [3, 7],
+      "dry_anchors": ["Makefile", "hogsmade npm / pre-commit"]
+    },
+    {
+      "id": "O4",
+      "stack": "product",
+      "archetype": "cadence",
+      "merges_fold_ids": [4, 8],
+      "dry_anchors": ["INSTRUCTION.md", "docs/ONBOARDING.md", "CONTRIBUTING.md"]
+    },
+    {
+      "id": "O5",
+      "stack": "risk_operator",
+      "archetype": "covenant",
+      "merges_fold_ids": [9, 13],
+      "dry_anchors": ["GRID-main/AGENTS.md §Security", "CLAUDE.md"]
+    },
+    {
+      "id": "O6",
+      "stack": "risk_operator",
+      "archetype": "cartography",
+      "merges_fold_ids": [10, 14],
+      "dry_anchors": ["GRID four windows", "SPEC.md", "CENTRAL_PLAZA.md", "planes/"]
+    },
+    {
+      "id": "O7",
+      "stack": "risk_operator",
+      "archetype": "circuit",
+      "merges_fold_ids": [11, 15],
+      "dry_anchors": ["GRID make/uv/pytest", "scripts/", "bridges/", "schemas/"]
+    },
+    {
+      "id": "O8",
+      "stack": "risk_operator",
+      "archetype": "cadence",
+      "merges_fold_ids": [12, 16],
+      "dry_anchors": ["GRID weekly audit", "WORKSPACE_GATES.md", "the-elevator-ride.md", "racks/"]
+    }
+  ],
+  "floor": {
+    "completeness_pct": 92,
+    "reserved_pct_note": "~8% wet: submodule drift, .env, review-package, per-host plane verification",
+    "verify_command": "make fourfold-snap",
+    "seal_path": "docs/artifacts/session-seal.json",
+    "corners": [
+      { "corner": "NW", "fold_id": 1, "path": "LICENSE" },
+      { "corner": "NE", "fold_id": 2, "path": "DESIGN.md" },
+      { "corner": "SE", "fold_id": 3, "path": "Makefile" },
+      { "corner": "SW", "fold_id": 4, "path": "INSTRUCTION.md" }
+    ]
+  },
+  "gain": {
+    "dry_pct_target": 67,
+    "wet_pct_target": 33,
+    "ping_pong_stroke": ["dry_read_octant", "wet_act_edit", "dry_reconcile_link"],
+    "triplet_shape": ["octant_id", "dry_anchor", "wet_note"],
+    "dotted_rhythm": ["anchor", "gesture_voice", "swing_metric"]
+  },
+  "neighborhood_graph": {
+    "nodes": ["LICENSE", "DESIGN.md", "Makefile", "INSTRUCTION.md", "REFERENCE.md"],
+    "edges_undirected": [
+      ["LICENSE", "REFERENCE.md"],
+      ["LICENSE", "DESIGN.md"],
+      ["DESIGN.md", "INSTRUCTION.md"],
+      ["DESIGN.md", "Makefile"],
+      ["INSTRUCTION.md", "Makefile"],
+      ["REFERENCE.md", "DESIGN.md"],
+      ["REFERENCE.md", "INSTRUCTION.md"],
+      ["REFERENCE.md", "Makefile"]
+    ]
+  },
+  "neighborhood_rules": [
+    "within_stratum: move along archetype columns covenant↔cadence",
+    "across_strata_same_archetype: 2→6→10→14 etc for same_question_deeper_repo",
+    "folds_1_4: literal fourfold cluster at umbrella stratum",
+    "commits_hogsmade: folds 5-8",
+    "commits_grid: folds 9-12",
+    "commits_umbrella_overlay: folds 13-16 except submodule pointer work uses folds 4 and 8"
+  ],
+  "swing_vs_gesture": {
+    "swing_metrics": [
+      "hops_from_REFERENCE_to_anchor",
+      "submodules_touched_count",
+      "octant_band O1-O4 vs O5-O8"
+    ],
+    "gesture_signals": [
+      "prince: implement",
+      "hermes: cross_repo_align",
+      "caraxes: marketplace_scout",
+      "grid: single_window_only",
+      "overlay: gates_elevator_lap"
+    ],
+    "programmable_checks": [
+      "if hops_gt 3 then suggest REFERENCE_row_or_fold_pointer",
+      "if gesture_hermes but edits_only_grid then rescope_to_grid_octant",
+      "name_octant_before_touching_code"
+    ]
+  },
+  "voices": [
+    {
+      "id": "prince-runtime-intel",
+      "default": true,
+      "when": "default_implementation_Mangrove_Cascade"
+    },
+    {
+      "id": "hermes",
+      "default": false,
+      "when": "submodule_pointer_CascadeProjects_cross_repo"
+    },
+    {
+      "id": "caraxes",
+      "default": false,
+      "when": "marketplace_plugin_scout"
+    },
+    {
+      "id": "grid-window",
+      "default": false,
+      "when": "GRID-main one of python frontend electron landing"
+    },
+    {
+      "id": "pi-isolation",
+      "default": false,
+      "when": "CascadeProjects/.pi AGENTS network rules"
+    }
+  ],
+  "licenses": {
+    "umbrella_spdx": "Apache-2.0",
+    "hogsmade_submodule_spdx": "MIT"
+  }
+}

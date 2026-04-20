@@ -1,0 +1,163 @@
+{
+  "$schema": "../../schemas/session-seal-v1.schema.json",
+  "schema_version": "session-seal-v1",
+  "stamp": {
+    "seal_id": "mss-2026-04-21-composition-cascade",
+    "closed_at_utc": "2026-04-21T12:00:00Z",
+    "workspace_role": "Umbrella workspace over CascadeProjects (hogsmade submodule) with nested GRID; operator overlay (planes, gates, racks, bridges).",
+    "composition_arc": [
+      "Fourfold + nearest neighborhood: LICENSE, DESIGN.md, Makefile, INSTRUCTION.md; hub REFERENCE.md; FOURFOLD_NEIGHBORHOOD (voices: prince, hermes, caraxes; GRID windows; Pi).",
+      "Partition framing: git modules/submodules vs directories; voices as routing lenses.",
+      "Sixteenfold: 4 strata × 4 archetypes (covenant, cartography, circuit, cadence).",
+      "Eightfold compaction + DRY/WET gain staging + swing metrics vs gesture (COMPOSITION_EIGHTFOLD_GAIN)."
+    ],
+    "git_context": {
+      "umbrella_submodules": ["CascadeProjects"],
+      "nested_submodules": ["CascadeProjects/Projects/GRID-main"]
+    }
+  },
+  "brand_voice": {
+    "summary": "Navigational infrastructure prose: name the fold and stratum before acting; prefer one hub hop (REFERENCE) over scattered restatement; mix ~two-thirds canonical DRY with ~one-third contextual WET so procedure stays repeatable without erasing session truth.",
+    "motion_metaphors": [
+      "cascade",
+      "nearest neighborhood",
+      "fold / octant",
+      "elevator lap and curvature",
+      "gate and reconcile",
+      "planes and plaza",
+      "ping-pong DRY↔WET",
+      "gain staging"
+    ],
+    "lexicon": [
+      "covenant",
+      "cartography",
+      "circuit",
+      "cadence",
+      "stratum",
+      "hub",
+      "swing metric",
+      "gesture",
+      "triplet (octant, anchor, wet note)"
+    ],
+    "tone": {
+      "cadence": "Complete sentences; tables and graphs for scan; metaphors are structural (signal chain, hops), not promotional.",
+      "avoid": [
+        "ungated agent output as sole source of truth",
+        "scope bleed across GRID debugging windows",
+        "duplicating policy in wet notes instead of linking DRY anchors"
+      ]
+    },
+    "registers": [
+      {
+        "id": "prince-runtime-intel",
+        "default": true,
+        "when_to_use": "Default build and implementation path across the Mangrove/Cascade stack; Makefile, npm gates, scripts/bridges when shipping glue."
+      },
+      {
+        "id": "hermes",
+        "default": false,
+        "when_to_use": "Submodule pointers, cross-repo alignment, CONTRIBUTING flows between umbrella and hogsmade; cadence that touches two remotes."
+      },
+      {
+        "id": "caraxes",
+        "default": false,
+        "when_to_use": "Marketplace and plugin scouting; peripheral integration surfaces."
+      },
+      {
+        "id": "grid-window",
+        "default": false,
+        "when_to_use": "GRID-main only: pick one of Python / frontend / Electron / landing; narrow gate before widening."
+      },
+      {
+        "id": "operator-overlay",
+        "default": false,
+        "when_to_use": "SPEC, CENTRAL_PLAZA, planes/, WORKSPACE_GATES, elevator, racks — navigation and reconcile laps without editing nested product code."
+      }
+    ],
+    "dry_wet_mix": {
+      "dry_pct": 67,
+      "wet_pct": 33,
+      "note": "Target band from COMPOSITION_EIGHTFOLD_GAIN: canonical tables and root fourfold as DRY spine; review-package and lap notes as bounded WET."
+    }
+  },
+  "doc_graph": {
+    "hub": "REFERENCE.md",
+    "fourfold": ["LICENSE", "DESIGN.md", "Makefile", "INSTRUCTION.md"],
+    "sixteenfold_doc": "docs/SIXTEENFOLD_NEIGHBORHOOD.md",
+    "eightfold_doc": "docs/COMPOSITION_EIGHTFOLD_GAIN.md",
+    "licenses": {
+      "umbrella": "Apache-2.0",
+      "cascadeProjects_submodule": "MIT"
+    },
+    "octants": [
+      {
+        "id": "O1",
+        "archetype": "covenant",
+        "merges": "1+5",
+        "anchors": ["LICENSE", "CascadeProjects/LICENSE"]
+      },
+      {
+        "id": "O2",
+        "archetype": "cartography",
+        "merges": "2+6",
+        "anchors": ["DESIGN.md", "CascadeProjects/AGENTS.md"]
+      },
+      {
+        "id": "O3",
+        "archetype": "circuit",
+        "merges": "3+7",
+        "anchors": ["Makefile", "package.json scripts / pre-commit"]
+      },
+      {
+        "id": "O4",
+        "archetype": "cadence",
+        "merges": "4+8",
+        "anchors": ["INSTRUCTION.md", "docs/ONBOARDING.md", "CONTRIBUTING.md"]
+      },
+      {
+        "id": "O5",
+        "archetype": "covenant",
+        "merges": "9+13",
+        "anchors": ["CascadeProjects/Projects/GRID-main/AGENTS.md", "CLAUDE.md"]
+      },
+      {
+        "id": "O6",
+        "archetype": "cartography",
+        "merges": "10+14",
+        "anchors": ["GRID AGENTS §windows", "SPEC.md", "CENTRAL_PLAZA.md", "planes/"]
+      },
+      {
+        "id": "O7",
+        "archetype": "circuit",
+        "merges": "11+15",
+        "anchors": ["GRID make/uv/pytest", "scripts/", "bridges/", "schemas/"]
+      },
+      {
+        "id": "O8",
+        "archetype": "cadence",
+        "merges": "12+16",
+        "anchors": ["GRID weekly audit", "WORKSPACE_GATES.md", "docs/the-elevator-ride.md", "racks/"]
+      }
+    ]
+  },
+  "four_on_the_floor": {
+    "completeness_pct": 92,
+    "reserved_pct_note": "~8%: submodule drift, local env, wet review bundles, per-host plane checks — expected; does not invalidate the floor.",
+    "snapped": true,
+    "verify_target": "make fourfold-snap",
+    "doc": "docs/FOUR_ON_THE_FLOOR.md"
+  },
+  "discovery": {
+    "prompts_for_voice_check": [
+      "Which octant (O1–O8) is this change in, and does the register match (prince vs hermes vs grid-window)?",
+      "Can a reader reach the canonical anchor from REFERENCE.md in three hops or fewer?",
+      "Does this sentence add DRY spine or only WET context — if only wet, is it linked to a DRY anchor?",
+      "If gesture says 'submodule bump' but files edited are GRID-only, how should scope be reframed?"
+    ],
+    "next_artifacts": [
+      "Optional: generate CHARACTERS.md from registers + octants for narrative onboarding.",
+      "Optional: Cursor canvas or MCP tool that loads session-seal.json for fold-aware prompts.",
+      "Optional: CI check that session-seal.json validates against schemas/session-seal-v1.schema.json when docs/artifacts/ changes."
+    ]
+  }
+}

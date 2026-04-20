@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/caraxesthebloodwyrm02/workspace/schemas/gridstral-pattern-v1.schema.json",
+  "title": "GRIDSTRAL / composition pattern feed (v1)",
+  "type": "object",
+  "required": ["schema_version", "meta", "axes", "hub", "fourfold", "strata", "folds_16", "octants_8", "floor", "gain", "neighborhood_graph", "neighborhood_rules", "swing_vs_gesture", "voices", "licenses"],
+  "properties": {
+    "schema_version": { "const": "gridstral-pattern-v1" },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "pattern_name": { "type": "string" },
+        "source_docs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "generated_for": {
+          "type": "string",
+          "description": "Consumer hint (e.g. GRIDSTRAL). Do not embed secrets."
+        }
+      }
+    },
+    "axes": {
+      "type": "object",
+      "properties": {
+        "strata": { "type": "array", "items": { "type": "string" } },
+        "archetypes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "hub": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" },
+        "is_fold": { "type": "boolean" }
+      }
+    },
+    "fourfold": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fold_id", "archetype", "path", "role"],
+        "properties": {
+          "fold_id": { "type": "integer" },
+          "archetype": { "type": "string" },
+          "path": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      }
+    },
+    "strata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "git_role": { "type": "string" },
+          "submodule_path": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "git_submodule_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "folds_16": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "stratum", "archetype"],
+        "properties": {
+          "id": { "type": "integer" },
+          "stratum": { "type": "string" },
+          "archetype": { "type": "string" },
+          "anchors": { "type": "array", "items": { "type": "string" } },
+          "voice": { "type": "string" },
+          "commit_surface": { "type": "string" }
+        }
+      }
+    },
+    "octants_8": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "archetype", "merges_fold_ids"],
+        "properties": {
+          "id": { "type": "string" },
+          "archetype": { "type": "string" },
+          "stack": { "type": "string" },
+          "merges_fold_ids": { "type": "array", "items": { "type": "integer" } },
+          "dry_anchors": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "floor": {
+      "type": "object",
+      "properties": {
+        "completeness_pct": { "type": "number" },
+        "reserved_pct_note": { "type": "string" },
+        "verify_command": { "type": "string" },
+        "corners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "corner": { "type": "string" },
+              "fold_id": { "type": "integer" },
+              "path": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "gain": {
+      "type": "object",
+      "properties": {
+        "dry_pct_target": { "type": "number" },
+        "wet_pct_target": { "type": "number" },
+        "ping_pong_stroke": { "type": "array", "items": { "type": "string" } },
+        "triplet_shape": { "type": "array", "items": { "type": "string" } },
+        "dotted_rhythm": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "neighborhood_graph": {
+      "type": "object",
+      "properties": {
+        "nodes": { "type": "array", "items": { "type": "string" } },
+        "edges_undirected": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "neighborhood_rules": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "swing_vs_gesture": {
+      "type": "object",
+      "properties": {
+        "swing_metrics": { "type": "array", "items": { "type": "string" } },
+        "gesture_signals": { "type": "array", "items": { "type": "string" } },
+        "programmable_checks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "voices": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "default": { "type": "boolean" },
+          "when": { "type": "string" }
+        }
+      }
+    },
+    "licenses": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

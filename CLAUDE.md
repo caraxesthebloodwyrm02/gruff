@@ -147,6 +147,7 @@ Key environment variables:
 Cross-server contracts that must not be broken:
 
 - **Echoes audit log** (`~/.echoes/audit.ndjson`): All MCP servers use `@cascade/shared-types` `emitAudit` to append `AuditEvent` objects. Fields: `timestamp`, `source`, `tool`, `status`, optional `durationMs`/`metadata`. Do not rename fields.
+- **GRUFF proportion v1** (workspace `schemas/gruff-proportion-v1.schema.json`, stub `bridges/gruff-echoes/receiver.py`): A **separate** contract for wall-board control snapshots (phase, CoG, weights, metrics, `audioDrive`). It is **not** an `AuditEvent` — do not append proportion JSON bodies to `audit.ndjson` unless you define an explicit `metadata` mapping and tooling to consume it.
 - **Seeds snapshots** (`~/.seeds-server/snapshots/snapshot-{timestamp}.json`): seeds-server writes; pulse-server reads latest by filename sort. Required fields: `overallScore` (number) and `repos[].healthScore` (number).
 - **GATE directory** (`CascadeProjects/GATE/`): Runtime envelopes, contracts, and results. Check `GATE/README.md` before restructuring.
 - **shared-types exports**: 9 paths — `.` (types), `./audit-client` (emitAudit), `./security-policy`, `./session-rate-limit`, `./id`, `./mcp-logger`, `./precedent`, `./trace-context`, `./command-bus`.

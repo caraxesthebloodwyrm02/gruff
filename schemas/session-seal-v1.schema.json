@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/caraxesthebloodwyrm02/workspace/schemas/session-seal-v1.schema.json",
+  "title": "Mangrove session seal (v1)",
+  "type": "object",
+  "required": ["schema_version", "stamp", "brand_voice", "doc_graph"],
+  "properties": {
+    "schema_version": { "const": "session-seal-v1" },
+    "stamp": {
+      "type": "object",
+      "required": ["seal_id", "closed_at_utc", "composition_arc"],
+      "properties": {
+        "seal_id": { "type": "string", "description": "Stable id for this sealed composition." },
+        "closed_at_utc": { "type": "string", "format": "date-time" },
+        "workspace_role": { "type": "string" },
+        "composition_arc": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Chronological capsule of what was composed."
+        },
+        "git_context": {
+          "type": "object",
+          "properties": {
+            "umbrella_submodules": { "type": "array", "items": { "type": "string" } },
+            "nested_submodules": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "brand_voice": {
+      "type": "object",
+      "required": ["summary", "motion_metaphors", "registers"],
+      "properties": {
+        "summary": { "type": "string" },
+        "motion_metaphors": { "type": "array", "items": { "type": "string" } },
+        "lexicon": { "type": "array", "items": { "type": "string" } },
+        "tone": {
+          "type": "object",
+          "properties": {
+            "cadence": { "type": "string" },
+            "avoid": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "registers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "when_to_use"],
+            "properties": {
+              "id": { "type": "string" },
+              "when_to_use": { "type": "string" },
+              "default": { "type": "boolean" }
+            }
+          }
+        },
+        "dry_wet_mix": {
+          "type": "object",
+          "properties": {
+            "dry_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "wet_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    },
+    "doc_graph": {
+      "type": "object",
+      "properties": {
+        "hub": { "type": "string" },
+        "fourfold": { "type": "array", "items": { "type": "string" } },
+        "sixteenfold_doc": { "type": "string" },
+        "eightfold_doc": { "type": "string" },
+        "octants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "merges"],
+            "properties": {
+              "id": { "type": "string" },
+              "archetype": { "type": "string" },
+              "merges": { "type": "string" },
+              "anchors": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "licenses": {
+          "type": "object",
+          "description": "SPDX-style ids for repo boundaries.",
+          "properties": {
+            "umbrella": { "type": "string" },
+            "cascadeProjects_submodule": { "type": "string" }
+          }
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "properties": {
+        "prompts_for_voice_check": { "type": "array", "items": { "type": "string" } },
+        "next_artifacts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "four_on_the_floor": {
+      "type": "object",
+      "description": "Foundation snap: root fourfold + completeness vs reserved wet margin.",
+      "properties": {
+        "completeness_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "reserved_pct_note": { "type": "string" },
+        "snapped": { "type": "boolean" },
+        "verify_target": { "type": "string" },
+        "doc": { "type": "string" }
+      }
+    }
+  }
+}

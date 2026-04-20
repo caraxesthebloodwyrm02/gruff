@@ -14,6 +14,8 @@
     { "name": "contracts · shared-pipeline",     "path": "planes/contracts/shared-pipeline" },
     { "name": "infrastructure",                  "path": "planes/infrastructure" },
     { "name": "racks",                           "path": "racks" },
+    { "name": "bridges · gruff-echoes",          "path": "bridges/gruff-echoes" },
+    { "name": "schemas",                         "path": "schemas" },
     { "name": "design-system (read-only)",       "path": "design-system" },
     { "name": "hogsmade-design (read-only)",     "path": "hogsmade-design" },
     { "name": "monorepo · CascadeProjects",      "path": "CascadeProjects" }

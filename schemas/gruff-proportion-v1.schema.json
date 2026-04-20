@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workspace.local/schemas/gruff-proportion-v1.schema.json",
+  "title": "GRUFF proportion payload v1",
+  "description": "Shared contract for gruff-wallboard.canvas.tsx and Echoes (or stub receiver). Weights sum to 1; theta is master phase in [0,1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "t",
+    "theta",
+    "cog",
+    "weights",
+    "modulation",
+    "sequence",
+    "metrics",
+    "audioDrive"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0.0" },
+    "t": { "type": "number", "description": "Monotonic ms (e.g. performance.now())" },
+    "theta": { "type": "number", "minimum": 0, "exclusiveMaximum": 1 },
+    "cog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sound", "gesture", "calculation"],
+      "properties": {
+        "sound": { "type": "number", "minimum": 0, "maximum": 1 },
+        "gesture": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculation": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "modulation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gains", "clamps"],
+      "properties": {
+        "gains": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        },
+        "clamps": {
+          "type": "object",
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        }
+      }
+    },
+    "sequence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "stepIndex", "stepName"],
+      "properties": {
+        "id": { "type": "string" },
+        "stepIndex": { "type": "integer", "minimum": 0 },
+        "stepName": { "type": "string" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "modulated"],
+      "properties": {
+        "raw": { "type": "object", "additionalProperties": { "type": "number" } },
+        "modulated": { "type": "object", "additionalProperties": { "type": "number" } }
+      }
+    },
+    "audioDrive": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Scalar 0..1 for Echoes DSP gain / sidechain; derived from weights and modulated.signal"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "t": 0,
+  "theta": 0.25,
+  "cog": { "x": 0.52, "y": 0.48 },
+  "weights": { "sound": 0.34, "gesture": 0.33, "calculation": 0.33 },
+  "modulation": {
+    "gains": { "contrast": 1.0 },
+    "clamps": { "min": 0, "max": 1 }
+  },
+  "sequence": { "id": "gruff-default-sequence", "stepIndex": 0, "stepName": "Idle" },
+  "metrics": {
+    "raw": { "signal": 0.9, "noise": 0.15 },
+    "modulated": { "signal": 0.9, "noise": 0.1275 }
+  },
+  "audioDrive": 0.35
+}

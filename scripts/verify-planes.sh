@@ -13,9 +13,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# hogwarts-server: MCP tree may exist before a planes/ symlink is created locally;
-# planes/ is gitignored, so fresh clones rely on this whitelist for pre-push.
-WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects|hogwarts-server)$'
+# staircase: declarative Hogwarts routing (YAML), not a plane symlink yet.
+# hogwarts-server: MCP scaffold co-located under Hogwarts fleet; map when planes/ entry exists.
+WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects|staircase|hogwarts-server)$'
 
 ok=0
 skip=0

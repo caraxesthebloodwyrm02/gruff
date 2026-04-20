@@ -1,0 +1,82 @@
+{
+  "folders": [
+    {
+      "name": "🏛️ Hogwarts · Governance & Code",
+      "path": "CascadeProjects/Hogwarts"
+    },
+    {
+      "name": "🪜 Hogwarts · Staircase & Rotation",
+      "path": "CascadeProjects/Hogwarts/staircase"
+    },
+    {
+      "name": "📚 Campus · The Library",
+      "path": "CascadeProjects/Documentation"
+    },
+    {
+      "name": "🏗️ Campus · Practice Yard (Racks)",
+      "path": "racks"
+    },
+    {
+      "name": "🎨 Campus · Design Canon",
+      "path": "design-system"
+    },
+    {
+      "name": "📍 Plaza · Central Map",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.readonlyInclude": {
+      "design-system/**": true,
+      "CascadeProjects/Documentation/**": true,
+      "CascadeProjects/Hogwarts/**": true,
+      "racks/**": true
+    },
+    "files.associations": {
+      "*.code": "markdown",
+      "*.yaml": "yaml"
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.venv": true,
+      "**/__pycache__": true,
+      "**/.git": true,
+      "planes": true,
+      "CascadeProjects/Applications": true,
+      "CascadeProjects/Tools": true,
+      "CascadeProjects/Projects": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "editor.formatOnSave": true,
+    "editor.bracketPairColorization.enabled": true,
+    "explorer.sortOrder": "type",
+    "workbench.colorCustomizations": {
+      "activityBar.background": "#1e1e2e",
+      "sideBar.background": "#181825",
+      "editor.background": "#1e1e2e"
+    },
+    "hogwarts.borrowProtocol": "enabled",
+    "hogwarts.rotationEngine": "active"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Hogwarts: Audit School Code",
+        "type": "shell",
+        "command": "cat CascadeProjects/Hogwarts/school.code",
+        "problemMatcher": []
+      },
+      {
+        "label": "Hogwarts: Verify Rotation Rules",
+        "type": "shell",
+        "command": "cat CascadeProjects/Hogwarts/staircase/rotation/rules.yaml",
+        "problemMatcher": []
+      }
+    ]
+  }
+}

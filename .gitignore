@@ -1,13 +1,46 @@
-# This workspace is a view, not a repo. Prevent accidental git-tracking.
+# =============================================================================
+# Workspace repo scope — what may enter shared / cloud history
+# =============================================================================
+# Principle: ignore machine-local weight, personal capture, and ephemeral clones.
+# The shareable “filtered” layer is everything not matched below (plus explicit `git add -f` when needed).
+# CascadeProjects/ remains excluded here as a separate monorepo checkout (see SPEC / CENTRAL_PLAZA).
+
+# --- Other repos / large trees (not this git history) ---
 CascadeProjects/
 planes/
 racks/
 design-system/
 hogsmade-design/
-scripts/*.log
 
-# IDE config
+# --- Ephemeral clones, caches, generated sandboxes ---
+tmp_repos/
+.cache/
+.parcel-cache/
+.turbo/
+**/.vite/
+
+# --- Personal & operator-local (bias, notes, scratch; keep out of default index) ---
+personal/
+private/
+scratch/
+*.local.md
+*.private.md
+STRUCTURE_*_DIFF.md
+
+# --- Secrets & environment (never stage) ---
+.env
+.env.*
+!.env.example
+
+# --- IDE / editor (local overlays) ---
 .cursor/
+.vscode/*.local.json
+
+# --- Logs & OS noise ---
+scripts/*.log
+*.log
+.DS_Store
+Thumbs.db
 
 # Ephemeral snapshots
 READINESS_REPORT.md
@@ -15,3 +48,7 @@ READINESS_REPORT.md
 # Pipeline monitoring — generated artifacts only
 .pipeline-monitoring/node_modules/
 .pipeline-monitoring/rl-ori-session-*.json
+
+# Workspace file variants: machine-local; canonical workspace file may be tracked
+*.code-workspace
+!workspace.code-workspace

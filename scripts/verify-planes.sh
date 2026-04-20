@@ -13,7 +13,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects)$'
+# hogwarts-server: MCP tree may exist before a planes/ symlink is created locally;
+# planes/ is gitignored, so fresh clones rely on this whitelist for pre-push.
+WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects|hogwarts-server)$'
 
 ok=0
 skip=0

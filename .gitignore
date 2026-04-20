@@ -5,3 +5,13 @@ racks/
 design-system/
 hogsmade-design/
 scripts/*.log
+
+# IDE config
+.cursor/
+
+# Ephemeral snapshots
+READINESS_REPORT.md
+
+# Pipeline monitoring — generated artifacts only
+.pipeline-monitoring/node_modules/
+.pipeline-monitoring/rl-ori-session-*.json

@@ -65,6 +65,28 @@ test("CLI: rejects invalid --mode value", () => {
   assert.match(stdout + stderr, /Invalid value for --mode/);
 });
 
+test("CLI: deep search returns matches (cache path)", () => {
+  const root = mkdtempSync(path.join(tmpdir(), "exploration-test-"));
+  writeFileSync(path.join(root, "a.ts"), "hello\nNEEDLE found here\nworld\n");
+  writeFileSync(path.join(root, "b.ts"), "no match\n");
+
+  const { code, stdout } = run([
+    "--root",
+    root,
+    "--pattern",
+    "*.ts",
+    "--mode",
+    "deep",
+    "--search",
+    "NEEDLE",
+  ]);
+  assert.equal(code, 0);
+  const result = JSON.parse(stdout);
+  assert.equal(result.matches.length, 1);
+  assert.equal(result.matches[0].path, "a.ts");
+  assert.equal(result.matches[0].line, 2);
+});
+
 test("CLI: .env exclude is segment-based, not substring-based", () => {
   const root = mkdtempSync(path.join(tmpdir(), "exploration-test-"));
   mkdirSync(path.join(root, ".env"));

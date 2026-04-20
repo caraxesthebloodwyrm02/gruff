@@ -131,10 +131,17 @@ class ExplorationRoutine {
   private config: ExplorationConfig;
   private startTime: number;
   private stats: ExplorationStats;
+  /**
+   * Cache of file contents already read by scanDirectory in deep mode,
+   * keyed by absolute path. searchFiles reuses this to avoid reading
+   * the same file from disk twice in the same exploration pass.
+   */
+  private contentCache: Map<string, string>;
 
   constructor(config: ExplorationConfig) {
     this.config = config;
     this.startTime = Date.now();
+    this.contentCache = new Map();
     this.stats = {
       totalFiles: 0,
       totalDirs: 0,
@@ -201,10 +208,11 @@ class ExplorationRoutine {
             modified: stats.mtime.toISOString(),
           };
 
-          // Deep mode: read content
+          // Deep mode: read content and cache it for reuse by searchFiles.
           if (this.config.mode === "deep") {
             try {
               const content = readFileSync(fullPath, "utf-8");
+              this.contentCache.set(fullPath, content);
               fileResult.lineCount = content.split("\n").length;
               fileResult.preview = content.slice(0, 500);
             } catch {
@@ -274,7 +282,8 @@ class ExplorationRoutine {
       if (matches.length >= limit) break;
 
       try {
-        const content = readFileSync(file.fullPath, "utf-8");
+        const cached = this.contentCache.get(file.fullPath);
+        const content = cached ?? readFileSync(file.fullPath, "utf-8");
         const lines = content.split("\n");
 
         for (let i = 0; i < lines.length; i++) {

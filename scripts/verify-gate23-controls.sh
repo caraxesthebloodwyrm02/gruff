@@ -10,8 +10,11 @@ CASCADE_DIR="$ROOT_DIR/CascadeProjects"
 SHARED_TYPES_DIR="$CASCADE_DIR/Components/shared-types"
 ORI_DIR="$CASCADE_DIR/Tools/MCPServers/ori-server"
 SERVERS_DIR="$CASCADE_DIR/Tools/MCPServers"
+AFLOAT_DIR="$SERVERS_DIR/afloat-server"
+SCHOOL_DIR="$SERVERS_DIR/school-server"
 
 FAILURES=0
+WARNINGS=0
 
 ok() {
   printf 'ok    %s\n' "$1"
@@ -20,6 +23,11 @@ ok() {
 fail() {
   printf 'FAIL  %s\n' "$1"
   FAILURES=$((FAILURES + 1))
+}
+
+warn() {
+  printf 'WARN  %s\n' "$1"
+  WARNINGS=$((WARNINGS + 1))
 }
 
 section() {
@@ -33,6 +41,16 @@ require_file() {
     ok "$desc ($file)"
   else
     fail "$desc missing ($file)"
+  fi
+}
+
+check_file_optional() {
+  local file="$1"
+  local desc="$2"
+  if [ -f "$file" ]; then
+    ok "$desc ($file)"
+  else
+    warn "$desc missing (deferred): $file"
   fi
 }
 
@@ -140,6 +158,31 @@ else
   fail "anticipation signal shape sentinel keys missing"
 fi
 
+# Control: afloat policy snapshot tool is present and keeps required contract keys.
+if node - "$AFLOAT_DIR/src/server.ts" <<'NODE'
+const fs = require("fs");
+const text = fs.readFileSync(process.argv[2], "utf8");
+const required = [
+  'server.registerTool(',
+  '"fetch_policy"',
+  "policyId:",
+  "allowedRoots:",
+  "previewTokenTtlMs:",
+  "enforcedPolicyIds:",
+];
+for (const token of required) {
+  if (!text.includes(token)) {
+    console.error(`missing afloat policy token: ${token}`);
+    process.exit(1);
+  }
+}
+NODE
+then
+  ok "afloat policy snapshot contract sentinel keys present"
+else
+  fail "afloat policy snapshot contract sentinel keys missing"
+fi
+
 section "R3 — GRID submodule policy confusion"
 
 # Control: GRID-main submodule must be declared and resolvable from CascadeProjects.
@@ -158,6 +201,12 @@ require_file "$SERVERS_DIR/afloat-server/tests/smoke.test.ts" "afloat smoke test
 require_file "$SERVERS_DIR/grid-server/tests/smoke.test.ts" "grid smoke test"
 require_file "$SERVERS_DIR/echoes-server/tests/smoke.test.ts" "echoes smoke test"
 require_file "$SERVERS_DIR/ori-server/tests/smoke.test.ts" "ori smoke test"
+check_file_optional "$SERVERS_DIR/school-server/tests/smoke.test.ts" "school smoke test"
+
+section "School compartment checkpoint presence"
+
+check_file_optional "$SCHOOL_DIR/package.json" "school-server package manifest"
+check_file_optional "$SCHOOL_DIR/src/index.ts" "school-server MCP entrypoint"
 
 section "R5 — Audit narrative vs evidence drift"
 
@@ -165,5 +214,6 @@ section "R5 — Audit narrative vs evidence drift"
 require_file "$ROOT_DIR/review-package/08-findings.md" "ultrareview findings record"
 require_file "$ROOT_DIR/review-package/07-preflight.log" "preflight evidence log"
 
-printf '\nsummary: failures=%s\n' "$FAILURES"
+printf '\nsummary: failures=%s warnings=%s\n' "$FAILURES" "$WARNINGS"
+
 [ "$FAILURES" -eq 0 ] && exit 0 || exit 1

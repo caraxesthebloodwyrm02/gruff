@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Pipeline monitoring and exploration utilities",
   "scripts": {
-    "explore": "tsx exploration-routine.ts"
+    "explore": "tsx exploration-routine.ts",
+    "test": "node --import tsx --test exploration-routine.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -88,18 +88,53 @@ export interface ExplorationStats {
   searchMatches: number;
 }
 
+// ── Glob Helpers ───────────────────────────────────────────────────────────────
+
+/**
+ * Convert a glob pattern to a regex source string.
+ *
+ * - "**" matches zero or more path segments (including separators).
+ * - "*"  matches zero or more characters within a single segment.
+ * - "?"  matches exactly one character within a single segment.
+ * - All other regex metacharacters are escaped literally.
+ *
+ * Input is assumed to use forward slashes; callers should normalize
+ * the path under test the same way before matching.
+ */
+export function globToRegex(glob: string): string {
+  let out = "";
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i];
+    if (ch === "*") {
+      if (glob[i + 1] === "*") {
+        // "**/" or "**" — match zero or more path segments
+        const hasTrailingSlash = glob[i + 2] === "/";
+        out += hasTrailingSlash ? "(?:.*/)?" : ".*";
+        i += hasTrailingSlash ? 2 : 1;
+      } else {
+        out += "[^/]*";
+      }
+    } else if (ch === "?") {
+      out += "[^/]";
+    } else if ("\\^$+.()|{}[]".includes(ch)) {
+      out += "\\" + ch;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 // ── Exploration Engine ─────────────────────────────────────────────────────────
 
 class ExplorationRoutine {
   private config: ExplorationConfig;
   private startTime: number;
   private stats: ExplorationStats;
-  private loggedNodeModulesTraversal: boolean;
 
   constructor(config: ExplorationConfig) {
     this.config = config;
     this.startTime = Date.now();
-    this.loggedNodeModulesTraversal = false;
     this.stats = {
       totalFiles: 0,
       totalDirs: 0,
@@ -142,26 +177,20 @@ class ExplorationRoutine {
       const relPath = path.join(relativePath, entry);
       const stats = statSync(fullPath);
 
-      // Check exclusion
-      if (this.config.exclude?.some(ex => relPath.includes(ex))) {
+      // Exclusion is segment-based, not substring-based: excluding ".env"
+      // must not drop "environment.ts" or "config/.env.example".
+      if (this.isExcluded(relPath, entry)) {
         continue;
       }
 
       if (stats.isDirectory()) {
         this.stats.totalDirs++;
-        if (!this.loggedNodeModulesTraversal && relPath.includes("node_modules")) {
-          this.loggedNodeModulesTraversal = true;
-        }
         results.push(...this.scanDirectory(fullPath, relPath));
       } else {
         this.stats.totalFiles++;
         this.stats.totalBytes += stats.size;
 
-        // Pattern matching
-        const matchesPattern = this.matchesPattern(relPath);
-        if (relPath.includes("node_modules") && matchesPattern) {
-        }
-        if (matchesPattern) {
+        if (this.matchesPattern(relPath)) {
           this.stats.patternMatches++;
 
           const fileResult: FileResult = {
@@ -193,31 +222,42 @@ class ExplorationRoutine {
   }
 
   /**
-   * Check if a file path matches the configured pattern.
+   * Check whether a relative path should be excluded.
+   *
+   * Matches any path segment exactly against the exclude list (so
+   * excluding ".env" drops "./.env" and "a/.env/b" but not "env.ts"
+   * or "environment.json").
+   */
+  private isExcluded(relPath: string, entry: string): boolean {
+    const excludes = this.config.exclude;
+    if (!excludes || excludes.length === 0) return false;
+    const segments = relPath.split(/[\\/]+/).filter(Boolean);
+    if (entry && !segments.includes(entry)) segments.push(entry);
+    return excludes.some(ex => segments.includes(ex));
+  }
+
+  /**
+   * Check if a file path matches the configured glob pattern.
+   *
+   * Supports:
+   *   - "**" — zero or more path segments
+   *   - "*"  — zero or more characters inside a single segment
+   *   - "?"  — exactly one character inside a single segment
+   * All other regex metacharacters are escaped literally.
    */
   private matchesPattern(filePath: string): boolean {
     if (!this.config.pattern) return true;
 
+    const normalized = filePath.replace(/\\/g, "/");
+
     try {
-      // Convert glob to proper regex with anchoring
-      let patternRegex: string;
-      if (this.config.pattern.startsWith("*")) {
-        // Handle patterns like "*.ts" - match at end only
-        patternRegex = "^" + this.config.pattern
-          .replace(/\*/g, "[^/\\\\]*")
-          .replace(/\?/g, "[^/\\\\]") + "$";
-      } else {
-        // Handle other patterns
-        patternRegex = "^" + this.config.pattern
-          .replace(/\*/g, ".*")
-          .replace(/\?/g, ".") + "$";
-      }
-      
-      const regex = new RegExp(patternRegex);
-      return regex.test(filePath);
-    } catch (error) {
-      // Fall back to simple string matching for invalid patterns
-      return filePath.includes(this.config.pattern.replace(/\*/g, "").replace(/\?/g, ""));
+      const regex = new RegExp("^" + globToRegex(this.config.pattern) + "$");
+      return regex.test(normalized);
+    } catch {
+      const literal = this.config.pattern
+        .replace(/\*/g, "")
+        .replace(/\?/g, "");
+      return normalized.includes(literal);
     }
   }
 
@@ -250,11 +290,6 @@ class ExplorationRoutine {
                 lines[Math.min(lines.length - 1, i + 1)],
               ],
             });
-            if (matches.length === limit) {
-            }
-            if (matches.length > limit) {
-            }
-            // Enforce limit after each match
             if (matches.length >= limit) break;
           }
         }
@@ -304,12 +339,19 @@ function parseArgs(): ExplorationConfig {
         config.search = args[++i];
         break;
       case "--mode":
-      case "-m":
+      case "-m": {
         if (!nextArg) {
           throw new Error(`Missing value for ${arg}`);
         }
-        config.mode = args[++i] as "shallow" | "deep";
+        const mode = args[++i];
+        if (mode !== "shallow" && mode !== "deep") {
+          throw new Error(
+            `Invalid value for ${arg}: "${mode}" (expected "shallow" or "deep")`,
+          );
+        }
+        config.mode = mode;
         break;
+      }
       case "--exclude":
       case "-e":
         config.exclude = nextArg

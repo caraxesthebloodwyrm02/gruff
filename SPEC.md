@@ -154,7 +154,7 @@ On conflict: **the narrower scope wins**. Monorepo CLAUDE.md governs inside `Cas
 
 ### Deferred (future sessions)
 
-- **P2 — Echoes integrity tooling carry-over.** Copy `~/.echoes/check-integrity.sh`, `audit-integrity.md`; seed `audit.ndjson.sha256`. Needed before first Ubuntu server start that writes audit events.
+- ~~**P2 — Echoes integrity tooling carry-over.**~~ **DONE** — `check-integrity.sh`, `audit-integrity.md`, `audit.ndjson.sha256`, and `backup/` dir now live in `~/.echoes/`. Script verified green on Ubuntu.
 - ~~**Command bus implementation.**~~ **DONE** — `concept/command-bus` branch, commit `fcc7ba0`. PR to main pending.
 - **Scheduler wiring.** `scripts/dispatch.sh` + `scripts/schedule.sh` — now unblocked.
 - **Verify-planes CI/cron integration.** Promote to pre-commit hook or daily check.

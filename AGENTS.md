@@ -16,7 +16,9 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Node workspaces monorepo for Mangrove/Cascade projects.
+This repository is a **workspace umbrella**: the root tracks `planes/` (symlink map) plus `CascadeProjects/` as a **git submodule** to the hogsmade monorepo (MCP servers, shared packages, apps, nested `Projects/GRID-main`, etc.). Open PRs against this repo to review the submodule pointer, plane layout, and workspace glue; use the hogsmade repo for day-to-day monorepo commits.
+
+Inside the submodule, the layout is a Node workspaces monorepo:
 
 - `Tools/MCPServers/`: first-party MCP servers (`afloat-server`, `grid-server`, `echoes-server`, etc.).
 - `Components/`: shared packages and cross-workspace scripts (`shared-types`, `shared-resilience`, `shared-pipeline`).

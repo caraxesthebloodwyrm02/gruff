@@ -1,0 +1,5 @@
+# Copy to .cursor/recent-ship-authors.regex in the repo root (one line, Git regex for `git log --author`).
+# Lines starting with # are ignored; the first non-empty, non-comment line wins.
+#
+# Example: union two common GitHub identities (escape dots for literal match).
+(you@example\.com|you@users\.noreply\.github\.com)

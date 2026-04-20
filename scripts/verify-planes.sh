@@ -13,7 +13,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects)$'
+# staircase: declarative Hogwarts routing (YAML), not a plane symlink yet.
+# hogwarts-server: MCP scaffold co-located under Hogwarts fleet; map when planes/ entry exists.
+WHITELIST_RE='^(integration-review|tests|config|experiments|scripts|research|projects|staircase|hogwarts-server)$'
 
 ok=0
 skip=0

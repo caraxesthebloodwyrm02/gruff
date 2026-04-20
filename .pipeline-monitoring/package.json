@@ -1,0 +1,14 @@
+{
+  "name": "pipeline-monitoring",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Pipeline monitoring and exploration utilities",
+  "scripts": {
+    "explore": "tsx exploration-routine.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.6.0",
+    "typescript": "~6.0.2"
+  }
+}

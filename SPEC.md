@@ -59,9 +59,11 @@ Derived from the Hogsmade Cockpit "AFTER" sketch:
 
 ## 3. The command bus
 
-Spec in `~/concept-command-bus.md`. One substrate: `~/.echoes/audit.ndjson`. One writer primitive: `appendNdjsonLine()` extracted from `audit-client.ts`. Two semantic layers on top: `emitAudit` (observability) and `dispatch` (actuation). Read path: `subscribe(ns, handler)` tails the NDJSON and filters by namespace. `runId` is required from day 1, making issue #2 a propagation task, not a schema migration.
+**Status: implemented** — branch `concept/command-bus` (commit `fcc7ba0`), pending PR to main.
 
-Blocked on `cursor/signal-io-hardening-d896` landing. Cut `concept/command-bus` from `hogsmade` (clean base) once the dirty tree clears.
+One substrate: `~/.echoes/audit.ndjson`. `appendNdjsonLine()` exported from `audit-client.ts` is the shared write primitive. `emitAudit` (observability) and `dispatch` (actuation) both call it. Read path: `subscribe(ns, handler, opts?)` watches the parent directory (inotify + 1s poll fallback) and filters by namespace via `CommandEnvelopeSchema.safeParse`. `runId` ({service}.{kind}.{uuid}) is first-class — issue #2 is now a propagation task.
+
+POC call-sites live: eligibility-server `onEvolutionCaseOpened` dispatches `case_opened`; pulse-server subscribes at startup with `fromTail: true`. 8/8 unit tests green.
 
 ---
 
@@ -153,8 +155,8 @@ On conflict: **the narrower scope wins**. Monorepo CLAUDE.md governs inside `Cas
 ### Deferred (future sessions)
 
 - **P2 — Echoes integrity tooling carry-over.** Copy `~/.echoes/check-integrity.sh`, `audit-integrity.md`; seed `audit.ndjson.sha256`. Needed before first Ubuntu server start that writes audit events.
-- **Command bus implementation.** Waits on `cursor/signal-io-hardening-d896` landing.
-- **Scheduler wiring.** `scripts/dispatch.sh` + `scripts/schedule.sh` arrive with the bus.
+- ~~**Command bus implementation.**~~ **DONE** — `concept/command-bus` branch, commit `fcc7ba0`. PR to main pending.
+- **Scheduler wiring.** `scripts/dispatch.sh` + `scripts/schedule.sh` — now unblocked.
 - **Verify-planes CI/cron integration.** Promote to pre-commit hook or daily check.
 
 ### Ubuntu-verify checklist

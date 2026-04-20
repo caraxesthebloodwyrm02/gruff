@@ -3,11 +3,9 @@
 # =============================================================================
 # Principle: ignore machine-local weight, personal capture, and ephemeral clones.
 # The shareable “filtered” layer is everything not matched below (plus explicit `git add -f` when needed).
-# CascadeProjects/ remains excluded here as a separate monorepo checkout (see SPEC / CENTRAL_PLAZA).
+# CascadeProjects/ is a git submodule (hogsmade); clone with: git submodule update --init --recursive
 
 # --- Other repos / large trees (not this git history) ---
-CascadeProjects/
-planes/
 racks/
 design-system/
 hogsmade-design/

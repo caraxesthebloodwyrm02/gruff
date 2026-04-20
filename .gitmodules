@@ -1,0 +1,4 @@
+[submodule "CascadeProjects"]
+	path = CascadeProjects
+	url = https://github.com/caraxesthebloodwyrm02/hogsmade.git
+	branch = main

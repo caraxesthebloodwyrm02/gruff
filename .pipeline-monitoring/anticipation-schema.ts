@@ -5,7 +5,7 @@
  * gate progression, and failure patterns. Used by monitoring systems to surface
  * early warnings and adaptive scheduling decisions.
  *
- * Reference: GRID agantic AnticipationEngine pattern (src/grid/agentic/anticipation_engine.py)
+ * Reference: GRID agentic AnticipationEngine pattern (src/grid/agentic/anticipation_engine.py)
  */
 
 // ── Core Anticipation Types ────────────────────────────────────────────────────────

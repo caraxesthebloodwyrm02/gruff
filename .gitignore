@@ -50,3 +50,10 @@ READINESS_REPORT.md
 # Workspace file variants: machine-local; canonical workspace file may be tracked
 *.code-workspace
 !workspace.code-workspace
+
+# --- Composition / feed JSON: optional local overrides next to committed seals (never default-commit) ---
+docs/artifacts/*.local.json
+
+# --- Python scratch under bridges (receiver dev) ---
+bridges/**/__pycache__/
+bridges/**/*.pyc

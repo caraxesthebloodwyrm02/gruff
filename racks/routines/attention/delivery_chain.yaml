@@ -1,0 +1,46 @@
+# ATTENTION DELIVERY CHAIN SYSTEM
+# Metaphor: Last-Mile Logistics (Drones & Fulfillment)
+
+system:
+  name: "Attention Logistics"
+  id: "ATTN-LOG-001"
+  objective: "Seamless distribution and allocation of focus units from School (Warehouse) to Workspace (Customer)."
+
+infrastructure:
+  fulfillment_center:
+    id: "FC-LIBRARY"
+    location: "CascadeProjects/Documentation"
+    role: "Inventory of all context. Packaging focus into discrete 'Attention Units' (AUs)."
+  
+  sortation_hub:
+    id: "HUB-STAIRCASE"
+    location: "CascadeProjects/Hogwarts/staircase"
+    role: "Routing AUs based on engagement signals and priority."
+
+delivery_modes:
+  drone_dispatch:
+    id: "DRONE-UNIT"
+    type: "Autonomous Task-Focus"
+    capability: "Last-mile delivery of a single 'Borrowed' context item."
+    advantage: "High speed, low overhead, perfect for narrow implementation tasks."
+  
+  heavy_freight:
+    id: "FREIGHT-UNIT"
+    type: "Cross-District Migration"
+    capability: "Bulk delivery of documentation for architectural refactors."
+    advantage: "High capacity, high latency, requires manual handling (User Approval)."
+
+allocation_management:
+  queuing_strategy: "FIFO for chores, Priority-based for feature delivery."
+  diffusion_control: "Preventing 'Attention Leakage' by ensuring drones return to the FC upon task completion (Borrow Expiry)."
+  tracking: "Logged in traversals/ to ensure every AU delivery is signed and accounted for."
+
+operational_states:
+  - id: picking
+    description: "Agent is searching the library for the relevant context (Input gathering)."
+  - id: transit
+    description: "AU is moving through Hyperspace toward the target district."
+  - id: delivered
+    description: "Focus is locked on the implementation file (Execution start)."
+  - id: returning
+    description: "AU is being returned to the warehouse (Context cleanup)."

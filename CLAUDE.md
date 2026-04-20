@@ -178,6 +178,17 @@ Cross-server contracts that must not be broken:
 - **Python runtime**: Always `uv run` — never bare `python` or `pip`
 - **`prompt.md` files**: These are often notes or scratch files, not authoritative configuration. Do not treat them as instruction files.
 
+## Git Workflow Constraints
+
+- Do NOT autonomously create branches, rebase, or run extra git operations when the user only asks to commit.
+- Only perform the specific git action requested; ask before expanding scope.
+- Before any git work, run `git status` and `git diff --stat`, summarize what you see, and confirm it matches the task brief. If the working tree state doesn't match what was described, STOP and report — do not proceed.
+
+## Response Style
+
+- When asked for concrete output (commit messages, command sequences, file contents), produce the output directly. Make reasonable assumptions, note them at the end under "Assumptions". Do not ask clarifying questions unless genuinely blocked from starting.
+- Draft first, iterate after — never stall on ambiguity when a reasonable attempt is possible.
+
 ## Git Operations
 
 - **Push strategy**: Prefer `gh` CLI or HTTPS as fallback if SSH fails. Do not retry SSH more than once.

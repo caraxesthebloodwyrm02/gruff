@@ -94,10 +94,12 @@ class ExplorationRoutine {
   private config: ExplorationConfig;
   private startTime: number;
   private stats: ExplorationStats;
+  private loggedNodeModulesTraversal: boolean;
 
   constructor(config: ExplorationConfig) {
     this.config = config;
     this.startTime = Date.now();
+    this.loggedNodeModulesTraversal = false;
     this.stats = {
       totalFiles: 0,
       totalDirs: 0,
@@ -147,6 +149,9 @@ class ExplorationRoutine {
 
       if (stats.isDirectory()) {
         this.stats.totalDirs++;
+        if (!this.loggedNodeModulesTraversal && relPath.includes("node_modules")) {
+          this.loggedNodeModulesTraversal = true;
+        }
         results.push(...this.scanDirectory(fullPath, relPath));
       } else {
         this.stats.totalFiles++;
@@ -154,6 +159,8 @@ class ExplorationRoutine {
 
         // Pattern matching
         const matchesPattern = this.matchesPattern(relPath);
+        if (relPath.includes("node_modules") && matchesPattern) {
+        }
         if (matchesPattern) {
           this.stats.patternMatches++;
 
@@ -191,11 +198,27 @@ class ExplorationRoutine {
   private matchesPattern(filePath: string): boolean {
     if (!this.config.pattern) return true;
 
-    const pattern = this.config.pattern
-      .replace(/\*/g, ".*")
-      .replace(/\?/g, ".");
-    const regex = new RegExp(pattern);
-    return regex.test(filePath);
+    try {
+      // Convert glob to proper regex with anchoring
+      let patternRegex: string;
+      if (this.config.pattern.startsWith("*")) {
+        // Handle patterns like "*.ts" - match at end only
+        patternRegex = "^" + this.config.pattern
+          .replace(/\*/g, "[^/\\\\]*")
+          .replace(/\?/g, "[^/\\\\]") + "$";
+      } else {
+        // Handle other patterns
+        patternRegex = "^" + this.config.pattern
+          .replace(/\*/g, ".*")
+          .replace(/\?/g, ".") + "$";
+      }
+      
+      const regex = new RegExp(patternRegex);
+      return regex.test(filePath);
+    } catch (error) {
+      // Fall back to simple string matching for invalid patterns
+      return filePath.includes(this.config.pattern.replace(/\*/g, "").replace(/\?/g, ""));
+    }
   }
 
   /**
@@ -227,6 +250,12 @@ class ExplorationRoutine {
                 lines[Math.min(lines.length - 1, i + 1)],
               ],
             });
+            if (matches.length === limit) {
+            }
+            if (matches.length > limit) {
+            }
+            // Enforce limit after each match
+            if (matches.length >= limit) break;
           }
         }
       } catch {
@@ -245,32 +274,53 @@ function parseArgs(): ExplorationConfig {
   const config: ExplorationConfig = {
     rootDir: process.cwd(),
     mode: "shallow",
+    exclude: ["node_modules", ".git", ".DS_Store", ".env"],
   };
 
   for (let i = 0; i < args.length; i++) {
-    switch (args[i]) {
+    const arg = args[i];
+    const nextArg = args[i + 1];
+
+    switch (arg) {
       case "--root":
       case "-r":
+        if (!nextArg) {
+          throw new Error(`Missing value for ${arg}`);
+        }
         config.rootDir = args[++i];
         break;
       case "--pattern":
       case "-p":
+        if (!nextArg) {
+          throw new Error(`Missing value for ${arg}`);
+        }
         config.pattern = args[++i];
         break;
       case "--search":
       case "-s":
+        if (!nextArg) {
+          throw new Error(`Missing value for ${arg}`);
+        }
         config.search = args[++i];
         break;
       case "--mode":
       case "-m":
+        if (!nextArg) {
+          throw new Error(`Missing value for ${arg}`);
+        }
         config.mode = args[++i] as "shallow" | "deep";
         break;
       case "--exclude":
       case "-e":
-        config.exclude = (args[++i] || "").split(",");
+        config.exclude = nextArg
+          ? args[++i].split(",").map(ex => ex.trim()).filter(Boolean)
+          : [];
         break;
       case "--limit":
       case "-l":
+        if (!nextArg) {
+          throw new Error(`Missing value for ${arg}`);
+        }
         config.limit = parseInt(args[++i], 10);
         break;
     }
@@ -282,10 +332,25 @@ function parseArgs(): ExplorationConfig {
 // ── Main Execution ─────────────────────────────────────────────────────────────
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const config = parseArgs();
-  const routine = new ExplorationRoutine(config);
-  const result = routine.explore();
+  try {
+    const config = parseArgs();
+    const routine = new ExplorationRoutine(config);
+    const result = routine.explore();
 
-  console.log(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
+  } catch (error) {
+    console.error(JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      usage: {
+        "--root/-r": "Root directory to explore (default: current directory)",
+        "--pattern/-p": "File pattern to match (glob-like)",
+        "--search/-s": "Search term to find in files",
+        "--mode/-m": "Exploration mode: shallow or deep",
+        "--exclude/-e": "Comma-separated paths to exclude",
+        "--limit/-l": "Maximum results to return"
+      }
+    }, null, 2));
+    process.exit(1);
+  }
 }
 

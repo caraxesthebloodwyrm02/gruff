@@ -49,3 +49,7 @@ Generated during Phase A sync/reconcile across:
 ## Gate-2/3 relevance notes
 - New MCP servers (`nexus-server`, `school-server`) are now explicitly part of this delivery batch and will be build/test-validated in the verification phase.
 - Staircase artifacts are declarative Hogwarts routing primitives; included as source content (not generated artifacts).
+
+## See also (narrow ~72h review bundle)
+
+- **`12-narrow-72h-structured-review.md`** — GRID **#110** / **#118**, hogsmade submodule pin `c49c72f`, `RELEASE_READINESS`, explicit pytest scope, local WIP disclosure, reviewer checklist.

@@ -1,5 +1,5 @@
 {
-  "name": "@caraxesthebloodwyrm02/gruff",
+  "name": "@irfankabir002/gruff",
   "version": "0.1.0-rc.1",
   "description": "Workspace cockpit + trust-routing overlay — GRID design system tokens, voice guide, 4-quadrant TUI, and actor-scoring layer over the MCP fleet.",
   "type": "module",

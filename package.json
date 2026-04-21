@@ -31,8 +31,8 @@
     "node": ">=22"
   },
   "bin": {
-    "gruff": "./dist/cli.js",
-    "gruff-ingester": "./dist/trust/ingester.js"
+    "gruff": "dist/cli.js",
+    "gruff-ingester": "dist/trust/ingester.js"
   },
   "exports": {
     "./tokens.json": "./design-system/tokens.json",

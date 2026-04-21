@@ -92,5 +92,5 @@ Runs weekly via systemd timer ( Mondays 9am).
 
 ---
 
-**Version:** 0.1.1
+**Version:** 0.1.2
 **Outlook: CLEAN** — Workspace dressed for presentation.

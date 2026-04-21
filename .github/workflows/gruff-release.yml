@@ -1,4 +1,5 @@
 name: Gruff Release
+# Auto-trigger test
 
 on:
   push:

@@ -1,4 +1,4 @@
-# 🏰 Workspace — GRUFF Cockpit & Trust-Routing
+# 🏰 Gruff — Cockpit & Trust-Routing
 
 This repository acts as the umbrella for the Mangrove ecosystem, providing a unified control surface for telemetry, actor-scoring, and design-system reproducibility.
 
@@ -25,11 +25,11 @@ npm install -g @irfankabir002/gruff@next   # global: puts `gruff` + `gruff-inges
 
 | District | Path | Function |
 |---|---|---|
-| **Central Plaza** | `~/workspace/` | Entry point & root documentation |
-| **Foundation** | `CascadeProjects/` | Monorepo source (submodule) |
-| **Planes** | `planes/` | Architectural symlink map |
-| **Intelligence** | `~/.gruff/` | Trust store & ingester state |
+| **Central Plaza** | `~/gruff/` | Entry point & root documentation |
+| **Workspace** | `workspace/` | Main development tree |
+| **School** | `school/` | Practice & sandbox mode |
 | **Telemetry** | `~/.echoes/` | Authoritative audit stream |
+| **Intelligence** | `~/.gruff/` | Trust store & ingester state |
 
 ---
 
@@ -63,13 +63,34 @@ gruff actors --sql "SELECT tool, count(*) FROM events GROUP BY 1"
 
 ---
 
+## 🩺 Diagnostic Tool
+
+Health checks for workspace paths, code patterns, and structural issues.
+
+```bash
+# Stage 1: Path diagnostics only
+node scripts/diagnostic-paths.mjs
+
+# Stage 1 + 2: Paths + bug scan
+node scripts/diagnostic-paths.mjs --bugs
+
+# All stages: Paths + bugs + format checks
+node scripts/diagnostic-paths.mjs --bugs --format
+```
+
+Runs weekly via systemd timer ( Mondays 9am).
+
+---
+
 ## 📚 Core Reference
 
 - **SPEC.md** — Architecture, vision, and governance
 - **DESIGN.md** — Visual foundations & palette
 - **CLAUDE.md** — Agent charters & operational rules
 - **ONBOARDING.md** — Routine: school vs market modes
+- **docs/DIAGNOSTIC_PATHS.md** — Diagnostic tool documentation
 
 ---
 
+**Version:** 0.1.1
 **Outlook: CLEAN** — Workspace dressed for presentation.

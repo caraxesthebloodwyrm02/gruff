@@ -1,17 +1,17 @@
 {
   "name": "@irfankabir002/gruff",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.1",
   "description": "Workspace cockpit + trust-routing overlay — GRID design system tokens, voice guide, 4-quadrant TUI, and actor-scoring layer over the MCP fleet.",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Irfan Kabir <irfankabir02@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/caraxesthebloodwyrm02/workspace.git"
+    "url": "git+https://github.com/caraxesthebloodwyrm02/gruff.git"
   },
-  "homepage": "https://github.com/caraxesthebloodwyrm02/workspace#readme",
+  "homepage": "https://github.com/caraxesthebloodwyrm02/gruff#readme",
   "bugs": {
-    "url": "https://github.com/caraxesthebloodwyrm02/workspace/issues"
+    "url": "https://github.com/caraxesthebloodwyrm02/gruff/issues"
   },
   "keywords": [
     "cli",

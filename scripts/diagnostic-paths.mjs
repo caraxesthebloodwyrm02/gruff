@@ -894,7 +894,6 @@ console.log(`\n---\nSummary: ${results.filter(r => r.status === 'ok').length}/${
 const args = process.argv.slice(2);
 const ciMode = args.includes('--ci') || args.includes('-c');
 const scanBugs = args.includes('--bugs') || args.includes('-b');
-const scanBugs = args.includes('--bugs') || args.includes('-b');
 
 if (scanBugs) {
   console.log(`\n🐛 Bug Pattern Scan`);

@@ -9,6 +9,12 @@
 racks/
 design-system/
 hogsmade-design/
+dist/
+node_modules/
+.gruff/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
 
 # --- Ephemeral clones, caches, generated sandboxes ---
 tmp_repos/

@@ -1,0 +1,20 @@
+# Nested git repo — tracked separately
+workspace/
+
+# Symlinks into the workspace tree
+school/
+
+# Build / cache / runtime artifacts
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+*.log
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Backup files
+*.save

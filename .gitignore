@@ -7,7 +7,12 @@
 
 # --- Other repos / large trees (not this git history) ---
 racks/
-design-system/
+design-system/**
+# Exceptions: files required by build (scripts/extract-tokens.mjs) and npm publish (package.json "files")
+!design-system/README.md
+!design-system/colors_and_type.css
+!design-system/assets/
+!design-system/assets/*.svg
 hogsmade-design/
 dist/
 node_modules/

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Directory Map
 
 ```
-~/workspace/  (prince@Ubuntu; legacy caraxes root archived at /mnt/arch_data/home/caraxes/)
+~/gruff/workspace/  (prince@Ubuntu; legacy caraxes root archived at /mnt/arch_data/home/caraxes/)
 ├── CascadeProjects/         # Nerve center — hogsmade monorepo
 │   ├── Tools/MCPServers/    # 21 MCP servers (14 TS servers including afloat, craft, echoes, grid, harness, ori, etc., + 7 Python servers)
 │   ├── Components/          # shared-types, shared-resilience, shared-pipeline, scripts, tests
@@ -38,7 +38,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ├── plugins/                 # Custom plugins (caraxes, atlas-echoes)
 ├── scripts/                 # Workspace-level automation scripts
 ├── skills/                  # Skill definitions and context
-└── .echoes/                 # Echoes audit trail
+├── .echoes/                 # Echoes audit trail
+└── school/                  # Practice & sandbox mode
+    └── server/              # Symlink to school-server
 ```
 
 ## GitHub Accounts & Git Identity

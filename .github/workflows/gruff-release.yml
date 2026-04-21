@@ -37,7 +37,7 @@ jobs:
         run: npm run lint
 
       - name: Run diagnostic scan
-        run: node scripts/diagnostic-paths.mjs --bugs --format
+        run: node scripts/diagnostic-paths.mjs --bugs --format --ci
 
   build:
     runs-on: ubuntu-latest

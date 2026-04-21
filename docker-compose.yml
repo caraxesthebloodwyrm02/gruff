@@ -1,0 +1,20 @@
+services:
+  gruff-ingester:
+    build: .
+    container_name: gruff-ingester
+    restart: unless-stopped
+    volumes:
+      - ${HOME}/.echoes:/root/.echoes:ro
+      - ${HOME}/.gruff:/root/.gruff
+    environment:
+      - NODE_ENV=production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: echoes-network
+    external: true

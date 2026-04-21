@@ -1,9 +1,32 @@
 {
-  "name": "gruff",
-  "version": "0.1.0",
+  "name": "@caraxesthebloodwyrm02/gruff",
+  "version": "0.1.0-rc.1",
   "description": "Workspace cockpit + trust-routing overlay — GRID design system tokens, voice guide, 4-quadrant TUI, and actor-scoring layer over the MCP fleet.",
   "type": "module",
   "license": "Apache-2.0",
+  "author": "Irfan Kabir <irfankabir02@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caraxesthebloodwyrm02/workspace.git"
+  },
+  "homepage": "https://github.com/caraxesthebloodwyrm02/workspace#readme",
+  "bugs": {
+    "url": "https://github.com/caraxesthebloodwyrm02/workspace/issues"
+  },
+  "keywords": [
+    "cli",
+    "tui",
+    "ink",
+    "mcp",
+    "audit",
+    "trust-routing",
+    "design-system",
+    "gruff"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -26,8 +49,7 @@
     "schemas/trust-event-v1.schema.json",
     "templates/gruff.md",
     "README.md",
-    "LICENSE",
-    "NOTICE"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsup && node scripts/extract-tokens.mjs",

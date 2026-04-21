@@ -6,7 +6,14 @@ This repository acts as the umbrella for the Mangrove ecosystem, providing a uni
 
 ## [GATE: cockpit] ✓ PASS — Workspace Control Surface
 
-The [**`gruff`**](https://www.npmjs.com/package/gruff) npm package layers presentation and routing logic over the existing MCP fleet.
+The [**`@caraxesthebloodwyrm02/gruff`**](https://www.npmjs.com/package/@caraxesthebloodwyrm02/gruff) npm package layers presentation and routing logic over the existing MCP fleet.
+
+**Install (pre-release)** — requires Node ≥22; `better-sqlite3` builds a native binding on install.
+
+```bash
+npx @caraxesthebloodwyrm02/gruff@next              # one-shot
+npm install -g @caraxesthebloodwyrm02/gruff@next   # global: puts `gruff` + `gruff-ingester` on PATH
+```
 
 - **Cockpit UI** — `npx gruff` renders a 4-quadrant dashboard (MCP / Inference / Agency / Horizon).
 - **Trust Routing** — SQL-backed actor profiling that partitions the fleet into **School** (full reach) and **Practice** (sandboxed).
@@ -28,7 +35,7 @@ The [**`gruff`**](https://www.npmjs.com/package/gruff) npm package layers presen
 
 ## 🛠️ Operational Routine
 
-### Fresh Initialization
+### Contributing / from source
 ```bash
 npm install && npm run build
 gruff init-automation

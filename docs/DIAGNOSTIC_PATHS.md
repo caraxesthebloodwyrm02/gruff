@@ -22,25 +22,35 @@ node scripts/diagnostic-paths.mjs --bugs --format
 | 1 | 0-30% | Path diagnostics, symlink validation, canonical alignment |
 | 2 | 30-65% | Bug pattern scan (20 regex rules) |
 | 3 | 65-80% | Format checks (imports, functions, attributes) |
-| 4 | 80-100% | Report generation |
+| 4 | 80-100% | Verbose features + report generation |
 
 ## Features
 
-### Path Diagnostics
+### Stage 1: Path Diagnostics
 - Detects broken, stale, or diverged symlinks
 - Validates paths point to canonical: `/mnt/arch_data/home/caraxes`
 - Reports missing directories
 
-### Bug Patterns (20 rules)
-- **Critical**: hardcoded secrets, eval(), innerHTML (XSS)
+### Stage 2: Bug Patterns (20 rules)
+- **Critical**: hardcoded secrets, eval(), innerHTML (XSS), SQL/command injection
 - **Warning**: TODO/FIXME, debug flags, empty catch, any type, npm global install, sudo
 - **Info**: console.log, process.env, hardcoded ports, async patterns
 
-### Format Checks
+### Stage 3: Format Checks
 - **Import order**: Validates relative imports don't follow external
 - **Function metrics**: Column count (parameters), async complexity
-- **Attributes**: Property count, type annotations
-- **Properties**: Deep chain detection
+- **Attributes**: Property count, type annotations, labels
+- **Properties**: Deep chain detection, verbose properties
+
+### Stage 4: Verbose Features
+- **Annotations**: JSDoc coverage, @ts-ignore detection
+- **Exports**: Default/named exports, re-exports
+- **Error handling**: try/catch, throw statements, empty catch blocks
+- **Async patterns**: .then() chains, unhandled promises
+- **Constants**: Magic numbers, hardcoded strings, URLs
+- **Security**: SQL injection, command injection, eval, new Function
+- **Performance**: Nested loops, excessive .map()
+- **Testing**: Test suites, expect() assertions
 
 ## Configuration
 

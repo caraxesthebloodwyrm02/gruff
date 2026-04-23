@@ -10,6 +10,14 @@ type GridConfig struct {
 	Rows       uint32 `json:"rows"`
 }
 
+// maxCoord is the upper bound used when clamping out-of-range coordinates.
+// Go spec says converting a floating-point value that does not fit in the
+// destination type produces an implementation-dependent result, so any
+// NaN / ±Inf / very-large float must be snapped to a concrete value before
+// the uint32 cast. math.MaxInt32 is well above any realistic grid size and
+// leaves headroom for arithmetic on the result.
+const maxCoord uint32 = math.MaxInt32
+
 // Quantize maps a canvas-space point to a grid cell.
 // Returns ok=false for NaN/Inf or otherwise unrepresentable input.
 // In-plane coordinates outside [0, width) x [0, height) are clamped
@@ -64,6 +72,25 @@ func (g GridConfig) Quantize(x, y float32) (col, row uint32, ok bool) {
 
 func isNaNOrInf(f float32) bool {
 	return math.IsNaN(float64(f)) || math.IsInf(float64(f), 0)
+}
+
+func quantizeAxis(v float32, cellPx, minCell uint32) uint32 {
+	if cellPx == 0 {
+		return minCell
+	}
+	f := float64(v)
+	if math.IsNaN(f) || f <= 0 {
+		return minCell
+	}
+	raw := f / float64(cellPx)
+	if raw >= float64(maxCoord) {
+		return maxCoord
+	}
+	cell := uint32(raw)
+	if cell < minCell {
+		cell = minCell
+	}
+	return cell
 }
 
 // CellOrigin returns the pixel coordinate of a cell's top-left corner.

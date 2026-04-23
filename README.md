@@ -7,6 +7,9 @@
 
 > Workspace cockpit + trust-routing overlay — GRID design system tokens, voice guide, 4-quadrant TUI, and actor-scoring layer over the MCP fleet.
 
+> ⚠️ **Internal / workspace tool — not supported for third-party production use.**
+> Published to npm under the `next` dist-tag for owner-workspace installability and CI only. Trust-scoring features assume the audit plane (`~/.echoes/audit.ndjson`) is live; run inside the CascadeProjects workspace for the intended experience. Expect breaking changes without semver notice until a `latest` tag ships.
+
 ---
 
 ## Quick Start

@@ -1,0 +1,8 @@
+cmd/notebook-engine/notebook-engine
+*.test
+*.out
+vendor/
+.DS_Store
+.vscode/
+.idea/
+notebook-engine

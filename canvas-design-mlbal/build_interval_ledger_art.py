@@ -12,8 +12,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
-FONTS = ROOT / "canvas-fonts"
-OUT = ROOT / "interval-ledger.png"
+FONTS = ROOT / 'canvas-fonts'
+OUT = ROOT / 'interval-ledger.png'
 
 W, H = 2400, 3000
 M = 140
@@ -85,7 +85,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
 
     # Mood bands (local solar-ish day)
     if 5.0 <= h < 8.0:
-        mood, note = "lift", "cool dawn · thin air"
+        mood, note = 'lift', 'cool dawn · thin air'
         paper, ink, muted, grid_dot, accent, fine = (
             (238, 242, 248),
             (32, 44, 62),
@@ -96,7 +96,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
         )
         bloom = ((220, 228, 248), (200, 216, 240))
     elif 8.0 <= h < 12.0:
-        mood, note = "bloom", "morning yellow · opening"
+        mood, note = 'bloom', 'morning yellow · opening'
         paper, ink, muted, grid_dot, accent, fine = (
             (253, 249, 232),
             (42, 36, 28),
@@ -112,7 +112,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
             (220, 190, 80),
         )
     elif 12.0 <= h < 15.0:
-        mood, note = "glare", "midday white · high edge"
+        mood, note = 'glare', 'midday white · high edge'
         paper, ink, muted, grid_dot, accent, fine = (
             (252, 252, 248),
             (28, 32, 36),
@@ -123,7 +123,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
         )
         bloom = ((255, 244, 220), (240, 236, 230))
     elif 15.0 <= h < 19.0:
-        mood, note = "tide", "afternoon drift · long shadows"
+        mood, note = 'tide', 'afternoon drift · long shadows'
         paper, ink, muted, grid_dot, accent, fine = (
             (246, 242, 234),
             (34, 38, 44),
@@ -134,7 +134,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
         )
         bloom = ((235, 210, 180), (220, 200, 170))
     elif 19.0 <= h < 22.0:
-        mood, note = "ember", "evening warmth · settling"
+        mood, note = 'ember', 'evening warmth · settling'
         paper, ink, muted, grid_dot, accent, fine = (
             (248, 236, 226),
             (48, 32, 28),
@@ -145,7 +145,7 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
         )
         bloom = ((240, 180, 140), (220, 150, 120))
     else:
-        mood, note = "basin", "night pool · low register"
+        mood, note = 'basin', 'night pool · low register'
         paper, ink, muted, grid_dot, accent, fine = (
             (232, 234, 240),
             (26, 30, 48),
@@ -171,8 +171,8 @@ def compute_skin(now: datetime | None = None) -> ClockSkin:
 
 
 def load_fonts() -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
-    sans = FONTS / "LiberationSans-Regular.ttf"
-    mono = FONTS / "DejaVuSansMono.ttf"
+    sans = FONTS / 'LiberationSans-Regular.ttf'
+    mono = FONTS / 'DejaVuSansMono.ttf'
     if not sans.is_file() or not mono.is_file():
         raise FileNotFoundError(f"Expected fonts in {FONTS}")
     return (
@@ -190,7 +190,7 @@ def draw_blooms(
     y1: int,
     seed: int,
 ) -> None:
-    if skin.mood != "bloom":
+    if skin.mood != 'bloom':
         return
     rng = random.Random(seed)
     for _ in range(38):
@@ -328,7 +328,7 @@ def main() -> None:
     skin = compute_skin(now)
     font_sans, font_mono = load_fonts()
 
-    img = Image.new("RGB", (W, H), skin.paper)
+    img = Image.new('RGB', (W, H), skin.paper)
     draw = ImageDraw.Draw(img)
 
     inner_l = M + 48
@@ -339,12 +339,12 @@ def main() -> None:
     draw_blooms(draw, skin, inner_l, inner_t, inner_r, inner_t + 520, seed)
     draw_field_grid(draw, inner_l, inner_t, inner_r, inner_t + 520, skin.grid_dot)
 
-    title = "INTERVAL LEDGER"
+    title = 'INTERVAL LEDGER'
     bb = draw.textbbox((0, 0), title, font=font_sans)
     th = bb[3] - bb[1]
     draw.text((inner_l, M + 8), title, font=font_sans, fill=skin.ink)
 
-    time_s = now.strftime("%H:%M")
+    time_s = now.strftime('%H:%M')
     sub = f"{time_s} local · {skin.tempo:.1f} bpm · {skin.mood} — {skin.mood_note}"
     draw.text((inner_l, M + 8 + th + 12), sub, font=font_mono, fill=skin.muted)
 
@@ -375,9 +375,9 @@ def main() -> None:
     gap = 100
 
     registers = [
-        ("M", register_maestro, y_base),
-        ("C", register_chronicler, y_base + reg_h + gap),
-        ("S", register_sentry, y_base + 2 * (reg_h + gap)),
+        ('M', register_maestro, y_base),
+        ('C', register_chronicler, y_base + reg_h + gap),
+        ('S', register_sentry, y_base + 2 * (reg_h + gap)),
     ]
 
     for label, painter, y0 in registers:
@@ -393,12 +393,12 @@ def main() -> None:
 
     col_x = reg_right + 36
     notes = [
-        "CAT. MLB-1",
-        "—",
-        "k 500",
-        "t 45",
-        "e 10",
-        "—",
+        'CAT. MLB-1',
+        '—',
+        'k 500',
+        't 45',
+        'e 10',
+        '—',
         f"tempo {skin.tempo:.1f}",
         f"mood {skin.mood}",
         f"clock {time_s}",
@@ -410,7 +410,7 @@ def main() -> None:
             (col_x, ny),
             line,
             font=font_mono,
-            fill=skin.ink if line.startswith("CAT") else skin.muted,
+            fill=skin.ink if line.startswith('CAT') else skin.muted,
         )
         ny += line_gap
 
@@ -425,9 +425,9 @@ def main() -> None:
 
     draw_frame(draw, skin.ink, skin.fine)
 
-    img.save(OUT, "PNG", dpi=(300, 300))
+    img.save(OUT, 'PNG', dpi=(300, 300))
     print(f"Wrote {OUT}  (tempo={skin.tempo:.1f} mood={skin.mood} at {time_s})")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

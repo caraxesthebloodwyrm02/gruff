@@ -60,7 +60,11 @@ CellOrigin(col, row) → (x, y):
 | Endpoint | Method | Response | Description |
 |----------|--------|----------|-------------|
 | `GET /` | GET | HTML | Single-page canvas shell |
-| `GET /api/grid` | GET | JSON | Grid config `{cell_px, margin_cols}` |
+| `GET /api/grid` | GET | JSON | Grid config `{cell_px, margin_cols, cols, rows}` |
+| `GET /api/blocks` | GET | JSON | List all blocks |
+| `POST /api/blocks` | POST | JSON | Create block (start/end or bounds shape) |
+| `DELETE /api/blocks/:id` | DELETE | — | Delete block by ID |
+| `POST /api/blocks/clear` | POST | — | Clear all blocks |
 | `GET /static/{file}` | GET | JS | Embedded canvas renderer |
 
 ### Design System
@@ -142,8 +146,11 @@ curl -s http://127.0.0.1:8080/api/grid  # All implementations
 |------|---------|
 | `cmd/notebook-engine/main.go` | CLI flags + Gin startup |
 | `internal/grid/grid.go` | GridConfig struct + Quantize + CellOrigin |
-| `internal/grid/grid_test.go` | 4 unit tests |
+| `internal/grid/grid_test.go` | 14 unit tests (quantize, boundary, NaN/Inf, subnormal) |
+| `internal/blocks/blocks.go` | Block store + DTOs + margin enforcement |
+| `internal/blocks/blocks_test.go` | 9 unit tests (shapes, validation, lifecycle) |
 | `internal/handlers/handlers.go` | Gin handlers + embedded static |
+| `internal/handlers/handlers_test.go` | 14 HTTP tests (endpoints, CRUD, errors) |
 | `internal/handlers/static/notebook.js` | Canvas renderer + pointer gestures |
 | `go.mod` | Module: `notebook-engine`, Gin v1.9.1 |
 

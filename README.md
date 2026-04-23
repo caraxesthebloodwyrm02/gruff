@@ -1,6 +1,6 @@
 # 🏰 Central Plaza (Local Root)
 
-Welcome to the **Mangrove Ecosystem** root directory. 
+Welcome to the **Mangrove Ecosystem** root directory.
 
 This directory (`~/gruff/`) serves as the local filesystem umbrella holding the dual-layer architecture defined by the **School Charter** and **TUV-001**.
 

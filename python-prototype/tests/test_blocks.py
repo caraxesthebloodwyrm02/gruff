@@ -3,7 +3,12 @@ from uuid import UUID
 import pytest
 from pydantic import ValidationError
 
-from notebook_engine.blocks import BlockCreate, InMemoryBlockStore, create_block_for_grid
+from notebook_engine.blocks import (
+    BlockCreate,
+    BlockValidationError,
+    InMemoryBlockStore,
+    create_block_for_grid,
+)
 
 
 def test_block_create_from_bounds() -> None:
@@ -51,9 +56,48 @@ def test_block_id_is_uuid4_string() -> None:
     assert parsed.version == 4
 
 
+def test_create_block_preserves_label_and_tone() -> None:
+    store = InMemoryBlockStore()
+    payload = BlockCreate(
+        min_col=2,
+        max_col=3,
+        min_row=1,
+        max_row=2,
+        label='  Sprint Planning  ',
+        tone='mint',
+    )
+    created = create_block_for_grid(store=store, payload=payload, margin_cols=2)
+    assert created.label == 'Sprint Planning'
+    assert created.tone == 'mint'
+
+
 def test_create_block_rejects_margin_violation() -> None:
     store = InMemoryBlockStore()
     payload = BlockCreate(min_col=1, max_col=2, min_row=0, max_row=1)
-    with pytest.raises(ValueError, match="min_col must be >= margin_cols"):
+    with pytest.raises(BlockValidationError, match='min_col must be >= margin_cols'):
         create_block_for_grid(store=store, payload=payload, margin_cols=2)
 
+
+def test_create_block_rejects_unknown_tone() -> None:
+    store = InMemoryBlockStore()
+    payload = BlockCreate(
+        min_col=2,
+        max_col=3,
+        min_row=0,
+        max_row=1,
+        tone='neon',
+    )
+    with pytest.raises(BlockValidationError, match='tone must be one of'):
+        create_block_for_grid(store=store, payload=payload, margin_cols=2)
+
+
+def test_create_block_rejects_invalid_range_with_structured_metadata() -> None:
+    store = InMemoryBlockStore()
+    payload = BlockCreate(min_col=4, max_col=2, min_row=1, max_row=3)
+
+    with pytest.raises(BlockValidationError) as exc_info:
+        create_block_for_grid(store=store, payload=payload, margin_cols=2)
+
+    error = exc_info.value.to_request_error()
+    assert error['loc'] == ('body', 'max_col')
+    assert 'min_col must be <=' in error['msg'] or 'max_col' in error['loc']

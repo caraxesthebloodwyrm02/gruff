@@ -1,0 +1,982 @@
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+index 5104ac9..8b7cdd7 100644
+--- a/.vscode/settings.json
++++ b/.vscode/settings.json
+@@ -1,3 +1,3 @@
+ {
+-  "python.defaultInterpreterPath": "/home/caraxes/CascadeProjects/Projects/GRID-main/.venv/bin/python"
++  "python.defaultInterpreterPath": "/home/irfankabir/workspace/CascadeProjects/Projects/GRID-main/.venv/bin/python"
+ }
+diff --git a/research/experiments/rl/GATE.md b/research/experiments/rl/GATE.md
+index a94b916..51a14ed 100644
+--- a/research/experiments/rl/GATE.md
++++ b/research/experiments/rl/GATE.md
+@@ -1,28 +1,30 @@
+ # GATE — RL Training Loop Activation
+ 
+ > The RL loop runs on real signal. Feeding a stub policy synthetic rewards is noise, not learning.
+-> **STATUS: All 7 gates green. Deep RL is active.**
++> **STATUS: Reconciled 2026-04-20 — gate checklist remains partially complete; deep RL is not yet active.**
+ 
+ ## Decision
+ 
+-**Decision date:** 2026-04-20
+-**Decision:** Deep RL activation complete. `dispatch.py --no-seed` now trains real policies.
++**Decision date:** 2026-04-20  
++**Reconciliation note (same day):** runtime verification shows `dispatch.py` still reports a stub policy path (`status=insufficient_data` and "POLICY is stub"), so prior "all 7 gates green" wording was inaccurate.
+ 
+-## Implementation Summary
++## Current Gate Status (runtime-verified)
+ 
+ | Component | Status | Notes |
+ |-----------|--------|-------|
+ | Policy Network | ✅ | `AgenticSACPolicy` with encoder, SAC actor, double Q-networks |
+ | Replay Buffer | ✅ | `ReplayBuffer` with partitioned buffers (DS1-DS6) |
+-| Optimizer Step | ✅ | TD error, policy gradient, entropy regularization, temperature update |
+-| Checkpoint | ✅ | `save()` / `load()` with full state serialization |
+-| Trace Ingestion | ✅ | `RuntimeBehaviorTracer` in `AgentExecutor.execute_task()` |
+-| Model Registry | ✅ | `ModelType.REINFORCEMENT` in `FrontierIntelligenceSystem` |
++| Optimizer Step | ⚠️ | Dispatch harness still reports policy update pending (stub path). |
++| Checkpoint | ⚠️ | Not treated as active gate completion until non-stub training path is exercised end-to-end. |
++| Trace Ingestion | ⚠️ | Requires real execution trace ingestion path to be verified in loop activation run. |
++| Model Registry | ⚠️ | Registry wiring must be validated together with non-stub training activation. |
+ 
+-## Test Results
++## Verification Snapshot (2026-04-20)
+ 
+-- **68 passing tests** in `tests/agentic/rl/`
+-- Full SAC pipeline verified: forward pass, Q-values, checkpoint save/load
++- `uv run pytest tests/agentic/rl/ -q --tb=short -m unit` exits 0.
++- `uv run python research/experiments/rl/dispatch.py --steps 3 --seed-sessions 6` exits 0, but reports:
++  - `train_step_done status=insufficient_data`
++  - `POLICY is stub — rewards computed, policy update pending SAC/PPO impl`
+ 
+ ## Production-Quality Components
+ 
+@@ -37,11 +39,17 @@ ## Lightweight Adaptation Path (Optional)
+ - Tune `RewardConfig` weights (`w1`, `w2`, `w3`) online based on episode-return gradients
+ - Tune `GridEnvironment` keyword thresholds from reward feedback
+ 
+-## Related
++## Next Activation Targets
++
++- Implement and validate non-stub optimizer updates in `dispatch.py` loop execution.
++- Verify checkpoint save/load on the active (non-stub) training path.
++- Switch ingestion from synthetic seeding to real runtime traces and re-run activation checks.
++- Confirm registry path is used by active training flow.
+ 
++## Related
+ - `POLICY.md` — architecture sketch for the policy network
+ - `BUFFER.md` — replay buffer interface
+ - `LOOP.md` — training loop step sequence
+-- `dispatch.py` — wiring harness (now training-capable)
+-- `tests/agentic/rl/` — 68 passing unit tests
++- `dispatch.py` — wiring harness (currently stub-policy execution path)
++- `tests/agentic/rl/` — RL unit test suite (passes under current scaffold)
+ - `research/rl-datasheets.md` — DS-1 Agentic Behavioral Intelligence full spec
+diff --git a/src/application/mothership/main.py b/src/application/mothership/main.py
+index 7fd2caf..aa79ab4 100644
+--- a/src/application/mothership/main.py
++++ b/src/application/mothership/main.py
+@@ -458,6 +458,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+                 raise RuntimeError("Safety enforcement must initialize in production") from e
+             logger.warning("Continuing startup in development mode (safety will fail closed)")
+ 
++        # Validate rate-limiter secret key (fail-fast in production if RATE_LIMIT_SECRET unset)
++        try:
++            from safety.api.rate_limiter import SecurityConfig as _RateLimiterConfig
++
++            _RateLimiterConfig.validate_secrets()
++            logger.info("Rate limiter secret key validated")
++        except RuntimeError as _e:
++            logger.error(f"Rate limiter secret validation failed: {_e}")
++            if settings.is_production:
++                raise
++            logger.warning("Rate limiter operating with insecure key in development mode")
++        except ImportError:
++            logger.warning("safety.api.rate_limiter not importable — rate limiter secret not validated")
++
+         if hasattr(app.state, "parasite_guard"):
+             try:
+                 from infrastructure.event_bus.event_system import get_eventbus
+diff --git a/src/grid/services/llm/llm_client.py b/src/grid/services/llm/llm_client.py
+index 21b50de..cf74c1a 100644
+--- a/src/grid/services/llm/llm_client.py
++++ b/src/grid/services/llm/llm_client.py
+@@ -105,19 +105,60 @@ async def generate(self, prompt: str, config: LLMConfig | None = None) -> LLMRes
+                 logger.error(f"Ollama generate failed: {e}")
+                 raise
+ 
+-    async def chat(self, messages: list[LLMMessage], config: LLMConfig | None = None) -> LLMResponse:
++    async def chat(
++        self,
++        messages: list[LLMMessage],
++        config: LLMConfig | None = None,
++        *,
++        think: bool | str | None = None,
++        tools: list[dict[str, Any]] | None = None,
++    ) -> LLMResponse:
++        """Generate a chat response.
++
++        Args:
++            messages: Conversation history.
++            config: LLMConfig (temperature, max_tokens, model, ...).
++            think: Thinking mode (per https://docs.ollama.com/thinking).
++                ``True``/``False`` for Qwen3/DeepSeek. For gpt-oss pass
++                ``"low"``, ``"medium"``, or ``"high"``. ``None`` means do
++                not send a ``think`` field (default; preserves legacy
++                behaviour for models that don't support it).
++            tools: Optional tool schema list (per
++                https://docs.ollama.com/tool-calling). When provided, the
++                response's ``message.tool_calls`` is propagated in
++                ``LLMResponse.metadata``.
++
++        Returns:
++            LLMResponse. ``metadata`` carries the raw response, including
++            ``message.thinking`` for thinking-capable models and
++            ``message.tool_calls`` for tool-calling models.
++        """
+         cfg = config or LLMConfig()
+         start_time = time.time()
+ 
+         formatted_messages = [{"role": m.role, "content": m.content} for m in messages]
+ 
++        # Only pass optional fields when explicitly requested — the Ollama
++        # Python SDK accepts them but models that don't support them ignore
++        # the field gracefully. We avoid sending ``think`` unless asked to
++        # preserve existing call shapes.
++        chat_kwargs: dict[str, Any] = {
++            "model": cfg.model,
++            "messages": formatted_messages,
++            "options": {
++                "temperature": cfg.temperature,
++                "num_predict": cfg.max_tokens,
++                "stop": cfg.stop,
++            },
++        }
++        if think is not None:
++            chat_kwargs["think"] = think
++        if tools is not None:
++            chat_kwargs["tools"] = tools
++
+         async with self._semaphore:
+             try:
+-                response = await self._client.chat(
+-                    model=cfg.model,
+-                    messages=formatted_messages,
+-                    options={"temperature": cfg.temperature, "num_predict": cfg.max_tokens, "stop": cfg.stop},
+-                )
++                response = await self._client.chat(**chat_kwargs)
+ 
+                 latency_ms = int((time.time() - start_time) * 1000)
+ 
+diff --git a/src/tools/rag/config.py b/src/tools/rag/config.py
+index 758cbe0..c614908 100644
+--- a/src/tools/rag/config.py
++++ b/src/tools/rag/config.py
+@@ -56,6 +56,7 @@ class RAGConfig:
+     # Ollama configuration
+     ollama_base_url: str = "http://localhost:11434"  # Local Ollama
+     ollama_cloud_url: str | None = None  # Cloud Ollama URL if using cloud
++    ollama_api_key: str | None = None  # API key for authenticated cloud Ollama (sent as Bearer token)
+ 
+     # External API provider configuration
+     openai_api_key: str | None = None  # OpenAI API key
+@@ -128,6 +129,7 @@ def from_env(cls) -> "RAGConfig":
+             # Ollama config
+             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+             ollama_cloud_url=os.getenv("OLLAMA_CLOUD_URL"),
++            ollama_api_key=os.getenv("OLLAMA_API_KEY") or None,
+             # External API provider config
+             openai_api_key=os.getenv("OPENAI_API_KEY"),
+             openai_base_url=os.getenv("OPENAI_BASE_URL") or os.getenv("RAG_LLM_OPENAI_BASE"),
+diff --git a/src/tools/rag/embeddings/nomic_v2.py b/src/tools/rag/embeddings/nomic_v2.py
+index 5ed1dbf..d8c0e3c 100644
+--- a/src/tools/rag/embeddings/nomic_v2.py
++++ b/src/tools/rag/embeddings/nomic_v2.py
+@@ -122,12 +122,21 @@ def embed(self, text: str) -> list[float]:
+                     # For other errors, continue to next model if available
+                     continue
+ 
+-                # Use HTTP API
++                # Use HTTP API — prefer the new /api/embed endpoint, fall back to
++                # the legacy /api/embeddings endpoint for older Ollama servers.
++                # New endpoint: {"model": ..., "input": str | list[str]} -> {"embeddings": [[...]]}
++                # Legacy endpoint: {"model": ..., "prompt": str}         -> {"embedding": [...]}
+                 with httpx.Client(timeout=self.timeout) as client:
+                     with self._breaker:
+                         response = client.post(
+-                            f"{self.base_url}/api/embeddings", json={"model": model_name, "prompt": text}
++                            f"{self.base_url}/api/embed", json={"model": model_name, "input": text}
+                         )
++                        if response.status_code == 404:
++                            # Older Ollama server — retry against legacy endpoint
++                            response = client.post(
++                                f"{self.base_url}/api/embeddings",
++                                json={"model": model_name, "prompt": text},
++                            )
+                     if response.status_code == 404:
+                         last_error = Exception(f"Model '{model_name}' not found (404)")
+                         continue  # Try next model
+diff --git a/src/tools/rag/indexer/distributed_spark_indexer.py b/src/tools/rag/indexer/distributed_spark_indexer.py
+index a8ab198..413ec39 100644
+--- a/src/tools/rag/indexer/distributed_spark_indexer.py
++++ b/src/tools/rag/indexer/distributed_spark_indexer.py
+@@ -259,14 +259,28 @@ def create_spark_job_notebook(
+ # Define embedding UDF
+ @udf("array<float>")
+ def embed_text(text):
+-    """Generate embedding for text using local Ollama."""
++    """Generate embedding for text using local Ollama.
++
++    Uses the /api/embed endpoint (response shape: {{"embeddings": [[...]]}}),
++    falling back to the legacy /api/embeddings endpoint (response shape:
++    {{"embedding": [...]}}) if the server is older.
++    """
+     try:
+         response = requests.post(
+-            "http://localhost:11434/api/embeddings",
+-            json={{"model": "{embedding_model}", "prompt": text}}
++            "http://localhost:11434/api/embed",
++            json={{"model": "{embedding_model}", "input": text}}
+         )
++        if response.status_code == 404:
++            response = requests.post(
++                "http://localhost:11434/api/embeddings",
++                json={{"model": "{embedding_model}", "prompt": text}}
++            )
+         if response.status_code == 200:
+-            return response.json()["embedding"]
++            data = response.json()
++            if "embeddings" in data and data["embeddings"]:
++                return data["embeddings"][0]
++            if "embedding" in data:
++                return data["embedding"]
+         return None
+     except Exception as e:
+         print(f"Embedding failed: {{e}}")
+diff --git a/src/tools/rag/llm/factory.py b/src/tools/rag/llm/factory.py
+index 2f1f589..3031924 100644
+--- a/src/tools/rag/llm/factory.py
++++ b/src/tools/rag/llm/factory.py
+@@ -1,11 +1,17 @@
+ """Factory for creating LLM providers.
+ 
+-Supports two resolution paths:
+-1. **Fallback chain** (default): Load config/ollama-models.json, probe providers
+-   in order, return the first healthy one. Activated when RAG_LLM_MODE=auto or
+-   when ollama-models.json exists and no explicit mode is set.
+-2. **Legacy explicit mode**: RAG_LLM_MODE=local|cloud|external|copilot picks a
+-   single provider directly from env vars (original behavior, still supported).
++Supports three resolution paths:
++1. **Catalog-based auto-select** (opt-in, docs-aligned): When
++   ``RAG_LLM_MODE=auto`` *and* ``RAG_LLM_AUTO_SELECT=catalog``, delegate to
++   :func:`tools.rag.auto_selector.select` with the caller's ``task_type``.
++   Honours UNPROVISIONED MODE and the docs-segmented catalog in
++   ``config/ollama-model-catalog.json``.
++2. **Fallback chain** (default auto): Load ``config/ollama-models.json``, probe
++   providers in order, return the first healthy one. Activated when
++   ``RAG_LLM_MODE=auto`` (without ``RAG_LLM_AUTO_SELECT=catalog``) or when
++   ``ollama-models.json`` exists and no explicit mode is set.
++3. **Legacy explicit mode**: ``RAG_LLM_MODE=local|cloud|external|copilot``
++   picks a single provider directly from env vars (original behavior).
+ """
+ 
+ import logging
+@@ -50,6 +56,48 @@ def _use_fallback_chain() -> bool:
+     return False
+ 
+ 
++def _use_catalog_auto_select() -> bool:
++    """Check whether to use the catalog-based auto-selector.
++
++    Opt-in: requires ``RAG_LLM_MODE=auto`` *and*
++    ``RAG_LLM_AUTO_SELECT=catalog``. Defaults off to preserve existing
++    behaviour and passing tests.
++    """
++    if os.environ.get("RAG_LLM_MODE", "").lower() != "auto":
++        return False
++    return os.environ.get("RAG_LLM_AUTO_SELECT", "").lower() == "catalog"
++
++
++def _provider_from_entry(entry: "ModelEntry") -> BaseLLMProvider:  # noqa: F821
++    """Instantiate a ``BaseLLMProvider`` from a catalog :class:`ModelEntry`.
++
++    Mapping:
++
++    * ``source == "local"`` or ``"cloud-bridged"`` → :class:`OllamaLocalLLM`
++      talking to the local daemon at ``OLLAMA_BASE_URL`` (the daemon handles
++      any cloud offloading for ``:cloud``-suffixed models).
++    * ``source == "cloud"`` → :class:`OllamaCloudLLM` talking to the upstream
++      Ollama cloud URL. Requires network (blocked under UNPROVISIONED).
++    * ``source == "simple"`` (synthetic fallback) →
++      :class:`tools.rag.llm.simple.SimpleLLM`.
++    """
++    base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
++    if entry.source in ("local", "cloud-bridged"):
++        return OllamaLocalLLM(model=entry.name, base_url=base_url)
++    if entry.source == "cloud":
++        cloud_url = os.environ.get("OLLAMA_CLOUD_URL", "https://ollama.com")
++        _cloud_api_key = os.environ.get("OLLAMA_API_KEY") or None
++        if not _cloud_api_key:
++            logger.warning(
++                "Cloud Ollama mode active but OLLAMA_API_KEY is not set — requests will be sent unauthenticated"
++            )
++        return OllamaCloudLLM(model=entry.name, cloud_url=cloud_url, api_key=_cloud_api_key)
++    # Synthetic fallback from auto_selector (no catalog match)
++    from .simple import SimpleLLM
++
++    return SimpleLLM()
++
++
+ def _provider_from_resolved(resolved: "ResolvedProvider") -> BaseLLMProvider:  # noqa: F821
+     """Instantiate a BaseLLMProvider from a ResolvedProvider."""
+     from ..model_resolver import ResolvedProvider  # noqa: F811 — runtime import for type
+@@ -60,13 +108,19 @@ def _provider_from_resolved(resolved: "ResolvedProvider") -> BaseLLMProvider:  #
+         return OllamaLocalLLM(
+             model=resolved.model,
+             base_url=resolved.url or "http://localhost:11434",
+-            timeout=resolved.timeout_ms // 1000,
++            timeout=max(1, resolved.timeout_ms // 1000),
+         )
+     if resolved.type in ("ollama-cloud",):
++        _cloud_api_key = os.environ.get("OLLAMA_API_KEY") or None
++        if not _cloud_api_key:
++            logger.warning(
++                "Cloud Ollama mode active but OLLAMA_API_KEY is not set — requests will be sent unauthenticated"
++            )
+         return OllamaCloudLLM(
+             model=resolved.model,
+             cloud_url=resolved.url or "",
+-            timeout=resolved.timeout_ms // 1000,
++            timeout=max(1, resolved.timeout_ms // 1000),
++            api_key=_cloud_api_key,
+         )
+     if resolved.type == "openai":
+         from .openai import OpenAILLM
+@@ -88,22 +142,57 @@ def _provider_from_resolved(resolved: "ResolvedProvider") -> BaseLLMProvider:  #
+ 
+ 
+ def get_llm_provider(
+-    provider_type: str | None = None, config: RAGConfig | None = None, model: str | None = None
++    provider_type: str | None = None,
++    config: RAGConfig | None = None,
++    model: str | None = None,
++    *,
++    task_type: str | None = None,
++    scope: str | None = None,
++    attributes: dict | None = None,
++    session_category: str | None = None,
+ ) -> BaseLLMProvider:
+-    """Get an LLM provider with fallback-chain or legacy explicit selection.
++    """Get an LLM provider with catalog / fallback-chain / legacy selection.
++
++    Resolution order when ``provider_type`` and ``model`` are both ``None``:
+ 
+-    When RAG_LLM_MODE=auto (or unset with ollama-models.json present), uses the
+-    fallback chain from config/ollama-models.json — probing cloud first, falling
+-    back to local. Otherwise, falls through to the legacy single-provider path.
++    1. **Catalog auto-select** if ``RAG_LLM_MODE=auto`` and
++       ``RAG_LLM_AUTO_SELECT=catalog``. Delegates to
++       :func:`tools.rag.auto_selector.select` with ``task_type``/``scope``/
++       ``attributes``/``session_category``.
++    2. **Fallback chain** from ``config/ollama-models.json`` when
++       ``RAG_LLM_MODE=auto`` (or unset and the file is present).
++    3. **Legacy explicit mode** — the original single-provider path.
+ 
+     Args:
+-        provider_type: Type of provider (default: based on config)
+-        config: RAG configuration (optional)
+-        model: Specific model name (overrides config)
++        provider_type: Type of provider (default: based on config).
++        config: RAG configuration (optional).
++        model: Specific model name (overrides config).
++        task_type: Task category hint for catalog auto-select.
++        scope: ``"local"``, ``"cloud"``, or ``"auto"`` — catalog-only.
++        attributes: Attribute hints for catalog auto-select.
++        session_category: Session category hint for catalog auto-select.
+ 
+     Returns:
+-        LLM provider instance
++        LLM provider instance.
+     """
++    # --- Catalog auto-select (opt-in) ---
++    if provider_type is None and model is None and _use_catalog_auto_select():
++        from ..auto_selector import TaskRequest, select
++
++        request = TaskRequest(
++            task_type=task_type or "chat",
++            scope=scope or "auto",  # type: ignore[arg-type]
++            attributes=attributes or {},
++            session_category=session_category,
++        )
++        selection = select(request)
++        logger.info(
++            "llm_factory.catalog_auto_select model=%s reason=%s",
++            selection.entry.name,
++            selection.trace.reason,
++        )
++        return _provider_from_entry(selection.entry)
++
+     # --- Fallback chain path ---
+     if provider_type is None and model is None and _use_fallback_chain():
+         from ..model_resolver import resolve_llm
+@@ -156,7 +245,11 @@ def get_llm_provider(
+             raise ValueError(
+                 "Cloud LLM mode requires OLLAMA_CLOUD_URL to be set. For local-only operation, use local mode."
+             )
+-        return OllamaCloudLLM(model=model, cloud_url=config.ollama_cloud_url)
++        if not config.ollama_api_key:
++            logger.warning(
++                "Cloud Ollama mode active but OLLAMA_API_KEY is not set — requests will be sent unauthenticated"
++            )
++        return OllamaCloudLLM(model=model, cloud_url=config.ollama_cloud_url, api_key=config.ollama_api_key)
+     elif provider_type == LLMProviderType.COPILOT.value:
+         from .copilot import CopilotLLM
+ 
+diff --git a/src/tools/rag/llm/functions.py b/src/tools/rag/llm/functions.py
+index cca487a..b2327f0 100644
+--- a/src/tools/rag/llm/functions.py
++++ b/src/tools/rag/llm/functions.py
+@@ -43,7 +43,7 @@ async def select_tool(self, query: str, tools: list[dict[str, Any]]) -> dict[str
+             try:
+                 response = await client.post(f"{self.base_url}/api/generate", json=payload, timeout=30.0)
+                 response.raise_for_status()
+-                result = response.model_dump_json()
++                result = response.json()
+                 text = result.get("response", "").strip()
+ 
+                 # Attempt to parse JSON from the response
+diff --git a/src/tools/rag/llm/ollama_cloud.py b/src/tools/rag/llm/ollama_cloud.py
+index 24c146a..24786a2 100644
+--- a/src/tools/rag/llm/ollama_cloud.py
++++ b/src/tools/rag/llm/ollama_cloud.py
+@@ -9,12 +9,13 @@ class OllamaCloudLLM(OllamaLocalLLM):
+     Extends local provider but uses cloud URL.
+     """
+ 
+-    def __init__(self, model: str, cloud_url: str, timeout: int = 120):
++    def __init__(self, model: str, cloud_url: str, timeout: int = 120, api_key: str | None = None):
+         """Initialize cloud Ollama LLM provider.
+ 
+         Args:
+             model: Model name
+             cloud_url: Cloud Ollama base URL
+             timeout: Request timeout in seconds
++            api_key: Optional Bearer token sent as Authorization header
+         """
+-        super().__init__(model=model, base_url=cloud_url, timeout=timeout)
++        super().__init__(model=model, base_url=cloud_url, timeout=timeout, api_key=api_key)
+diff --git a/src/tools/rag/llm/ollama_local.py b/src/tools/rag/llm/ollama_local.py
+index 9d7e0c8..400feca 100644
+--- a/src/tools/rag/llm/ollama_local.py
++++ b/src/tools/rag/llm/ollama_local.py
+@@ -19,17 +19,25 @@ class OllamaLocalLLM(BaseLLMProvider):
+     Uses proper Ollama HTTP API or Python package.
+     """
+ 
+-    def __init__(self, model: str = "ministral", base_url: str = "http://localhost:11434", timeout: int = 120):
++    def __init__(
++        self,
++        model: str = "ministral",
++        base_url: str = "http://localhost:11434",
++        timeout: int = 120,
++        api_key: str | None = None,
++    ):
+         """Initialize local Ollama LLM provider.
+ 
+         Args:
+             model: Model name (ministral, gpt-oss-safeguard, etc.)
+             base_url: Ollama base URL
+             timeout: Request timeout in seconds
++            api_key: Optional Bearer token for authenticated Ollama endpoints (cloud)
+         """
+         self.model = model
+         self.base_url = base_url.rstrip("/")
+         self.timeout = timeout
++        self.api_key = api_key
+         self._breaker = get_circuit_breaker("ollama")
+ 
+     def generate(
+@@ -73,7 +81,8 @@ def generate(
+                 pass
+ 
+             # Use HTTP API
+-            with httpx.Client(timeout=self.timeout) as client:
++            _headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
++            with httpx.Client(timeout=self.timeout, headers=_headers) as client:
+                 payload = {
+                     "model": self.model,
+                     "prompt": prompt,
+@@ -90,7 +99,7 @@ def generate(
+                 with self._breaker:
+                     response = client.post(f"{self.base_url}/api/generate", json=payload)
+                     response.raise_for_status()
+-                data = response.model_dump_json()
++                data = response.json()
+                 return cast(str, data.get("response", ""))
+ 
+         except Exception as e:
+@@ -135,7 +144,8 @@ def stream(self, prompt: str, system: str | None = None, temperature: float = 0.
+                 pass
+ 
+             # Use HTTP API streaming
+-            with httpx.Client(timeout=self.timeout) as client:
++            _headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
++            with httpx.Client(timeout=self.timeout, headers=_headers) as client:
+                 payload = {
+                     "model": self.model,
+                     "prompt": prompt,
+@@ -170,6 +180,26 @@ async def async_generate(
+         **kwargs: Any,
+     ) -> str:
+         """Generate text using native async Ollama client."""
++        if self.api_key:
++            # Authenticated path: use AsyncClient directly so the Authorization header is forwarded
++            try:
++                import ollama
++
++                messages = []
++                if system:
++                    messages.append({"role": "system", "content": system})
++                messages.append({"role": "user", "content": prompt})
++                _client = ollama.AsyncClient(host=self.base_url, headers={"Authorization": f"Bearer {self.api_key}"})
++                response = await _client.chat(
++                    model=self.model,
++                    messages=messages,
++                    options={"temperature": temperature, "num_predict": max_tokens or 2048},
++                )
++                return cast(str, response["message"]["content"])
++            except ImportError:
++                logger.warning("ollama package unavailable for authenticated async_generate; auth header not sent")
++
++        # Unauthenticated path: use OllamaNativeClient
+         from grid.services.llm.llm_client import LLMConfig, LLMMessage, OllamaNativeClient
+ 
+         messages = []
+@@ -187,16 +217,37 @@ async def async_generate(
+     async def async_stream(
+         self, prompt: str, system: str | None = None, temperature: float = 0.7, **kwargs: Any
+     ) -> Any:
+-        """Stream text generation using native async Ollama client."""
++        """Stream text generation using native async Ollama client with proper message structure."""
++        try:
++            import ollama
++
++            messages = []
++            if system:
++                messages.append({"role": "system", "content": system})
++            messages.append({"role": "user", "content": prompt})
++
++            _client_kwargs: dict[str, Any] = {}
++            if self.api_key:
++                _client_kwargs["headers"] = {"Authorization": f"Bearer {self.api_key}"}
++
++            async_client = ollama.AsyncClient(host=self.base_url, **_client_kwargs)
++            async for chunk in await async_client.chat(
++                model=self.model,
++                messages=messages,
++                options={"temperature": temperature, **kwargs},
++                stream=True,
++            ):
++                if "message" in chunk and "content" in chunk["message"]:
++                    yield chunk["message"]["content"]
++            return
++        except ImportError:
++            pass
++
++        # Fallback: OllamaNativeClient stream (prompt-only; system is concatenated as a last resort)
+         from grid.services.llm.llm_client import LLMConfig, OllamaNativeClient
+ 
+-        # OllamaNativeClient.stream currently only takes prompt, not messages
+-        # I might need to update LLMClient to support async_stream with messages
+         client = OllamaNativeClient(host=self.base_url)
+-
+-        # Simple implementation for now (using generate-style stream)
+         full_prompt = f"{system}\n\n{prompt}" if system else prompt
+-
+         async for chunk in client.stream(
+             prompt=full_prompt, config=LLMConfig(model=self.model, temperature=temperature)
+         ):
+diff --git a/src/tools/rag/llm/structured.py b/src/tools/rag/llm/structured.py
+index c061817..e3752a9 100644
+--- a/src/tools/rag/llm/structured.py
++++ b/src/tools/rag/llm/structured.py
+@@ -39,7 +39,7 @@ async def generate_structured(self, prompt: str, output_schema: type[T]) -> T:
+             try:
+                 response = await client.post(f"{self.base_url}/api/generate", json=payload, timeout=60.0)
+                 response.raise_for_status()
+-                result = response.model_dump_json()
++                result = response.json()
+                 text = result.get("response", "").strip()
+ 
+                 # Clean up if markdown blocks leaked
+diff --git a/src/tools/rag/utils.py b/src/tools/rag/utils.py
+index fc88086..cd006b4 100644
+--- a/src/tools/rag/utils.py
++++ b/src/tools/rag/utils.py
+@@ -5,6 +5,7 @@
+ from datetime import UTC, datetime
+ from enum import StrEnum
+ from pathlib import Path
++from typing import Any
+ 
+ import httpx
+ 
+@@ -77,22 +78,33 @@ def find_embedding_model(
+             if with_tag in models:
+                 return with_tag
+ 
+-        # Try alternatives in order of preference
++        # Try alternatives in order of preference. Kept docs-aligned:
++        # Ollama's current recommended embedders are embeddinggemma,
++        # qwen3-embedding, and all-minilm (see https://docs.ollama.com/embeddings).
+         alternatives = [
+             "nomic-embed-text-v2-moe:latest",
+             "nomic-embed-text-v2-moe",
+             "nomic-embed-text-v2",
+             "nomic-embed-text",
+             "nomic-embed-text:latest",
++            "embeddinggemma:latest",
++            "embeddinggemma",
++            "qwen3-embedding:latest",
++            "qwen3-embedding",
++            "all-minilm:latest",
++            "all-minilm",
+         ]
+ 
+         for alt in alternatives:
+             if alt in models:
+                 return alt
+ 
+-        # Check for any nomic model
++        # Check for any nomic / embeddinggemma / minilm / qwen-embedding model
+         for model in models:
+-            if "nomic" in model.lower() and "embed" in model.lower():
++            lower = model.lower()
++            if "embed" in lower:
++                return model
++            if "minilm" in lower:
+                 return model
+ 
+         return None
+@@ -127,20 +139,44 @@ def find_llm_model(preferred: str = "ministral-3:latest", base_url: str = "http:
+             if with_tag in models:
+                 return with_tag
+ 
+-        # Try alternatives
++        # Try alternatives. Order: legacy ministral family first (kept for
++        # backward compatibility), then current-gen models that are commonly
++        # pulled on modern workstations (per Ollama's model library).
+         alternatives = [
+             "ministral-3:latest",
+             "ministral-3:3b",
+             "ministral",
+             "gpt-oss-safeguard",
++            "gpt-oss:latest",
++            "gpt-oss",
++            "qwen3:latest",
++            "qwen3",
++            "qwen3-coder-next:cloud",
++            "deepseek-r1:latest",
++            "deepseek-r1",
++            "deepseek-v3.1",
++            "gemma4:latest",
++            "gemma4",
++            "gemma3:latest",
++            "gemma3",
++            "llama4:latest",
++            "llama4",
+             "llama2",
+             "mistral",
++            "mistral-nemo:latest",
++            "mistral-nemo",
+         ]
+ 
+         for alt in alternatives:
+             if alt in models:
+                 return alt
+ 
++        # Last resort: any chat-capable model that isn't an embedder
++        for model in models:
++            lower = model.lower()
++            if "embed" not in lower and "minilm" not in lower:
++                return model
++
+         return None
+     except Exception:
+         return None
+@@ -194,9 +230,9 @@ class ModelHealthInfo:
+     is_available: bool
+     last_checked: datetime
+     error_message: str | None = None
+-    details: dict[str, any] | None = None
++    details: dict[str, Any] | None = None
+ 
+-    def to_dict(self) -> dict[str, any]:
++    def to_dict(self) -> dict[str, Any]:
+         """Convert to dictionary."""
+         return {
+             "model_name": self.model_name,
+@@ -216,7 +252,7 @@ class ModelHealthCheck:
+     models: dict[str, ModelHealthInfo]
+     timestamp: datetime
+ 
+-    def to_dict(self) -> dict[str, any]:
++    def to_dict(self) -> dict[str, Any]:
+         """Convert to dictionary."""
+         return {
+             "ollama_accessible": self.ollama_accessible,
+@@ -362,7 +398,7 @@ def check_rag_system_health(
+     embedding_model: str = "nomic-embed-text-v2-moe:latest",
+     llm_model: str = "ministral-3:latest",
+     base_url: str = "http://localhost:11434",
+-) -> dict[str, any]:
++) -> dict[str, Any]:
+     """
+     Check health of the RAG system's model dependencies.
+ 
+diff --git a/tests/api/test_phase3_security_guardrails.py b/tests/api/test_phase3_security_guardrails.py
+index 85970f9..dd3de2e 100644
+--- a/tests/api/test_phase3_security_guardrails.py
++++ b/tests/api/test_phase3_security_guardrails.py
+@@ -14,12 +14,25 @@
+ 
+ from __future__ import annotations
+ 
++import importlib.util
+ import os
+-from unittest.mock import patch
++import sys
++from pathlib import Path
++from unittest.mock import AsyncMock, patch
+ 
+ import pytest
+ from fastapi.testclient import TestClient
+ 
++
++def _load_module(name: str, file_path: Path):
++    spec = importlib.util.spec_from_file_location(name, file_path)
++    assert spec is not None and spec.loader is not None
++    mod = importlib.util.module_from_spec(spec)
++    sys.modules[name] = mod
++    spec.loader.exec_module(mod)
++    return mod
++
++
+ # =============================================================================
+ # Agentic Auth Tests
+ # =============================================================================
+@@ -186,19 +199,26 @@ async def _handler(request, exc):
+ class TestRagChatErrors:
+     """Verify rag_chat_server does not leak stack traces."""
+ 
+-    @pytest.mark.skip(reason="I/O operation on closed file - pre-existing pytest capturing issue")
+     def test_chat_error_is_generic(self) -> None:
+         """The /api/chat error response must not include stack traces."""
+-        from rag_chat_server import app
+-
+-        client = TestClient(app, raise_server_exceptions=False)
+-        # Send a chat request that will fail (no session initialized)
+-        response = client.post("/api/chat", json={"query": "test"})
+-        if response.status_code == 200:
+-            body = response.json()
+-            if "error" in body:
+-                assert "Traceback" not in body["error"], "Stack trace must not leak"
+-                assert "traceback" not in body["error"].lower(), "Stack trace must not leak"
++        repo_root = Path(__file__).resolve().parents[2]
++        module = _load_module("rag_chat_server_demo", repo_root / "scripts" / "demos" / "rag_chat_server.py")
++
++        with patch.object(
++            module,
++            "get_session",
++            new=AsyncMock(side_effect=RuntimeError("secret database connection string")),
++        ):
++            client = TestClient(module.app, raise_server_exceptions=False)
++            response = client.post("/api/chat", json={"query": "test"})
++
++        assert response.status_code == 200
++        body = response.json()
++        assert body["error"] == "An internal error occurred. Please try again."
++        assert "Traceback" not in body["error"], "Stack trace must not leak"
++        assert "traceback" not in body["error"].lower(), "Stack trace must not leak"
++        assert "secret" not in body["error"].lower(), "Error details must not leak"
++        assert "connection" not in body["error"].lower(), "Error details must not leak"
+ 
+ 
+ # =============================================================================
+diff --git a/tests/security/test_security_suite.py b/tests/security/test_security_suite.py
+index 5670e77..7511a85 100644
+--- a/tests/security/test_security_suite.py
++++ b/tests/security/test_security_suite.py
+@@ -18,6 +18,7 @@
+     ExponentialBackoff,
+     IPRateLimiter,
+     RequestValidator,
++    SecurityConfig,
+     allow_request,
+ )
+ from safety.api.security_headers import SecurityHeadersMiddleware, get_security_headers
+@@ -39,7 +40,11 @@
+         PromptInjectionDetector,
+     )
+ except ImportError:
+-    pytest.skip("grid.security.ai_security not available", allow_module_level=True)
++    AISecurityConfig = None
++    AISecurityWrapper = None
++    InputValidator = None
++    OutputSanitizer = None
++    PromptInjectionDetector = None
+ 
+ try:
+     from workspace.mcp.servers.database.server import (
+@@ -48,9 +53,12 @@
+         SQLInjectionValidator,
+     )
+ except ImportError:
+-    pytest.skip("workspace.mcp.servers.database.server not available", allow_module_level=True)
++    ConnectionManager = None
++    ProductionDatabaseMCPServer = None
++    SQLInjectionValidator = None
+ 
+ 
++@pytest.mark.skipif(SQLInjectionValidator is None, reason="workspace.mcp.servers.database.server not available")
+ class TestSQLInjectionProtection:
+     """Test SQL injection protection components"""
+ 
+@@ -103,6 +111,7 @@ def test_table_name_validation(self) -> None:
+             assert not self.validator.validate_table_name(name), f"Name should be invalid: {name}"
+ 
+ 
++@pytest.mark.skipif(ConnectionManager is None, reason="workspace.mcp.servers.database.server not available")
+ class TestConnectionManager:
+     """Test database connection management"""
+ 
+@@ -176,13 +185,9 @@ def test_exponential_backoff(self) -> None:
+         assert in_backoff
+         assert remaining > 0
+ 
+-    @pytest.mark.skip(reason="Test implementation issue - signature validation logic needs debugging")
+     def test_request_signature_validation(self) -> None:
+         """Test request signature validation"""
+-        # Require proper environment configuration
+-        secret = os.getenv("RATE_LIMIT_SECRET")
+-        if not secret:
+-            pytest.skip("RATE_LIMIT_SECRET not configured for signature validation test")
++        secret = "test-rate-limit-secret"
+ 
+         data = "test_data"
+         timestamp = str(int(datetime.now().timestamp()))
+@@ -195,35 +200,37 @@ def test_request_signature_validation(self) -> None:
+         message = f"{data}:{timestamp}:{client_id}"
+         signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+ 
+-        # Should validate
+-        assert self.request_validator.validate_request_signature(data, signature, int(timestamp), client_id)
++        with patch.object(SecurityConfig, "SECRET_KEY", secret):
++            assert self.request_validator.validate_request_signature(data, signature, int(timestamp), client_id)
+ 
+-        # Should fail with wrong secret
+-        wrong_signature = hmac.new(b"wrong_secret", message.encode(), hashlib.sha256).hexdigest()
++            wrong_signature = hmac.new(b"wrong_secret", message.encode(), hashlib.sha256).hexdigest()
+ 
+-        assert not self.request_validator.validate_request_signature(data, wrong_signature, int(timestamp), client_id)
++            assert not self.request_validator.validate_request_signature(
++                data, wrong_signature, int(timestamp), client_id
++            )
+ 
+     @pytest.mark.asyncio
+     async def test_enhanced_rate_limiting(self):
+         """Test enhanced rate limiting with IP and user limits"""
+-        with patch("safety.api.rate_limiter._get_redis") as mock_redis:
+-            mock_client = AsyncMock()
+-            mock_redis.return_value = mock_client
++        with patch.dict(os.environ, {"SAFETY_BYPASS_REDIS": ""}):
++            with patch("safety.api.rate_limiter._get_redis") as mock_redis:
++                mock_client = AsyncMock()
++                mock_redis.return_value = mock_client
+ 
+-            # Mock successful Redis response
+-            mock_client.evalsha.return_value = [1, 99, 0]  # allowed, remaining, reset
++                # Mock successful Redis response
++                mock_client.evalsha.return_value = [1, 99, 0]  # allowed, remaining, reset
+ 
+-            result = await allow_request(
+-                user_id="test_user",
+-                trust_tier=Mock(value="premium"),
+-                ip_address="192.168.1.1",
+-                user_agent="Mozilla/5.0 (Test Browser)",
+-            )
++                result = await allow_request(
++                    user_id="test_user",
++                    trust_tier=Mock(value="premium"),
++                    ip_address="192.168.1.1",
++                    user_agent="Mozilla/5.0 (Test Browser)",
++                )
+ 
+-            assert result.allowed is True
+-            assert result.remaining == 99
+-            assert result.reset_seconds == 0  # min(99, 100) = 99
+-            assert result.reset_seconds >= 0.0
++                assert result.allowed is True
++                assert result.remaining == 99
++                assert result.reset_seconds == 0  # min(99, 100) = 99
++                assert result.reset_seconds >= 0.0
+ 
+ 
+ class TestSecurityHeaders:
+@@ -274,6 +281,7 @@ def test_security_headers_dict(self):
+             assert header in headers, f"Missing security header: {header}"
+ 
+ 
++@pytest.mark.skipif(AISecurityConfig is None, reason="grid.security.ai_security not available")
+ class TestAISecurity:
+     """Test AI security components"""
+ 
+@@ -434,27 +442,35 @@ class TestIntegration:
+     """Integration tests for security components working together"""
+ 
+     @pytest.mark.asyncio
+-    @pytest.mark.skip(reason="Redis mock configuration issue - AsyncMock incompatibility with Redis client")
+     async def test_full_security_pipeline(self):
+         """Test the complete security pipeline"""
+-        # This would test the integration of all components
+-        # For now, just ensure components can be imported and instantiated
++        from mycelium.safety import SafetyGuard
++        from safety.detectors.pre_check import SQLInjectionValidator as PreCheckSQLInjectionValidator
++
++        class FakeRedisClient:
++            async def script_load(self, _script: str) -> str:
++                return "test-lua-sha"
++
++            async def evalsha(self, *_args):
++                return [1, 99, 1]
+ 
+         # Test database security
+-        db_validator = SQLInjectionValidator()
++        db_validator = PreCheckSQLInjectionValidator()
+         assert db_validator.validate_query("SELECT * FROM users")
+ 
+-        # Test AI security
+-        ai_security = AISecurityWrapper()
+-        response, info = await ai_security.secure_inference("Hello, how are you?", lambda x: f"Response to: {x}")
+-        assert response is not None
+-        assert info["input_validated"]
++        # Test current safety layer
++        safety_guard = SafetyGuard()
++        report = safety_guard.validate_input("Hello, how are you?")
++        assert report.is_safe
++        assert report.verdict.value in {"pass", "warn"}
+ 
+         # Test rate limiting
+-        result = await allow_request("test_user", Mock(value="basic"))
++        with patch("safety.api.rate_limiter._get_redis", new=AsyncMock(return_value=FakeRedisClient())):
++            with patch("safety.api.rate_limiter.risk_manager.get_score", new=AsyncMock(return_value=0.0)):
++                result = await allow_request("test_user", Mock(value="basic"))
+         assert result.allowed is True
+         assert result.remaining > 0
+-        assert result.reset_seconds > 0.0
++        assert result.reset_seconds >= 0.0
+         assert result.risk_score >= 0.0
+         assert result.blocked_reason is None
+ 

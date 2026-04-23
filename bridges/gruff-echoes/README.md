@@ -1,60 +1,36 @@
-# GRUFF proportion bridge (Echoes stub)
+# gruff-echoes bridge
 
-The Cursor canvas `~/.cursor/projects/<workspace>/canvases/gruff-wallboard.canvas.tsx` cannot open network connections. Copy the proportion JSON from the canvas, then POST it here (or to the real Echoes service once implemented).
+Python **stdlib-only** HTTP receiver in [`receiver.py`](./receiver.py) that validates `gruff-proportion-v1` JSON and responds **202** for local/contract tests.
 
-## Run the stub
+## Local stub — current implementation
 
-```bash
-cd ~/workspace
-python3 bridges/gruff-echoes/receiver.py
-```
+- **Bind:** `127.0.0.1:8765` by default (override with `PORT` env var).
+- **Path:** `POST /gruff/proportion`
+- **Behavior:** validates payload against required fields + weight sum, prints summary, returns `202 Accepted`. No upstream forwarding and no persistence — contract testing only.
+- **Start:** `python3 bridges/gruff-echoes/receiver.py`
 
-Default port is **8765**. If you see `Address already in use`, an old stub is still running. Free the port:
+## Echoes FastAPI (upstream) — TBD
 
-```bash
-kill $(lsof -t -iTCP:8765 -sTCP:LISTEN)
-```
+Echoes is the stack's FastAPI app. Local dev is typically **Uvicorn on port 8000**. There is not yet a `POST /gruff/proportion` route in the Echoes codebase — treat the real ingest endpoint as **deployment-specific / TBD** until the Echoes service exposes a matching route.
 
-Or use another port:
+**Discovery steps:**
+1. Run Echoes locally (`uvicorn app.main:app --reload`).
+2. List available routes: `GET http://127.0.0.1:8000/openapi.json` or open `/docs`.
+3. Confirm the agreed proportion-ingest path with the team.
+4. Set `ECHOES_URL` (see below) once the endpoint is confirmed.
 
-```bash
-PORT=8766 python3 bridges/gruff-echoes/receiver.py
-# curl ... http://127.0.0.1:8766/gruff/proportion
-```
+## Env vars (planned — Wave 1)
 
-**GET vs POST:** Only **POST** accepts proportion JSON. A **GET** on `/gruff/proportion` returns **405** with a small JSON hint (for “is the server up?” checks without spamming tracebacks).
+The following env vars are designed but **not yet wired** in `receiver.py` or `src/commands/proportion.ts`. They are documented here so Wave 1 work has a clear contract to implement against.
 
-## curl example
+| Variable | Component | Purpose |
+|----------|-----------|---------|
+| `ECHOES_URL` | `receiver.py` | Full upstream URL. When set, receiver forwards the validated raw body to Echoes after responding 202. **Not yet implemented.** |
+| `ECHOES_TOKEN` | `receiver.py` | Optional Bearer token. Forwarded requests include `Authorization: Bearer <token>`. **Not yet implemented.** |
+| `GRUFF_ECHOES_URL` | `src/commands/proportion.ts` | Overrides the default `127.0.0.1:8765` target, letting `gruff proportion` POST directly to Echoes. **Not yet implemented** — currently only `PORT` affects the target host. |
 
-Save JSON from the canvas **Copy JSON** button into `proportion.json`, then:
+**Auth:** For other schemes, extend `receiver.py` (e.g. custom headers from env).
 
-```bash
-curl -sS -X POST http://127.0.0.1:8765/gruff/proportion \
-  -H 'Content-Type: application/json' \
-  -d @proportion.json
-```
+## CLI alignment
 
-Or use the helper (from repo root):
-
-```bash
-chmod +x bridges/gruff-echoes/push-proportion.sh   # once
-./bridges/gruff-echoes/push-proportion.sh bridges/gruff-echoes/examples/proportion-v1.example.json
-```
-
-Expected: HTTP `202` and `{"ok": true, "accepted": true, ...}`.
-
-Fixture in this repo:
-
-```bash
-curl -sS -X POST http://127.0.0.1:8765/gruff/proportion \
-  -H 'Content-Type: application/json' \
-  -d @bridges/gruff-echoes/examples/proportion-v1.example.json
-```
-
-## Schema
-
-See [`schemas/gruff-proportion-v1.schema.json`](../schemas/gruff-proportion-v1.schema.json).
-
-## Production Echoes
-
-Mount an equivalent route on the Echoes FastAPI app (e.g. `POST /gruff/proportion`), reuse the same JSON body, map `audioDrive` and `metrics.modulated` into DSP parameters per `docs/GRUFF_WALLBOARD_BRIDGE.md`.
+`gruff proportion` currently targets `http://127.0.0.1:${PORT ?? 8765}/gruff/proportion`. Point it at the stub while developing locally. Direct Echoes targeting via `GRUFF_ECHOES_URL` is Wave 1 work (`src/commands/proportion.ts`).

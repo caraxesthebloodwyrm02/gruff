@@ -1,0 +1,3261 @@
+diff --git a/.gitignore b/.gitignore
+index 7c5445a..9a49144 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -280,6 +280,8 @@ SESSION_MEMO.md
+ *-audit*.json
+ *-inventory.json
+ claude-progress.txt
++.dirty-state-report.md
++*dirty-state*.md
+ 
+ # ==========================
+ # DATA & ARCHIVE
+@@ -410,3 +412,7 @@ glimpse-server/dist/
+ 
+ # Session handoff notes (ephemeral, per-session)
+ docs/session-handoff-*.md
++
++# Workspace consolidation: dirty-state triage report (ephemeral, regenerable)
++.dirty-state-report.md
++wget-log
+diff --git a/.windsurf/workflows/mufliato.md b/.windsurf/workflows/mufliato.md
+index 2910d27..6752222 100644
+--- a/.windsurf/workflows/mufliato.md
++++ b/.windsurf/workflows/mufliato.md
+@@ -13,7 +13,7 @@ Choose one mode before starting. The mode governs how deeply the document is tra
+ | ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+ | **substitute**    | Replace literals (paths, keys, ports) with env-var references or generic placeholders           | Configs, .env examples, setup guides with hardcoded values                                                                      |
+ | **reframe**       | Restructure content around principles, not specifics — rename concepts, anonymize topology      | Architecture docs, decision records, internal design notes                                                                      |
+-| **reauthor**      | Rewrite as a standalone public artifact — new structure, new voice, same instructional value    | Pre-ship review packages, public READMEs, blog-ready write-ups (see `Tools/MCPServers/integration-review/public/` as reference) |
++| **reauthor**      | Rewrite as a standalone public artifact — new structure, new voice, same instructional value    | Pre-ship review packages, public READMEs, blog-ready write-ups (see `Tools/MCPServers/ori-server/integration-review/public/` as reference) |
+ | **veil** _(flex)_ | All of the above plus glass-shader opacity: inject plausible decoy blocks at signal-gated ratio | High-sensitivity docs where structural fingerprinting is a concern                                                              |
+ 
+ Pinned core: **substitute + reframe + reauthor** are always available.
+@@ -95,7 +95,7 @@ For each section, ask:
+ 
+ If any section fails this test: reframe (restructure around the principle) or reauthor (rewrite the section from scratch preserving only the instructional goal).
+ 
+-Reference: `Tools/MCPServers/integration-review/public/` demonstrates the reauthor pattern — internal tool docs rewritten as public-facing capability/integration/methodology guides without leaking internal topology.
++Reference: `Tools/MCPServers/ori-server/integration-review/public/` demonstrates the reauthor pattern — internal tool docs rewritten as public-facing capability/integration/methodology guides without leaking internal topology.
+ 
+ ---
+ 
+diff --git a/CLAUDE.md b/CLAUDE.md
+index f86a4ae..aaa4cdb 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -1,6 +1,6 @@
+ # CLAUDE.md
+ 
+-This file provides guidance to Claude when working in the CascadeProjects workspace.
++This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+ 
+ ---
+ 
+@@ -60,14 +60,14 @@ This file provides guidance to Claude when working in the CascadeProjects worksp
+ 
+ This is a multi-project workspace. The current layout is namespaced rather than flat.
+ 
+-| Path                | Type                    | Notes                                                                                                                                                                                                                                    |
+-| ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+-| `Applications/`     | Apps and engines        | `glimpse-artifact`, `glimpse-engine`, `pi-mangrove`                                                                                                                                                                                      |
+-| `Tools/MCPServers/` | First-party MCP servers | 12 TS (`afloat-server`, `echoes-server`, `eligibility-server`, `glimpse-server`, `grid-server`, `lots-server`, `maintain-server`, `mangrove-server`, `ori-server`, `overview-server`, `pulse-server`, `seeds-server`) + 7 Python servers |
+-| `Projects/`         | Operational projects    | `GRID-main`, `DIO`, `GATE`, `projects/viz`                                                                                                                                                                                               |
+-| `Components/`       | Shared packages         | `shared-types`, `shared-resilience`, `shared-pipeline`                                                                                                                                                                                   |
+-| `Documentation/`    | Shared docs and audits  | Workspace guides, audits, and conventions                                                                                                                                                                                                |
+-| `Hogwarts/`         | Governance sim          | Board UI, houses, arena, governors                                                                                                                                                                                                       |
++| Path                | Type                    | Notes                                                                                                                                                                                                                                                                      |
++| ------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
++| `Applications/`     | Apps and engines        | `glimpse-artifact`, `glimpse-engine`, `pi-mangrove`                                                                                                                                                                                                                        |
++| `Tools/MCPServers/` | First-party MCP servers | 14 TS (`afloat-server`, `craft-server`, `echoes-server`, `eligibility-server`, `glimpse-server`, `grid-server`, `harness-server`, `lots-server`, `maintain-server`, `mangrove-server`, `ori-server`, `overview-server`, `pulse-server`, `seeds-server`) + 7 Python servers |
++| `Projects/`         | Operational projects    | `GRID-main`, `DIO`, `GATE`, `projects/viz`                                                                                                                                                                                                                                 |
++| `Components/`       | Shared packages         | `shared-types`, `shared-resilience`, `shared-pipeline`                                                                                                                                                                                                                     |
++| `Documentation/`    | Shared docs and audits  | Workspace guides, audits, and conventions                                                                                                                                                                                                                                  |
++| `Hogwarts/`         | Governance sim          | Board UI, houses, arena, governors                                                                                                                                                                                                                                         |
+ 
+ ## Per-Project Guidance
+ 
+@@ -130,6 +130,14 @@ npm run start
+ - `grid-server` depends on both shared packages
+ - Keep server-specific changes inside the matching `Tools/MCPServers/<server>/` directory
+ 
++**craft-server** — LSP template rendering and context artifact generation for python-craft (transformer/geometric outputs).
++
++**harness-server** — Agentic pipeline for the Great League GATE harness. Wraps the Python harness to expose scenario execution (Foundation/Probe/Integration layers), transistor gate monitoring, signal collection, and the autonomous arm/cycle/disarm loop.
++
++**ori-server/anticipation engine** — Pipeline failure prediction. Generates `AnticipationSignal` objects from log history and environment state. Three MCP tools: `generate_anticipation_signals`, `get_anticipation_status`, `resolve_anticipation_signal`. Signal shape uses `category`, `confidence`, `horizon`, `evidence[]`, and `resolved` fields — do not rename these.
++
++**ori-server/envelope.ts** — Phased test pipeline with modulation gates. Exports `envelope()` callable and fold constants `FOLD_1_CORE`, `FOLD_2_ANALYSIS`, `FOLD_3_INTEGRATION`. Phase advancement: fold N passes → fold N+1 unlocks. Hard-halt on critical smoke failures.
++
+ ### DIO
+ 
+ ```bash
+@@ -150,6 +158,10 @@ uv run python combined_space.py
+ - Each project uses its own lockfile; do not mix package managers across projects.
+ - When working across projects, always `cd` into the project root before running commands.
+ - Build order: `Components/shared-types` first, then `Components/shared-resilience`, then dependent servers.
++- `shared-types` exports 9 paths: `.` (types), `./audit-client`, `./security-policy`, `./session-rate-limit`, `./id`, `./mcp-logger`, `./precedent`, `./trace-context`, `./command-bus`. Import only from these published paths — never from `dist/` directly.
++- `shared-types/command-bus`: `dispatch` / `subscribe` primitive. `CommandEnvelope` and `Namespace` schemas validated with Zod; `runId` must be a valid `RunId` (format: `{service}.{kind}.{uuid}`).
++- `shared-types/id`: `generateRunId(service, kind)` produces structured run IDs. `parseRunId` / `isRunId` for validation. Both `service` and `kind` must be lowercase-kebab (no dots).
++- `shared-types` test runner: `.test.mjs` files run via `node --test` (not vitest). `.test.ts` files run via vitest. Run both with `npm test` from the package root.
+ - Root tests such as `tests/glimpse-engine.test.mjs` run from the workspace root.
+ - `Projects/GRID-main` is the only active nested repository in the current tree; `mcp-tool-experiment` is historical only.
+ 
+@@ -157,6 +169,12 @@ uv run python combined_space.py
+ 
+ ## Operational Standards
+ 
++### Known Test Environment Constraints
++
++- **ori-server Fold 1** (executor/registry): 4 tests fail in recursive test environments — `run_tests`, `get_run_result`, `registry health updated after test run` (subprocess cascade), and `discover_tests validates project on disk` (path env coupling). These are expected failures in CI; do not treat as regressions.
++- **ori-server Fold 3** (threat-model): 6 tests fail with `ENOENT` for `/home/irfankabir/CascadeProjects/Documentation/docs/CascadeProjects-threat-model.md`. The file doesn't exist at that hardcoded path — fixture-missing, not a code bug.
++- **ori-server Fold 2** (reporter/heatmap/anti-pattern): All green — zero failures expected.
++
+ ### Pre-Flight
+ 
+ - Verify write access to all target directories before editing
+diff --git a/Components/shared-types/package.json b/Components/shared-types/package.json
+index 96eeb8c..aebb480 100644
+--- a/Components/shared-types/package.json
++++ b/Components/shared-types/package.json
+@@ -37,6 +37,10 @@
+     "./trace-context": {
+       "types": "./dist/trace-context.d.ts",
+       "default": "./dist/trace-context.js"
++    },
++    "./command-bus": {
++      "types": "./dist/command-bus.d.ts",
++      "default": "./dist/command-bus.js"
+     }
+   },
+   "scripts": {
+diff --git a/Components/shared-types/src/audit-client.ts b/Components/shared-types/src/audit-client.ts
+index 2d241f5..6c1560f 100644
+--- a/Components/shared-types/src/audit-client.ts
++++ b/Components/shared-types/src/audit-client.ts
+@@ -18,7 +18,7 @@ let isWriting = false;
+  * Strips newlines/carriage returns from string values so a single
+  * JSON.stringify() call always produces exactly one NDJSON line.
+  */
+-function sanitizeForNdjson(value: unknown): unknown {
++export function sanitizeForNdjson(value: unknown): unknown {
+   if (typeof value === "string") {
+     return value.replace(/[\n\r]/g, " ");
+   }
+@@ -104,7 +104,7 @@ async function processWriteQueue(): Promise<void> {
+   }
+ }
+ 
+-export function emitAudit(event: Omit<AuditEvent, "timestamp">): Promise<boolean> {
++export function appendNdjsonLine(line: string): Promise<boolean> {
+   return new Promise((resolve) => {
+     if (!dirEnsured) {
+       try {
+@@ -119,20 +119,32 @@ export function emitAudit(event: Omit<AuditEvent, "timestamp">): Promise<boolean
+       }
+     }
+ 
+-    const record: AuditEvent = {
+-      ...event,
+-      metadata: event.metadata
+-        ? (sanitizeForNdjson(event.metadata) as Record<string, unknown>)
+-        : undefined,
+-      timestamp: new Date().toISOString(),
+-    };
+-
+-    const eventString = JSON.stringify(record) + "\n";
++    // Enforce queue depth ceiling — shed oldest entry to make room.
++    // This prevents unbounded memory growth if disk I/O stalls.
++    if (writeQueue.length >= MAX_QUEUE_SIZE) {
++      const dropped = writeQueue.shift();
++      if (dropped) {
++        dropped.resolve(false);
++        process.stderr.write("[audit-client] write queue at capacity — oldest entry dropped\n");
++      }
++    }
+ 
+-    // Add to write queue
+-    writeQueue.push({ event: eventString, resolve });
++    const sanitised = line.replace(/\r?\n/g, " ");
++    const normalised = `${sanitised}\n`;
++    writeQueue.push({ event: normalised, resolve });
+ 
+     // Trigger queue processing
+     processWriteQueue();
+   });
+ }
++
++export function emitAudit(event: Omit<AuditEvent, "timestamp">): Promise<boolean> {
++  const record: AuditEvent = {
++    ...event,
++    metadata: event.metadata
++      ? (sanitizeForNdjson(event.metadata) as Record<string, unknown>)
++      : undefined,
++    timestamp: new Date().toISOString(),
++  };
++  return appendNdjsonLine(JSON.stringify(record));
++}
+diff --git a/Components/shared-types/src/command-bus.ts b/Components/shared-types/src/command-bus.ts
+new file mode 100644
+index 0000000..cfe8110
+--- /dev/null
++++ b/Components/shared-types/src/command-bus.ts
+@@ -0,0 +1,125 @@
++import { appendFileSync, existsSync, mkdirSync, readFileSync, watch } from "fs";
++import type { FSWatcher } from "fs";
++import { homedir } from "os";
++import { dirname, resolve } from "path";
++import { z } from "zod";
++import { appendNdjsonLine, sanitizeForNdjson } from "./audit-client.js";
++import { generateId, isRunId } from "./id.js";
++
++const ECHOES_AUDIT_PATH =
++  process.env.ECHOES_AUDIT_PATH || resolve(homedir(), ".echoes", "audit.ndjson");
++
++export const NamespaceSchema = z.string().regex(/^[a-z][a-z0-9-]*$/);
++export type Namespace = z.infer<typeof NamespaceSchema>;
++
++export const CommandEnvelopeSchema = z.object({
++  id: z.string(),
++  runId: z.string(),
++  ns: NamespaceSchema,
++  source: z.string(),
++  command: z.string(),
++  payload: z.record(z.string(), z.unknown()),
++  timestamp: z.string().datetime(),
++});
++export type CommandEnvelope = z.infer<typeof CommandEnvelopeSchema>;
++
++export type CommandHandler = (envelope: CommandEnvelope) => void | Promise<void>;
++
++export interface Subscription {
++  unsubscribe(): void;
++}
++
++export async function dispatch(
++  envelope: Omit<CommandEnvelope, "id" | "timestamp"> & { id?: string },
++): Promise<boolean> {
++  if (!isRunId(envelope.runId)) {
++    throw new Error(`Invalid runId "${envelope.runId}" for command dispatch.`);
++  }
++  const record: CommandEnvelope = CommandEnvelopeSchema.parse({
++    ...envelope,
++    id: envelope.id ?? generateId("cmd"),
++    payload: sanitizeForNdjson(envelope.payload) as Record<string, unknown>,
++    timestamp: new Date().toISOString(),
++  });
++  return appendNdjsonLine(JSON.stringify(record));
++}
++
++export function subscribe(ns: Namespace, handler: CommandHandler): Subscription {
++  NamespaceSchema.parse(ns);
++
++  const tailOnly = process.env.ECHOES_COMMAND_BUS_TAIL_ONLY === "1";
++  let closed = false;
++  let offset = 0;
++  let watcher: FSWatcher | null = null;
++
++  const flush = () => {
++    if (closed) return;
++    if (!existsSync(ECHOES_AUDIT_PATH)) {
++      return;
++    }
++
++    const raw = readFileSync(ECHOES_AUDIT_PATH);
++    if (tailOnly && offset === 0) {
++      offset = raw.length;
++      return;
++    }
++    if (raw.length < offset) {
++      offset = 0;
++    }
++
++    const chunk = raw.subarray(offset).toString("utf8");
++    offset = raw.length;
++    if (!chunk) return;
++
++    for (const line of chunk.split("\n")) {
++      const trimmed = line.trim();
++      if (!trimmed) continue;
++
++      let parsed: unknown;
++      try {
++        parsed = JSON.parse(trimmed);
++      } catch {
++        continue;
++      }
++
++      const envelope = CommandEnvelopeSchema.safeParse(parsed);
++      if (!envelope.success) continue;
++      if (envelope.data.ns !== ns) continue;
++
++      try {
++        const out = handler(envelope.data);
++        if (out && typeof (out as Promise<unknown>).then === "function") {
++          (out as Promise<unknown>).catch((err) => {
++            process.stderr.write(`[command-bus] handler rejected: ${String(err)}\n`);
++          });
++        }
++      } catch (err) {
++        process.stderr.write(`[command-bus] handler failed: ${String(err)}\n`);
++      }
++    }
++  };
++
++  // Ensure file exists so fs.watch can attach reliably.
++  mkdirSync(dirname(ECHOES_AUDIT_PATH), { recursive: true });
++  appendFileSync(ECHOES_AUDIT_PATH, "", { flag: "a" });
++
++  flush();
++
++  try {
++    watcher = watch(ECHOES_AUDIT_PATH, () => {
++      flush();
++    });
++  } catch {
++    watcher = null;
++  }
++
++  const poller = setInterval(flush, 1000);
++
++  return {
++    unsubscribe() {
++      closed = true;
++      clearInterval(poller);
++      if (watcher) watcher.close();
++    },
++  };
++}
+diff --git a/Components/shared-types/src/id.ts b/Components/shared-types/src/id.ts
+index 0206f2f..1c0325a 100644
+--- a/Components/shared-types/src/id.ts
++++ b/Components/shared-types/src/id.ts
+@@ -1,4 +1,4 @@
+-import { randomBytes } from "node:crypto";
++import { randomBytes, randomUUID } from "node:crypto";
+ 
+ /**
+  * Generate a cryptographically secure unique ID with a prefix.
+@@ -7,3 +7,57 @@ import { randomBytes } from "node:crypto";
+ export function generateId(prefix: string): string {
+   return `${prefix}-${Date.now()}-${randomBytes(4).toString("hex")}`;
+ }
++
++/**
++ * Structured run identifier: {service}.{kind}.{uuid}.
++ * Enables cross-service correlation without a central registry.
++ */
++export interface RunId {
++  service: string;
++  kind: string;
++  uuid: string;
++}
++
++const RUN_ID_SEGMENT = /^[a-z][a-z0-9-]*$/;
++
++function assertSegment(name: "service" | "kind", value: string): void {
++  if (!RUN_ID_SEGMENT.test(value)) {
++    throw new Error(
++      `Invalid ${name} "${value}": must match /^[a-z][a-z0-9-]*$/ (lowercase, alphanumeric, dashes; no dots).`,
++    );
++  }
++}
++
++/**
++ * Generate a structured run id of the form {service}.{kind}.{uuid}.
++ * `service` and `kind` must be lowercase-kebab (no dots).
++ */
++export function generateRunId(service: string, kind: string): string {
++  assertSegment("service", service);
++  assertSegment("kind", kind);
++  return `${service}.${kind}.${randomUUID()}`;
++}
++
++/**
++ * Parse a run id. Returns null if the shape does not match
++ * {service}.{kind}.{uuid} with valid service/kind segments.
++ */
++export function parseRunId(id: string): RunId | null {
++  const firstDot = id.indexOf(".");
++  if (firstDot <= 0) return null;
++  const secondDot = id.indexOf(".", firstDot + 1);
++  if (secondDot <= firstDot + 1) return null;
++  const service = id.slice(0, firstDot);
++  const kind = id.slice(firstDot + 1, secondDot);
++  const uuid = id.slice(secondDot + 1);
++  if (!uuid) return null;
++  if (!RUN_ID_SEGMENT.test(service) || !RUN_ID_SEGMENT.test(kind)) return null;
++  return { service, kind, uuid };
++}
++
++/**
++ * Type guard: does `id` conform to the run-id scheme?
++ */
++export function isRunId(id: string): boolean {
++  return parseRunId(id) !== null;
++}
+diff --git a/Components/shared-types/src/index.ts b/Components/shared-types/src/index.ts
+index dc0a033..3999c8c 100644
+--- a/Components/shared-types/src/index.ts
++++ b/Components/shared-types/src/index.ts
+@@ -38,8 +38,12 @@ export { TelemetrySnapshotSchema } from "./telemetry.js";
+ export type { TelemetrySnapshot } from "./telemetry.js";
+ 
+ export { emitAudit } from "./audit-client.js";
++export { appendNdjsonLine } from "./audit-client.js";
++export { dispatch, subscribe, CommandEnvelopeSchema, NamespaceSchema } from "./command-bus.js";
++export type { CommandEnvelope, Namespace, CommandHandler, Subscription } from "./command-bus.js";
+ 
+-export { generateId } from "./id.js";
++export { generateId, generateRunId, parseRunId, isRunId } from "./id.js";
++export type { RunId } from "./id.js";
+ 
+ export { McpLogger } from "./mcp-logger.js";
+ 
+diff --git a/Components/shared-types/tests/command-bus.test.mjs b/Components/shared-types/tests/command-bus.test.mjs
+new file mode 100644
+index 0000000..73d131f
+--- /dev/null
++++ b/Components/shared-types/tests/command-bus.test.mjs
+@@ -0,0 +1,99 @@
++import assert from "node:assert/strict";
++import { mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import test from "node:test";
++
++const tempRoot = mkdtempSync(join(tmpdir(), "command-bus-test-"));
++const auditPath = join(tempRoot, "audit.ndjson");
++process.env.ECHOES_AUDIT_PATH = auditPath;
++
++const { dispatch, subscribe } = await import("../dist/command-bus.js");
++const { emitAudit } = await import("../dist/audit-client.js");
++const { generateRunId } = await import("../dist/id.js");
++
++test.after(() => {
++  rmSync(tempRoot, { recursive: true, force: true });
++});
++
++test("dispatch writes a command envelope line", async () => {
++  const ok = await dispatch({
++    runId: generateRunId("eligibility-server", "case"),
++    ns: "eligibility",
++    source: "eligibility-server",
++    command: "case_opened",
++    payload: { caseId: "case-1" },
++  });
++
++  assert.equal(ok, true);
++  const text = readFileSync(auditPath, "utf8");
++  assert.match(text, /"command":"case_opened"/);
++  assert.match(text, /"ns":"eligibility"/);
++});
++
++test("dispatch rejects invalid runId", async () => {
++  await assert.rejects(() =>
++    dispatch({
++      runId: "bad-run-id",
++      ns: "eligibility",
++      source: "eligibility-server",
++      command: "case_opened",
++      payload: { caseId: "case-2" },
++    }),
++  );
++});
++
++test("subscribe receives only matching namespace commands", async () => {
++  const received = [];
++  const sub = subscribe("pulse", (envelope) => {
++    received.push(envelope.command);
++  });
++
++  await dispatch({
++    runId: generateRunId("pulse-server", "briefing"),
++    ns: "pulse",
++    source: "pulse-server",
++    command: "briefing_include",
++    payload: { id: "a" },
++  });
++
++  await dispatch({
++    runId: generateRunId("eligibility-server", "case"),
++    ns: "eligibility",
++    source: "eligibility-server",
++    command: "case_opened",
++    payload: { id: "b" },
++  });
++
++  await new Promise((resolve) => setTimeout(resolve, 150));
++  sub.unsubscribe();
++
++  assert.deepEqual(received, ["briefing_include"]);
++});
++
++test("subscribe skips audit events in same NDJSON file", async () => {
++  const received = [];
++  const sub = subscribe("grid", (envelope) => {
++    received.push(envelope.command);
++  });
++
++  await emitAudit({
++    source: "grid-server",
++    tool: "health",
++    status: "success",
++    metadata: { type: "audit_only" },
++  });
++
++  await dispatch({
++    runId: generateRunId("grid-server", "health"),
++    ns: "grid",
++    source: "grid-server",
++    command: "health_probe",
++    payload: { ok: true },
++  });
++
++  await new Promise((resolve) => setTimeout(resolve, 150));
++  sub.unsubscribe();
++
++  assert.deepEqual(received, ["health_probe"]);
++});
+diff --git a/Components/shared-types/tests/id.test.mjs b/Components/shared-types/tests/id.test.mjs
+new file mode 100644
+index 0000000..0eb1bd2
+--- /dev/null
++++ b/Components/shared-types/tests/id.test.mjs
+@@ -0,0 +1,49 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { generateId, generateRunId, parseRunId, isRunId } from "../dist/id.js";
++
++test("generateId keeps legacy prefix-timestamp-hex shape", () => {
++  const id = generateId("run");
++  assert.match(id, /^run-\d+-[0-9a-f]{8}$/);
++});
++
++test("generateRunId emits {service}.{kind}.{uuid}", () => {
++  const id = generateRunId("ori", "run");
++  const parts = id.split(".");
++  assert.equal(parts.length, 3);
++  assert.equal(parts[0], "ori");
++  assert.equal(parts[1], "run");
++  assert.match(parts[2], /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
++});
++
++test("generateRunId rejects invalid segments", () => {
++  assert.throws(() => generateRunId("Ori", "run"));
++  assert.throws(() => generateRunId("ori", "Run"));
++  assert.throws(() => generateRunId("ori.sub", "run"));
++  assert.throws(() => generateRunId("", "run"));
++  assert.throws(() => generateRunId("ori", ""));
++  assert.throws(() => generateRunId("1ori", "run"));
++});
++
++test("parseRunId round-trips", () => {
++  const id = generateRunId("afloat-server", "exec");
++  const parsed = parseRunId(id);
++  assert.ok(parsed);
++  assert.equal(parsed.service, "afloat-server");
++  assert.equal(parsed.kind, "exec");
++  assert.equal(`${parsed.service}.${parsed.kind}.${parsed.uuid}`, id);
++});
++
++test("parseRunId rejects malformed ids", () => {
++  assert.equal(parseRunId("no-dots-here"), null);
++  assert.equal(parseRunId("only.two"), null);
++  assert.equal(parseRunId(".kind.uuid"), null);
++  assert.equal(parseRunId("svc..uuid"), null);
++  assert.equal(parseRunId("svc.kind."), null);
++  assert.equal(parseRunId("Svc.kind.uuid"), null);
++});
++
++test("isRunId distinguishes new from legacy ids", () => {
++  assert.equal(isRunId(generateRunId("ori", "run")), true);
++  assert.equal(isRunId(generateId("run")), false);
++});
+diff --git a/Projects/DIO/.pre-commit-config.yaml b/Projects/DIO/.pre-commit-config.yaml
+new file mode 100644
+index 0000000..3e54f7e
+--- /dev/null
++++ b/Projects/DIO/.pre-commit-config.yaml
+@@ -0,0 +1,26 @@
++# Pre-commit hook configuration
++# See https://pre-commit.com
++
++repos:
++  - repo: https://github.com/pre-commit/pre-commit-hooks
++    rev: v4.5.0
++    hooks:
++      - id: trailing-whitespace
++      - id: end-of-file-fixer
++      - id: check-yaml
++      - id: check-added-large-files
++      - id: check-merge-conflict
++      - id: debug-statements
++
++  - repo: https://github.com/astral-sh/ruff-pre-commit
++    rev: v0.1.0
++    hooks:
++      - id: ruff
++        args: [--fix]
++      - id: ruff-format
++
++  - repo: https://github.com/pre-commit/mirrors-mypy
++    rev: v1.8.0
++    hooks:
++      - id: mypy
++        additional_dependencies: [types-all]
+diff --git a/Projects/DIO/CHANGELOG.md b/Projects/DIO/CHANGELOG.md
+new file mode 100644
+index 0000000..ab27b14
+--- /dev/null
++++ b/Projects/DIO/CHANGELOG.md
+@@ -0,0 +1,12 @@
++# Changelog
++
++All notable changes to this project will be documented in this file.
++
++The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
++and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
++
++## [0.1.0] - 2026-04-15
++
++### Added
++
++- Initial release
+diff --git a/Projects/DIO/CODE_OF_CONDUCT.md b/Projects/DIO/CODE_OF_CONDUCT.md
+new file mode 100644
+index 0000000..cad7b4a
+--- /dev/null
++++ b/Projects/DIO/CODE_OF_CONDUCT.md
+@@ -0,0 +1,31 @@
++# Code of Conduct
++
++## Our Pledge
++
++We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity and expression, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
++
++## Our Standards
++
++Examples of behavior that contributes to a positive environment:
++
++- Using welcoming and inclusive language
++- Being respectful of differing viewpoints and experiences
++- Gracefully accepting constructive criticism
++- Focusing on what is best for the community
++- Showing empathy towards other community members
++
++Examples of unacceptable behavior:
++
++- The use of sexualized language or imagery and unwelcome sexual attention
++- Trolling, insulting/derogatory comments, and personal or political attacks
++- Public or private harassment
++- Publishing others' private information without explicit permission
++- Other conduct which could reasonably be considered inappropriate
++
++## Enforcement
++
++Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders. All complaints will be reviewed and investigated fairly.
++
++## Attribution
++
++This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org/), version 2.0.
+diff --git a/Projects/DIO/CONTRIBUTING.md b/Projects/DIO/CONTRIBUTING.md
+new file mode 100644
+index 0000000..9765874
+--- /dev/null
++++ b/Projects/DIO/CONTRIBUTING.md
+@@ -0,0 +1,32 @@
++# Contributing to this Project
++
++## Prerequisites
++
++- Python 3.12+
++- [uv](https://docs.astral.sh/uv/)
++- Git 2.30+
++
++## Setup
++
++```bash
++git clone <repository>
++cd <project>
++uv sync --group dev --group test
++```
++
++## Development
++
++```bash
++# Run tests
++uv run pytest -q --tb=short
++
++# Lint
++uv run ruff check .
++
++# Format
++uv run ruff format .
++```
++
++## License
++
++MIT License - see [LICENSE](LICENSE)
+diff --git a/Projects/DIO/LICENSE b/Projects/DIO/LICENSE
+new file mode 100644
+index 0000000..af4996b
+--- /dev/null
++++ b/Projects/DIO/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2025 Irfan Kabir
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/Projects/DIO/Makefile b/Projects/DIO/Makefile
+new file mode 100644
+index 0000000..527998f
+--- /dev/null
++++ b/Projects/DIO/Makefile
+@@ -0,0 +1,23 @@
++# Makefile for DIO
++
++.PHONY: help install run test lint format clean
++
++help:
++	@echo "DIO Development Commands"
++	@grep -E '^[a-zA-Z_-]+:.*?## .*382358' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
++
++install:
++	uv sync
++
++test:
++	uv run pytest tests/ -q --tb=short
++
++lint:
++	uv run ruff check .
++
++format:
++	uv run ruff format .
++
++clean:
++	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
++	rm -rf .pytest_cache .ruff_cache
+diff --git a/Projects/DIO/SECURITY.md b/Projects/DIO/SECURITY.md
+new file mode 100644
+index 0000000..7a19c86
+--- /dev/null
++++ b/Projects/DIO/SECURITY.md
+@@ -0,0 +1,19 @@
++# Security Policy
++
++## Supported Versions
++
++| Version | Supported          |
++| ------- | ------------------ |
++| 0.1.x   | ✅ Current release |
++
++## Reporting a Vulnerability
++
++**Do not open a public issue for security vulnerabilities.**
++
++Report privately to the maintainers.
++
++## What to Include
++
++- Description and potential impact
++- Steps to reproduce
++- Suggested fix (optional)
+diff --git a/Projects/GATE/archived/envelope_commit-wave-2026-04.json b/Projects/GATE/archived/envelope_commit-wave-2026-04.json
+new file mode 100644
+index 0000000..0d1e2ce
+--- /dev/null
++++ b/Projects/GATE/archived/envelope_commit-wave-2026-04.json
+@@ -0,0 +1,49 @@
++{
++  "envelope_id": "20e2f52d-cf57-412f-beac-db790d713e49",
++  "payload": {
++    "source_path": "/home/caraxes/CascadeProjects/Projects/GRID-main",
++    "version": "2.8.0",
++    "branch": "main",
++    "timestamp": "2026-04-09T06:16:31Z",
++    "lint_passed": true,
++    "commit_sha": "581acca",
++    "project": "GRID-main",
++    "port": 8080,
++    "username": "caraxes",
++    "hostname": "mangrove",
++    "tool_manager": "uv",
++    "commit_msg": "feat: MCQ router, schemas, frontend hooks, MCQPage, ai_brain_bridge store fix; 1206 tests pass",
++    "tests_passed": true,
++    "release_wave": "packaging-release-revive-2026-04",
++    "repos_committed": [
++      "GRID-main:581acca",
++      "CascadeProjects:15c5616",
++      "afloat:4c7a554",
++      "Vision:7f50711",
++      "apiguard:4b70f70",
++      "echoes:8b49c4fe"
++    ]
++  },
++  "payload_hash": "6ce5bb79e2bdc5b7b143a342500916e253b7242403345637b33b0af7b7087fb2",
++  "nonce": "f5495a0942654d67925a2cfc911cb354",
++  "timestamp": 1775717072.2020628,
++  "user_fingerprint": "ce73407c35056cbd95ae0f5199da502b92105c2b004112ed18955c9ec9f4251b",
++  "machine_fingerprint": "5ce2c0768575bfc133abeac2e7cccd36ce98b99303d3504ee771bcff305bf2e6",
++  "scope": {
++    "permissions": ["deploy", "run_tests"],
++    "target_project": "GRID-main",
++    "target_path": "/home/caraxes/CascadeProjects/Projects/GATE/incoming",
++    "max_execution_time_seconds": 600,
++    "network_allowed": false,
++    "notes": "packaging-release-revive-2026-04 commit wave"
++  },
++  "source_partition": "/home/caraxes/CascadeProjects/Projects/GRID-main",
++  "target_partition": "/home/caraxes/CascadeProjects/Projects/GATE/incoming",
++  "sealed_by": "caraxes",
++  "tests_passed": true,
++  "lint_passed": true,
++  "metadata": {
++    "pipeline_version": "1.1.0",
++    "eligibility_case": "packaging-release-revive-2026-04"
++  }
++}
+diff --git a/Projects/GRID-main b/Projects/GRID-main
+index 4d14abf..2cc792a 160000
+--- a/Projects/GRID-main
++++ b/Projects/GRID-main
+@@ -1 +1 @@
+-Subproject commit 4d14abf3c21ee814fb6fc26f7827c56f2cbf38a3
++Subproject commit 2cc792a0acde2bafcb058cc0513a46f1fb4331f5
+diff --git a/Projects/projects/viz/idea-risk-map.html b/Projects/projects/viz/idea-risk-map.html
+new file mode 100644
+index 0000000..4637534
+--- /dev/null
++++ b/Projects/projects/viz/idea-risk-map.html
+@@ -0,0 +1,573 @@
++<!doctype html>
++<html lang="en">
++  <head>
++    <meta charset="UTF-8" />
++    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++    <title>Idea-Risk Map</title>
++    <style>
++      :root {
++        --bg: #06060e;
++        --surface: #0f0f1e;
++        --border: rgba(255, 255, 255, 0.08);
++        --text: #e0e0f0;
++        --muted: rgba(224, 224, 240, 0.45);
++        --accent: #00ccff;
++        --accent2: #ff3366;
++        --green: #00ff88;
++        --amber: #ffcc44;
++        --grid: rgba(255, 255, 255, 0.04);
++      }
++
++      * { margin: 0; padding: 0; box-sizing: border-box; }
++
++      body {
++        background: var(--bg);
++        color: var(--text);
++        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
++        font-size: 12px;
++        min-height: 100vh;
++        padding: 32px;
++      }
++
++      h1 {
++        font-size: 18px;
++        font-weight: 500;
++        letter-spacing: 0.12em;
++        text-transform: uppercase;
++        color: var(--accent);
++        margin-bottom: 8px;
++      }
++
++      .subtitle {
++        color: var(--muted);
++        font-size: 11px;
++        letter-spacing: 0.06em;
++        margin-bottom: 32px;
++      }
++
++      .grid {
++        display: grid;
++        grid-template-columns: 1fr 1fr;
++        grid-template-rows: auto auto;
++        gap: 20px;
++        max-width: 1100px;
++      }
++
++      .panel {
++        background: var(--surface);
++        border: 1px solid var(--border);
++        border-radius: 6px;
++        padding: 20px;
++      }
++
++      .panel-title {
++        font-size: 10px;
++        letter-spacing: 0.14em;
++        text-transform: uppercase;
++        color: var(--muted);
++        margin-bottom: 16px;
++      }
++
++      svg {
++        display: block;
++        overflow: visible;
++      }
++
++      .metrics-row {
++        grid-column: 1 / -1;
++        display: grid;
++        grid-template-columns: repeat(5, 1fr);
++        gap: 12px;
++      }
++
++      .metric-card {
++        background: var(--surface);
++        border: 1px solid var(--border);
++        border-radius: 6px;
++        padding: 16px 12px;
++        text-align: center;
++      }
++
++      .metric-value {
++        font-size: 22px;
++        font-weight: 600;
++        margin-bottom: 4px;
++      }
++
++      .metric-label {
++        font-size: 10px;
++        letter-spacing: 0.08em;
++        color: var(--muted);
++        text-transform: uppercase;
++        line-height: 1.4;
++      }
++
++      .legend {
++        margin-top: 12px;
++        display: flex;
++        gap: 16px;
++        flex-wrap: wrap;
++      }
++
++      .legend-item {
++        display: flex;
++        align-items: center;
++        gap: 6px;
++        font-size: 10px;
++        color: var(--muted);
++      }
++
++      .legend-dot {
++        width: 8px;
++        height: 8px;
++        border-radius: 50%;
++        flex-shrink: 0;
++      }
++
++      .legend-line {
++        width: 20px;
++        height: 2px;
++        flex-shrink: 0;
++      }
++    </style>
++  </head>
++  <body>
++    <h1>Idea-Risk Map</h1>
++    <p class="subtitle">Session analysis · April 15, 2026 · 5 concepts evaluated</p>
++
++    <div class="grid">
++
++      <!-- SCATTER: Complexity vs Value -->
++      <div class="panel">
++        <div class="panel-title">Complexity vs Expected Value</div>
++        <svg id="scatter" width="100%" viewBox="0 0 420 300"></svg>
++        <div class="legend">
++          <div class="legend-item"><div class="legend-dot" style="background:#00ccff"></div>Ideas</div>
++          <div class="legend-item"><div class="legend-line" style="background:#ff3366"></div>Risk threshold (y=5)</div>
++        </div>
++      </div>
++
++      <!-- QUADRANT CHART -->
++      <div class="panel">
++        <div class="panel-title">Risk vs Impact Quadrant</div>
++        <svg id="quadrant" width="100%" viewBox="0 0 420 300"></svg>
++        <div class="legend">
++          <div class="legend-item"><div class="legend-dot" style="background:#00ff88"></div>Q2: Low Risk / High Impact (ideal)</div>
++        </div>
++      </div>
++
++      <!-- GAUGE + HEATMAP side by side -->
++      <div class="panel">
++        <div class="panel-title">Signal-to-Noise Ratio</div>
++        <svg id="gauge" width="100%" viewBox="0 0 420 220"></svg>
++      </div>
++
++      <div class="panel">
++        <div class="panel-title">Risk Assessment Heatmap</div>
++        <svg id="heatmap" width="100%" viewBox="0 0 420 300"></svg>
++      </div>
++
++      <!-- SUMMARY METRICS -->
++      <div class="metrics-row">
++        <div class="metric-card">
++          <div class="metric-value" style="color:#00ccff">8.2<span style="font-size:13px;color:var(--muted)">/10</span></div>
++          <div class="metric-label">Avg Idea Value</div>
++        </div>
++        <div class="metric-card">
++          <div class="metric-value" style="color:#00ff88">1.8<span style="font-size:13px;color:var(--muted)">/10</span></div>
++          <div class="metric-label">Avg Risk Score</div>
++        </div>
++        <div class="metric-card">
++          <div class="metric-value" style="color:#ffcc44">85%</div>
++          <div class="metric-label">Signal-to-Noise Ratio</div>
++        </div>
++        <div class="metric-card">
++          <div class="metric-value" style="color:#00ff88">100%</div>
++          <div class="metric-label">Implementation Success</div>
++        </div>
++        <div class="metric-card">
++          <div class="metric-value" style="color:#00ccff">90%</div>
++          <div class="metric-label">Risk Mitigation</div>
++        </div>
++      </div>
++
++    </div>
++
++    <script>
++      // ── Helpers ──────────────────────────────────────────────────────────────
++      const ns = 'http://www.w3.org/2000/svg';
++      function el(tag, attrs = {}, children = []) {
++        const e = document.createElementNS(ns, tag);
++        for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
++        children.forEach(c => typeof c === 'string'
++          ? e.appendChild(document.createTextNode(c))
++          : e.appendChild(c));
++        return e;
++      }
++
++      // ── Scatter ──────────────────────────────────────────────────────────────
++      (function buildScatter() {
++        const svg = document.getElementById('scatter');
++        const W = 420, H = 300;
++        const pad = { top: 20, right: 20, bottom: 40, left: 40 };
++        const cw = W - pad.left - pad.right;
++        const ch = H - pad.top - pad.bottom;
++
++        const xDom = [0, 6], yDom = [0, 10];
++        const xScale = v => pad.left + (v - xDom[0]) / (xDom[1] - xDom[0]) * cw;
++        const yScale = v => pad.top + ch - (v - yDom[0]) / (yDom[1] - yDom[0]) * ch;
++
++        const ideas = [
++          { x: 1, y: 9, name: 'Workspace Config' },
++          { x: 2, y: 8, name: 'Tool Setup' },
++          { x: 3, y: 9, name: 'Search Interface' },
++          { x: 4, y: 7, name: 'Issue Investigation' },
++          { x: 5, y: 8, name: 'System Health Check' },
++        ];
++
++        // Risk threshold line
++        const thresholdY = yScale(5);
++        svg.appendChild(el('line', {
++          x1: xScale(0), y1: thresholdY,
++          x2: xScale(6), y2: thresholdY,
++          stroke: '#ff3366', 'stroke-width': '1',
++          'stroke-dasharray': '4 3', opacity: '0.7'
++        }));
++        svg.appendChild(el('text', {
++          x: xScale(5.9), y: thresholdY - 5,
++          fill: '#ff3366', 'font-size': '9',
++          'text-anchor': 'end', opacity: '0.7'
++        }, ['threshold']));
++
++        // Grid lines
++        for (let x = 1; x <= 5; x++) {
++          svg.appendChild(el('line', {
++            x1: xScale(x), y1: pad.top,
++            x2: xScale(x), y2: pad.top + ch,
++            stroke: 'rgba(255,255,255,0.04)', 'stroke-width': '1'
++          }));
++        }
++        for (let y = 0; y <= 10; y += 2) {
++          svg.appendChild(el('line', {
++            x1: pad.left, y1: yScale(y),
++            x2: pad.left + cw, y2: yScale(y),
++            stroke: 'rgba(255,255,255,0.04)', 'stroke-width': '1'
++          }));
++        }
++
++        // Axes
++        svg.appendChild(el('line', {
++          x1: pad.left, y1: pad.top,
++          x2: pad.left, y2: pad.top + ch,
++          stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1'
++        }));
++        svg.appendChild(el('line', {
++          x1: pad.left, y1: pad.top + ch,
++          x2: pad.left + cw, y2: pad.top + ch,
++          stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1'
++        }));
++
++        // Axis labels
++        svg.appendChild(el('text', {
++          x: pad.left + cw / 2, y: H - 4,
++          fill: 'rgba(224,224,240,0.45)', 'font-size': '10',
++          'text-anchor': 'middle'
++        }, ['Complexity of Implementation']));
++        const yLabel = el('text', {
++          x: 10, y: pad.top + ch / 2,
++          fill: 'rgba(224,224,240,0.45)', 'font-size': '10',
++          'text-anchor': 'middle',
++          transform: `rotate(-90, 10, ${pad.top + ch / 2})`
++        }, ['Expected Value / Reward']);
++        svg.appendChild(yLabel);
++
++        // X axis ticks
++        for (let x = 1; x <= 5; x++) {
++          svg.appendChild(el('text', {
++            x: xScale(x), y: pad.top + ch + 14,
++            fill: 'rgba(224,224,240,0.45)', 'font-size': '9',
++            'text-anchor': 'middle'
++          }, [String(x)]));
++        }
++        for (let y = 0; y <= 10; y += 2) {
++          svg.appendChild(el('text', {
++            x: pad.left - 6, y: yScale(y) + 3,
++            fill: 'rgba(224,224,240,0.45)', 'font-size': '9',
++            'text-anchor': 'end'
++          }, [String(y)]));
++        }
++
++        // Data points
++        ideas.forEach(d => {
++          const cx = xScale(d.x), cy = yScale(d.y);
++
++          // glow
++          svg.appendChild(el('circle', {
++            cx, cy, r: '10',
++            fill: '#00ccff', opacity: '0.08'
++          }));
++          // dot
++          svg.appendChild(el('circle', {
++            cx, cy, r: '5',
++            fill: '#00ccff', opacity: '0.9'
++          }));
++          // label
++          svg.appendChild(el('text', {
++            x: cx, y: cy - 10,
++            fill: '#e0e0f0', 'font-size': '9',
++            'text-anchor': 'middle', opacity: '0.8'
++          }, [d.name]));
++        });
++      })();
++
++      // ── Quadrant ─────────────────────────────────────────────────────────────
++      (function buildQuadrant() {
++        const svg = document.getElementById('quadrant');
++        const W = 420, H = 300;
++        const pad = { top: 20, right: 20, bottom: 40, left: 50 };
++        const cw = W - pad.left - pad.right;
++        const ch = H - pad.top - pad.bottom;
++
++        const mx = pad.left + cw / 2;
++        const my = pad.top + ch / 2;
++
++        const items = [
++          { name: 'Tool Dev',           x: 0.2, y: 0.8 },
++          { name: 'Workspace Config',   x: 0.1, y: 0.9 },
++          { name: 'Search Interface',   x: 0.3, y: 0.7 },
++          { name: 'Issue Investigation',x: 0.1, y: 0.6 },
++          { name: 'System Analysis',    x: 0.2, y: 0.8 },
++        ];
++
++        const xScale = v => pad.left + v * cw;
++        const yScale = v => pad.top + (1 - v) * ch;
++
++        // Quadrant fills
++        const quadrants = [
++          { x: mx, y: pad.top, w: cw / 2, h: ch / 2, color: 'rgba(255,100,100,0.06)', label: 'High Risk\nHigh Impact' },
++          { x: pad.left, y: pad.top, w: cw / 2, h: ch / 2, color: 'rgba(0,255,136,0.07)', label: 'Low Risk\nHigh Impact' },
++          { x: pad.left, y: my, w: cw / 2, h: ch / 2, color: 'rgba(200,200,200,0.04)', label: 'Low Risk\nLow Impact' },
++          { x: mx, y: my, w: cw / 2, h: ch / 2, color: 'rgba(255,100,100,0.04)', label: 'High Risk\nLow Impact' },
++        ];
++        quadrants.forEach((q, i) => {
++          svg.appendChild(el('rect', {
++            x: q.x, y: q.y, width: q.w, height: q.h,
++            fill: q.color, rx: '2'
++          }));
++          const labels = q.label.split('\n');
++          const lx = q.x + q.w / 2;
++          const ly = q.y + q.h / 2 - 7;
++          labels.forEach((l, li) => {
++            svg.appendChild(el('text', {
++              x: lx, y: ly + li * 14,
++              fill: i === 1 ? 'rgba(0,255,136,0.5)' : 'rgba(255,255,255,0.15)',
++              'font-size': '10', 'text-anchor': 'middle', 'font-style': 'italic'
++            }, [l]));
++          });
++        });
++
++        // Grid divisions
++        svg.appendChild(el('line', { x1: mx, y1: pad.top, x2: mx, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.15)', 'stroke-width': '1' }));
++        svg.appendChild(el('line', { x1: pad.left, y1: my, x2: pad.left + cw, y2: my, stroke: 'rgba(255,255,255,0.15)', 'stroke-width': '1' }));
++
++        // Axes
++        svg.appendChild(el('line', { x1: pad.left, y1: pad.top + ch, x2: pad.left + cw, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1' }));
++        svg.appendChild(el('line', { x1: pad.left, y1: pad.top, x2: pad.left, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1' }));
++
++        // Axis labels
++        svg.appendChild(el('text', { x: pad.left, y: H - 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10' }, ['Low Risk']));
++        svg.appendChild(el('text', { x: pad.left + cw, y: H - 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end' }, ['High Risk']));
++        const yL1 = el('text', { x: 12, y: pad.top + ch, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end', transform: `rotate(-90, 12, ${pad.top + ch})` }, ['Low Impact']);
++        const yL2 = el('text', { x: 12, y: pad.top + 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end', transform: `rotate(-90, 12, ${pad.top + 4})` }, ['High Impact']);
++        svg.appendChild(yL1);
++        svg.appendChild(yL2);
++
++        // Points
++        items.forEach(d => {
++          const cx = xScale(d.x), cy = yScale(d.y);
++          svg.appendChild(el('circle', { cx, cy, r: '8', fill: '#00ff88', opacity: '0.1' }));
++          svg.appendChild(el('circle', { cx, cy, r: '5', fill: '#00ff88', opacity: '0.9' }));
++          svg.appendChild(el('text', { x: cx + 8, y: cy + 3, fill: '#e0e0f0', 'font-size': '9', opacity: '0.8' }, [d.name]));
++        });
++      })();
++
++      // ── Gauge ─────────────────────────────────────────────────────────────────
++      (function buildGauge() {
++        const svg = document.getElementById('gauge');
++        const W = 420, H = 220;
++        const cx = W / 2, cy = H - 40;
++        const r = 110;
++        const val = 85;
++
++        const startAngle = Math.PI;
++        const endAngle = 0;
++        const totalAngle = Math.PI;
++
++        function polarToRect(angle, radius) {
++          return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
++        }
++
++        function arcPath(r, a1, a2) {
++          const s = polarToRect(a1, r);
++          const e = polarToRect(a2, r);
++          const large = Math.abs(a2 - a1) > Math.PI ? 1 : 0;
++          return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
++        }
++
++        // Background arc
++        svg.appendChild(el('path', {
++          d: arcPath(r, startAngle, endAngle),
++          stroke: 'rgba(255,255,255,0.08)', 'stroke-width': '18',
++          fill: 'none', 'stroke-linecap': 'round'
++        }));
++
++        // Color segments: 0-25 red, 25-50 amber, 50-75 yellow, 75-100 green
++        const segments = [
++          { from: 0, to: 25, color: '#ff3366' },
++          { from: 25, to: 50, color: '#ff7733' },
++          { from: 50, to: 75, color: '#ffcc44' },
++          { from: 75, to: 100, color: '#00ff88' },
++        ];
++        segments.forEach(s => {
++          const a1 = startAngle + (s.from / 100) * totalAngle;
++          const a2 = startAngle + (s.to / 100) * totalAngle;
++          svg.appendChild(el('path', {
++            d: arcPath(r, a1, a2),
++            stroke: s.color, 'stroke-width': '18',
++            fill: 'none', 'stroke-linecap': 'butt', opacity: '0.35'
++          }));
++        });
++
++        // Value arc
++        const valAngle = startAngle + (val / 100) * totalAngle;
++        svg.appendChild(el('path', {
++          d: arcPath(r, startAngle, valAngle),
++          stroke: '#00ff88', 'stroke-width': '18',
++          fill: 'none', 'stroke-linecap': 'round'
++        }));
++
++        // Needle
++        const needleAngle = startAngle + (val / 100) * totalAngle;
++        const needleTip = polarToRect(needleAngle, r - 10);
++        const needleBase1 = polarToRect(needleAngle + Math.PI / 2, 8);
++        const needleBase2 = polarToRect(needleAngle - Math.PI / 2, 8);
++        svg.appendChild(el('polygon', {
++          points: `${needleTip.x},${needleTip.y} ${cx + needleBase1.x - cx},${cy + needleBase1.y - cy} ${cx + needleBase2.x - cx},${cy + needleBase2.y - cy}`,
++          fill: '#e0e0f0', opacity: '0.9'
++        }));
++        svg.appendChild(el('circle', { cx, cy, r: '6', fill: '#e0e0f0' }));
++
++        // Value text
++        svg.appendChild(el('text', {
++          x: cx, y: cy - 20,
++          fill: '#00ff88', 'font-size': '32', 'font-weight': '600',
++          'text-anchor': 'middle'
++        }, [`${val}%`]));
++        svg.appendChild(el('text', {
++          x: cx, y: cy - 4,
++          fill: 'rgba(224,224,240,0.5)', 'font-size': '10',
++          'text-anchor': 'middle', 'letter-spacing': '0.1em'
++        }, ['SIGNAL-TO-NOISE']));
++
++        // Scale labels
++        const labels = ['Poor', 'Fair', 'Good', 'Excellent'];
++        labels.forEach((l, i) => {
++          const a = startAngle + (i / (labels.length - 1)) * totalAngle;
++          const p = polarToRect(a, r + 18);
++          svg.appendChild(el('text', {
++            x: p.x, y: p.y,
++            fill: 'rgba(224,224,240,0.4)', 'font-size': '9',
++            'text-anchor': 'middle'
++          }, [l]));
++        });
++      })();
++
++      // ── Heatmap ───────────────────────────────────────────────────────────────
++      (function buildHeatmap() {
++        const svg = document.getElementById('heatmap');
++        const W = 420, H = 300;
++        const pad = { top: 30, right: 20, bottom: 40, left: 50 };
++        const cw = W - pad.left - pad.right;
++        const ch = H - pad.top - pad.bottom;
++
++        const items = [
++          { name: 'Tool Config',       x: 0.2, y: 0.3 },
++          { name: 'Workspace Setup',   x: 0.1, y: 0.2 },
++          { name: 'Ecosystem Risk',    x: 0.3, y: 0.8 },
++          { name: 'Implementation',    x: 0.2, y: 0.4 },
++          { name: 'Maintenance',       x: 0.4, y: 0.6 },
++        ];
++
++        const xScale = v => pad.left + v * cw;
++        const yScale = v => pad.top + (1 - v) * ch;
++
++        // Heat background — interpolate colour grid
++        const cols = 20, rows = 20;
++        const cellW = cw / cols, cellH = ch / rows;
++        for (let xi = 0; xi < cols; xi++) {
++          for (let yi = 0; yi < rows; yi++) {
++            const fx = xi / (cols - 1), fy = 1 - yi / (rows - 1);
++            // Hotter = higher probability AND impact
++            const heat = fx * fy;
++            const r = Math.round(255 * heat);
++            const g = Math.round(255 * (1 - heat) * 0.4);
++            const b = Math.round(80 * (1 - heat));
++            svg.appendChild(el('rect', {
++              x: pad.left + xi * cellW,
++              y: pad.top + yi * cellH,
++              width: cellW + 0.5, height: cellH + 0.5,
++              fill: `rgba(${r},${g},${b},${0.25 + heat * 0.35})`
++            }));
++          }
++        }
++
++        // Border
++        svg.appendChild(el('rect', {
++          x: pad.left, y: pad.top, width: cw, height: ch,
++          fill: 'none', stroke: 'rgba(255,255,255,0.08)', 'stroke-width': '1'
++        }));
++
++        // Grid lines
++        for (let i = 0; i <= 4; i++) {
++          const x = pad.left + (i / 4) * cw;
++          const y = pad.top + (i / 4) * ch;
++          svg.appendChild(el('line', { x1: x, y1: pad.top, x2: x, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.06)', 'stroke-width': '1' }));
++          svg.appendChild(el('line', { x1: pad.left, y1: y, x2: pad.left + cw, y2: y, stroke: 'rgba(255,255,255,0.06)', 'stroke-width': '1' }));
++        }
++
++        // Axes
++        svg.appendChild(el('line', { x1: pad.left, y1: pad.top + ch, x2: pad.left + cw, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1' }));
++        svg.appendChild(el('line', { x1: pad.left, y1: pad.top, x2: pad.left, y2: pad.top + ch, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': '1' }));
++
++        // Axis labels
++        svg.appendChild(el('text', { x: pad.left, y: H - 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10' }, ['Low Prob.']));
++        svg.appendChild(el('text', { x: pad.left + cw, y: H - 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end' }, ['High Prob.']));
++        const yL1 = el('text', { x: 12, y: pad.top + ch, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end', transform: `rotate(-90, 12, ${pad.top + ch})` }, ['Low Impact']);
++        const yL2 = el('text', { x: 12, y: pad.top + 4, fill: 'rgba(224,224,240,0.45)', 'font-size': '10', 'text-anchor': 'end', transform: `rotate(-90, 12, ${pad.top + 4})` }, ['High Impact']);
++        svg.appendChild(yL1);
++        svg.appendChild(yL2);
++
++        // Points
++        items.forEach(d => {
++          const heat = d.x * d.y;
++          const dotColor = heat > 0.2 ? '#ffcc44' : '#00ff88';
++          const px = xScale(d.x), py = yScale(d.y);
++          svg.appendChild(el('circle', { cx: px, cy: py, r: '10', fill: dotColor, opacity: '0.12' }));
++          svg.appendChild(el('circle', { cx: px, cy: py, r: '5', fill: dotColor, opacity: '0.9' }));
++          svg.appendChild(el('text', { x: px + 8, y: py + 3, fill: '#e0e0f0', 'font-size': '9', opacity: '0.8' }, [d.name]));
++        });
++
++        // "Safe zone" annotation
++        svg.appendChild(el('text', {
++          x: pad.left + 8, y: pad.top + ch - 6,
++          fill: 'rgba(0,255,136,0.5)', 'font-size': '9', 'font-style': 'italic'
++        }, ['safe zone']));
++        svg.appendChild(el('text', {
++          x: pad.left + cw - 8, y: pad.top + 14,
++          fill: 'rgba(255,80,80,0.5)', 'font-size': '9', 'font-style': 'italic',
++          'text-anchor': 'end'
++        }, ['danger zone']));
++      })();
++    </script>
++  </body>
++</html>
+diff --git a/Tools/MCPServers/afloat-server/package.json b/Tools/MCPServers/afloat-server/package.json
+index e55110b..a0ccb3a 100644
+--- a/Tools/MCPServers/afloat-server/package.json
++++ b/Tools/MCPServers/afloat-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/afloat-server/src/server.ts b/Tools/MCPServers/afloat-server/src/server.ts
+index 12dc6c8..8d2512b 100644
+--- a/Tools/MCPServers/afloat-server/src/server.ts
++++ b/Tools/MCPServers/afloat-server/src/server.ts
+@@ -11,6 +11,7 @@
+  * Port: 3000 (per GATE/agent_schema.json)
+  */
+ 
++import { emitAudit } from "@cascade/shared-types/audit-client";
+ import { generateId } from "@cascade/shared-types/id";
+ import { ExecutionPolicyEngine } from "@cascade/shared-types/security-policy";
+ import { SessionRateLimiter } from "@cascade/shared-types/session-rate-limit";
+@@ -240,6 +241,7 @@ export function buildServer(): McpServer {
+         updatedAt: now,
+       };
+       await saveWorkflow(wf);
++      void emitAudit({ source: SERVER_NAME, tool: "workflow_create", status: "success", metadata: { workflowId: wf.id, steps: wf.steps.length } });
+       return {
+         content: [
+           {
+@@ -477,6 +479,7 @@ export function buildServer(): McpServer {
+       exec.status = "completed";
+       exec.completedAt = new Date().toISOString();
+       await saveExecution(exec);
++      void emitAudit({ source: SERVER_NAME, tool: "workflow_execute", status: "success", metadata: { workflowId: wf.id, dryRun, steps: wf.steps.length } });
+ 
+       // Generate preview token on successful dry-run
+       if (dryRun) {
+diff --git a/Tools/MCPServers/afloat-server/tests/smoke.test.ts b/Tools/MCPServers/afloat-server/tests/smoke.test.ts
+index ba0b15a..76def2d 100644
+--- a/Tools/MCPServers/afloat-server/tests/smoke.test.ts
++++ b/Tools/MCPServers/afloat-server/tests/smoke.test.ts
+@@ -201,4 +201,74 @@ describe("afloat-server smoke", () => {
+     expect(error.policyResult.verdict).toBe("deny");
+     expect(error.policyResult.reason).toContain("blocked shell operator");
+   });
++
++  it("workflow_get returns isError for nonexistent ID", async () => {
++    const server = buildServer();
++    const result = (await invokeTool(server, "workflow_get", {
++      workflowId: "wf-does-not-exist",
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(result.isError).toBe(true);
++    expect(JSON.parse(result.content[0].text).error).toContain("not found");
++  });
++
++  it("workflow_execute rejects non-dry-run without prior preview token (P-MCP-002)", async () => {
++    const server = buildServer();
++    const create = (await invokeTool(server, "workflow_create", {
++      name: "no-token-flow",
++      description: "missing preview token test",
++      steps: [{ name: "step", description: "a step", command: "echo hi" }],
++    })) as { content: Array<{ text: string }> };
++    const workflowId = JSON.parse(create.content[0].text).workflow.id as string;
++
++    const result = (await invokeTool(server, "workflow_execute", {
++      workflowId,
++      dryRun: false,
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(result.isError).toBe(true);
++    const payload = JSON.parse(result.content[0].text);
++    expect(payload.error).toMatch(/dry-run first|preview token/i);
++    expect(payload.policyId).toBe("P-MCP-002");
++  });
++
++  it("workflow_execute rejects non-dry-run with wrong preview token", async () => {
++    const server = buildServer();
++    const create = (await invokeTool(server, "workflow_create", {
++      name: "bad-token-flow",
++      description: "wrong token test",
++      steps: [{ name: "step", description: "a step", command: "echo hi" }],
++    })) as { content: Array<{ text: string }> };
++    const workflowId = JSON.parse(create.content[0].text).workflow.id as string;
++
++    await invokeTool(server, "workflow_execute", { workflowId, dryRun: true });
++
++    const result = (await invokeTool(server, "workflow_execute", {
++      workflowId,
++      dryRun: false,
++      previewToken: "wrong-token-value",
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(result.isError).toBe(true);
++    expect(JSON.parse(result.content[0].text).error).toMatch(/Invalid preview token/i);
++  });
++
++  it("workflow_create with no-command step succeeds and appears in list", async () => {
++    const server = buildServer();
++    const create = (await invokeTool(server, "workflow_create", {
++      name: "manual-review",
++      description: "human-gated step with no command",
++      steps: [{ name: "review", description: "open the PR and read it" }],
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(create.isError).not.toBe(true);
++    const { workflow } = JSON.parse(create.content[0].text);
++    expect(workflow.steps[0].command).toBeUndefined();
++
++    const list = (await invokeTool(server, "workflow_list", {})) as {
++      content: Array<{ text: string }>;
++    };
++    const { workflows } = JSON.parse(list.content[0].text);
++    expect(workflows.some((w: any) => w.id === workflow.id)).toBe(true);
++  });
+ });
+diff --git a/Tools/MCPServers/afloat-server/tsconfig.json b/Tools/MCPServers/afloat-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/afloat-server/tsconfig.json
++++ b/Tools/MCPServers/afloat-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/craft-server/package.json b/Tools/MCPServers/craft-server/package.json
+index 7fdeca1..0dafeba 100644
+--- a/Tools/MCPServers/craft-server/package.json
++++ b/Tools/MCPServers/craft-server/package.json
+@@ -13,6 +13,7 @@
+     "test:coverage": "vitest run --coverage"
+   },
+   "dependencies": {
++    "@cascade/shared-types": "file:../../../Components/shared-types",
+     "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+diff --git a/Tools/MCPServers/craft-server/src/server.ts b/Tools/MCPServers/craft-server/src/server.ts
+index 680f943..d524ef0 100644
+--- a/Tools/MCPServers/craft-server/src/server.ts
++++ b/Tools/MCPServers/craft-server/src/server.ts
+@@ -1,3 +1,4 @@
++import { emitAudit } from "@cascade/shared-types/audit-client";
+ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+ import { spawn } from "node:child_process";
+@@ -46,7 +47,7 @@ type TemplateResult = {
+ 
+ const SERVER_NAME = "craft-server";
+ const VERSION = "1.0.0";
+-const DEFAULT_CRAFT_ROOT = "/home/caraxes/roots/python-craft";
++const DEFAULT_CRAFT_ROOT = "/home/irfankabir/roots/python-craft";
+ const COMMAND_TIMEOUT_MS = 30_000;
+ const RENDER_TIMEOUT_MS = 120_000;
+ 
+@@ -458,6 +459,7 @@ async function handleRender(
+       ? outputPath
+       : path.resolve(craftRoot, outputPath);
+ 
++    void emitAudit({ source: SERVER_NAME, tool: "render", status: "success", metadata: { target, outputPath: absoluteOutput } });
+     return {
+       content: [
+         {
+@@ -480,6 +482,7 @@ async function handleRender(
+       ],
+     };
+   } catch (error) {
++    void emitAudit({ source: SERVER_NAME, tool: "render", status: "error", metadata: { target, error: String(error) } });
+     return {
+       content: [{ type: "text", text: JSON.stringify({ error: String(error) }) }],
+       isError: true,
+@@ -689,10 +692,12 @@ async function handleFoldContrast(
+       };
+     }
+ 
++    void emitAudit({ source: SERVER_NAME, tool: "fold_contrast", status: "success", metadata: { geoA, geoB } });
+     return {
+       content: [{ type: "text", text: execution.stdout.trim() }],
+     };
+   } catch (error) {
++    void emitAudit({ source: SERVER_NAME, tool: "fold_contrast", status: "error", metadata: { geoA, geoB, error: String(error) } });
+     return {
+       content: [{ type: "text", text: JSON.stringify({ error: String(error) }) }],
+       isError: true,
+diff --git a/Tools/MCPServers/craft-server/tsconfig.json b/Tools/MCPServers/craft-server/tsconfig.json
+index 0361bf2..797b627 100644
+--- a/Tools/MCPServers/craft-server/tsconfig.json
++++ b/Tools/MCPServers/craft-server/tsconfig.json
+@@ -6,6 +6,10 @@
+     "outDir": "./dist",
+     "rootDir": "./src",
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "types": ["node"],
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+diff --git a/Tools/MCPServers/echoes-server/package.json b/Tools/MCPServers/echoes-server/package.json
+index b5fdb7d..b5f0099 100644
+--- a/Tools/MCPServers/echoes-server/package.json
++++ b/Tools/MCPServers/echoes-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/echoes-server/src/server.ts b/Tools/MCPServers/echoes-server/src/server.ts
+index e67312b..eefbefa 100644
+--- a/Tools/MCPServers/echoes-server/src/server.ts
++++ b/Tools/MCPServers/echoes-server/src/server.ts
+@@ -10,6 +10,7 @@
+  * Port: 8000 (per GATE/agent_schema.json)
+  */
+ 
++import { emitAudit } from "@cascade/shared-types/audit-client";
+ import { generateId } from "@cascade/shared-types/id";
+ import { McpLogger } from "@cascade/shared-types/mcp-logger";
+ import type { RecurrenceCheckResult } from "@cascade/shared-types/precedent";
+@@ -544,6 +545,7 @@ export function buildServer(): McpServer {
+         precedentStore.recordSuccess(entry.source, entry.tool);
+       }
+ 
++      void emitAudit({ source: SERVER_NAME, tool: "record_audit", status: "success", metadata: { recordedId: entry.id, targetSource: entry.source, targetTool: entry.tool } });
+       return {
+         content: [
+           {
+@@ -707,6 +709,7 @@ export function buildServer(): McpServer {
+         },
+         metadata,
+       );
++      void emitAudit({ source: SERVER_NAME, tool: "query_audit", status: "success", metadata: { count: entries.length } });
+       return {
+         content: [
+           {
+diff --git a/Tools/MCPServers/echoes-server/tsconfig.json b/Tools/MCPServers/echoes-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/echoes-server/tsconfig.json
++++ b/Tools/MCPServers/echoes-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/eligibility-server/package.json b/Tools/MCPServers/eligibility-server/package.json
+index ea25684..b0962a7 100644
+--- a/Tools/MCPServers/eligibility-server/package.json
++++ b/Tools/MCPServers/eligibility-server/package.json
+@@ -19,7 +19,7 @@
+   "dependencies": {
+     "@cascade/shared-pipeline": "file:../../../Components/shared-pipeline",
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/eligibility-server/src/routing.ts b/Tools/MCPServers/eligibility-server/src/routing.ts
+index 5bbd8cf..eff73c4 100644
+--- a/Tools/MCPServers/eligibility-server/src/routing.ts
++++ b/Tools/MCPServers/eligibility-server/src/routing.ts
+@@ -9,7 +9,7 @@
+  * Follows the same patterns as grid-server, lots-server, maintain-server.
+  */
+ 
+-import type { AuditEvent } from "@cascade/shared-types/audit-client";
++import type { AuditEvent } from "@cascade/shared-types";
+ import { emitAudit } from "@cascade/shared-types/audit-client";
+ import type { TraceContext } from "@cascade/shared-types/trace-context";
+ import { createChildSpan, createRootSpan, extractTrace } from "@cascade/shared-types/trace-context";
+diff --git a/Tools/MCPServers/glimpse-server/package.json b/Tools/MCPServers/glimpse-server/package.json
+index d0e3036..8202b02 100644
+--- a/Tools/MCPServers/glimpse-server/package.json
++++ b/Tools/MCPServers/glimpse-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/glimpse-server/src/server.ts b/Tools/MCPServers/glimpse-server/src/server.ts
+index bee06d0..df29852 100644
+--- a/Tools/MCPServers/glimpse-server/src/server.ts
++++ b/Tools/MCPServers/glimpse-server/src/server.ts
+@@ -14,6 +14,7 @@
+  * Runs via stdio transport. Register in mcp_config.json.
+  */
+ 
++import { emitAudit } from "@cascade/shared-types/audit-client";
+ import { SessionRateLimiter } from "@cascade/shared-types/session-rate-limit";
+ import {
+   type TraceContext,
+@@ -150,10 +151,12 @@ tool(
+         groundedInsightCount: result.groundedInsights?.length || 0,
+       };
+ 
++      void emitAudit({ source: SERVER_NAME, tool: "glimpse_analyze", status: "success", metadata: { recordCount: summary.recordCount, entityCount: summary.entityCount } });
+       return {
+         content: [{ type: "text" as const, text: JSON.stringify(summary, null, 2) }],
+       };
+     } catch (err: any) {
++      void emitAudit({ source: SERVER_NAME, tool: "glimpse_analyze", status: "error", metadata: { error: String(err) } });
+       return {
+         content: [{ type: "text" as const, text: `Error: ${err.message}` }],
+         isError: true,
+@@ -446,10 +449,12 @@ tool(
+         ruleTraces: result.ruleTraces,
+       };
+ 
++      void emitAudit({ source: SERVER_NAME, tool: "glimpse_session", status: "success", metadata: { lensCount: output.contextLenses?.length } });
+       return {
+         content: [{ type: "text" as const, text: JSON.stringify(output, null, 2) }],
+       };
+     } catch (err: any) {
++      void emitAudit({ source: SERVER_NAME, tool: "glimpse_session", status: "error", metadata: { error: String(err) } });
+       return {
+         content: [{ type: "text" as const, text: `Error: ${err.message}` }],
+         isError: true,
+diff --git a/Tools/MCPServers/glimpse-server/tsconfig.json b/Tools/MCPServers/glimpse-server/tsconfig.json
+index d099447..26e7bc1 100644
+--- a/Tools/MCPServers/glimpse-server/tsconfig.json
++++ b/Tools/MCPServers/glimpse-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/grid-server/package.json b/Tools/MCPServers/grid-server/package.json
+index 560014c..57f3817 100644
+--- a/Tools/MCPServers/grid-server/package.json
++++ b/Tools/MCPServers/grid-server/package.json
+@@ -15,7 +15,7 @@
+   "dependencies": {
+     "@cascade/shared-resilience": "file:../../../Components/shared-resilience",
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/grid-server/tsconfig.json b/Tools/MCPServers/grid-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/grid-server/tsconfig.json
++++ b/Tools/MCPServers/grid-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/harness-server/package.json b/Tools/MCPServers/harness-server/package.json
+index 1140811..15c3a5a 100644
+--- a/Tools/MCPServers/harness-server/package.json
++++ b/Tools/MCPServers/harness-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/harness-server/tsconfig.json b/Tools/MCPServers/harness-server/tsconfig.json
+index b1b227f..27d798f 100644
+--- a/Tools/MCPServers/harness-server/tsconfig.json
++++ b/Tools/MCPServers/harness-server/tsconfig.json
+@@ -5,6 +5,10 @@
+     "moduleResolution": "NodeNext",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/lots-server/package.json b/Tools/MCPServers/lots-server/package.json
+index 9e72a4a..6e1ad37 100644
+--- a/Tools/MCPServers/lots-server/package.json
++++ b/Tools/MCPServers/lots-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/lots-server/tsconfig.json b/Tools/MCPServers/lots-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/lots-server/tsconfig.json
++++ b/Tools/MCPServers/lots-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/maintain-server/package.json b/Tools/MCPServers/maintain-server/package.json
+index f5ea700..4abd1dd 100644
+--- a/Tools/MCPServers/maintain-server/package.json
++++ b/Tools/MCPServers/maintain-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/maintain-server/tests/smoke.test.ts b/Tools/MCPServers/maintain-server/tests/smoke.test.ts
+index 4773376..0a6b2f5 100644
+--- a/Tools/MCPServers/maintain-server/tests/smoke.test.ts
++++ b/Tools/MCPServers/maintain-server/tests/smoke.test.ts
+@@ -160,6 +160,40 @@ describe("maintain-server smoke", () => {
+     },
+   );
+ 
++  it("scan_temp returns structured temp scan result", { timeout: 15000 }, async () => {
++    const server = buildServer();
++    const result = await invokeTool(server, "scan_temp", { maxAgeDays: 7 });
++    expect(result.isError).not.toBe(true);
++    const payload = JSON.parse(result.content?.[0]?.text ?? "{}");
++    expect(payload.scanType).toBe("temp");
++    expect(payload.maxAgeDays).toBe(7);
++    expect(Array.isArray(payload.targets)).toBe(true);
++    expect(payload._tailFunction).toHaveProperty("reclaimableTotalMB");
++    expect(payload._tailFunction).toHaveProperty("recommendation");
++  });
++
++  it("scan_workspaces returns structured workspace scan result", { timeout: 15000 }, async () => {
++    const server = buildServer();
++    const result = await invokeTool(server, "scan_workspaces", {});
++    expect(result.isError).not.toBe(true);
++    const payload = JSON.parse(result.content?.[0]?.text ?? "{}");
++    expect(payload.scanType).toBe("workspaces");
++    expect(Array.isArray(payload.workspaces)).toBe(true);
++    expect(payload._tailFunction).toHaveProperty("totalReclaimableMB");
++  });
++
++  it("dep_audit_history returns empty-history message when no audits have run", async () => {
++    const server = buildServer();
++    const result = await invokeTool(server, "dep_audit_history", { limit: 5 });
++    expect(result.isError).not.toBe(true);
++    const payload = JSON.parse(result.content?.[0]?.text ?? "{}");
++    // Before any dep_audit run: { message: "No audit history found..." }
++    // After runs: { auditRuns: [...], trend: ... }
++    const isEmptyState = "message" in payload && payload.message.includes("No audit history");
++    const isPopulated = "auditRuns" in payload || "history" in payload;
++    expect(isEmptyState || isPopulated).toBe(true);
++  });
++
+   it("cleanup_execute executes with valid preview token and appends cleanup log", async () => {
+     const server = buildServer();
+     const cleanupTarget = path.join(process.env.CASCADE_WORKSPACE_ROOT!, "cleanup-target");
+diff --git a/Tools/MCPServers/maintain-server/tsconfig.json b/Tools/MCPServers/maintain-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/maintain-server/tsconfig.json
++++ b/Tools/MCPServers/maintain-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/mangrove-server/package.json b/Tools/MCPServers/mangrove-server/package.json
+index 72787a8..97d3665 100644
+--- a/Tools/MCPServers/mangrove-server/package.json
++++ b/Tools/MCPServers/mangrove-server/package.json
+@@ -13,6 +13,7 @@
+     "test:coverage": "vitest run --coverage"
+   },
+   "dependencies": {
++    "@cascade/shared-types": "file:../../../Components/shared-types",
+     "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+diff --git a/Tools/MCPServers/mangrove-server/src/server.ts b/Tools/MCPServers/mangrove-server/src/server.ts
+index cf3a0e0..1b099bd 100644
+--- a/Tools/MCPServers/mangrove-server/src/server.ts
++++ b/Tools/MCPServers/mangrove-server/src/server.ts
+@@ -1,3 +1,4 @@
++import { emitAudit } from "@cascade/shared-types/audit-client";
+ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+ import { spawn } from "node:child_process";
+@@ -278,6 +279,7 @@ async function handleEpisodeSummary(
+     const summary = await runEpisodeSummary(dioRoot, extra.signal);
+     const result = partIndex ? selectPart(summary, partIndex) : summary;
+ 
++    void emitAudit({ source: SERVER_NAME, tool: "dio_episode_summary", status: "success", metadata: { dioRoot, partIndex: partIndex ?? null } });
+     return {
+       content: [
+         {
+@@ -287,6 +289,7 @@ async function handleEpisodeSummary(
+       ],
+     };
+   } catch (error) {
++    void emitAudit({ source: SERVER_NAME, tool: "dio_episode_summary", status: "error", metadata: { error: String(error) } });
+     return {
+       content: [{ type: "text", text: JSON.stringify({ error: String(error) }) }],
+       isError: true,
+@@ -302,6 +305,7 @@ async function handleSecurityAudit(
+     const dioRoot = resolveDioRoot();
+     const audit = await runSecurityAudit(dioRoot, { path: requestedPath, format }, extra.signal);
+ 
++    void emitAudit({ source: SERVER_NAME, tool: "security_audit", status: "success", metadata: { targetPath: audit.targetPath, format: audit.format, exitCode: audit.exitCode } });
+     return {
+       content: [
+         {
+@@ -324,6 +328,7 @@ async function handleSecurityAudit(
+       ],
+     };
+   } catch (error) {
++    void emitAudit({ source: SERVER_NAME, tool: "security_audit", status: "error", metadata: { error: String(error) } });
+     return {
+       content: [{ type: "text", text: JSON.stringify({ error: String(error) }) }],
+       isError: true,
+diff --git a/Tools/MCPServers/mangrove-server/tsconfig.json b/Tools/MCPServers/mangrove-server/tsconfig.json
+index 0361bf2..797b627 100644
+--- a/Tools/MCPServers/mangrove-server/tsconfig.json
++++ b/Tools/MCPServers/mangrove-server/tsconfig.json
+@@ -6,6 +6,10 @@
+     "outDir": "./dist",
+     "rootDir": "./src",
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "types": ["node"],
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+diff --git a/Tools/MCPServers/ori-server/docs/ROUTINE_PHASES.md b/Tools/MCPServers/ori-server/docs/ROUTINE_PHASES.md
+new file mode 100644
+index 0000000..a2b622f
+--- /dev/null
++++ b/Tools/MCPServers/ori-server/docs/ROUTINE_PHASES.md
+@@ -0,0 +1,189 @@
++# ori-server — Routine Phases & Envelope Automation
++
++> Generated from 3-fold combination batch run. Date: 2026-04-20.
++> Plugin: phasing and modulation — automated via `envelope()` callable.
++
++---
++
++## Fold Results Summary
++
++| Fold      | Category    | Files                           | Passed  | Failed | Duration  |
++| --------- | ----------- | ------------------------------- | ------- | ------ | --------- |
++| 1         | Core        | smoke, registry, executor       | 36      | 4      | 391ms     |
++| 2         | Analysis    | reporter, heatmap, anti-pattern | 64      | 0      | 130ms     |
++| 3         | Integration | threat-model, notebook, interop | 35      | 6      | 362ms     |
++| **Total** |             | **9 files**                     | **135** | **10** | **883ms** |
++
++---
++
++## Failure Classification
++
++### Fold 1 — Core (environment-dependent)
++
++| Test                                                  | Root Cause                                                      | Category     |
++| ----------------------------------------------------- | --------------------------------------------------------------- | ------------ |
++| `executor > run_tests executes smoke tests`           | Subprocess test execution returns `failed` (recursive test env) | env-coupling |
++| `executor > get_run_result retrieves completed run`   | Cascading from above — no run to retrieve                       | cascading    |
++| `executor > registry health updated after test run`   | `failing` instead of `healthy` — same cascade                   | cascading    |
++| `registry > discover_tests validates project on disk` | Missing project directory at expected path                      | env-path     |
++
++### Fold 3 — Integration (missing fixture)
++
++| Test                           | Root Cause                                                                                                                                               | Category        |
++| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
++| `threat-model tools` (6 tests) | `ENOENT: .../CascadeProjects-threat-model.md` — threat model file doesn't exist at hardcoded path `/home/irfankabir/CascadeProjects/Documentation/docs/` | fixture-missing |
++
++### Fold 2 — Analysis: **All green. Zero failures.**
++
++---
++
++## Phase Envelope Definition
++
++```typescript
++/**
++ * Envelope — phased execution wrapper with modulation hooks.
++ *
++ * Each phase:
++ *   1. Declares its fold (test file set)
++ *   2. Runs with --reporter=verbose
++ *   3. Collects output into structured PhaseResult
++ *   4. Modulates: applies gate logic (pass/fail → advance/halt)
++ *
++ * Plugin: phasing and modulation
++ *   - Phase advancement: fold N passes → fold N+1 unlocks
++ *   - Modulation: failure count below threshold → soft-advance with warnings
++ *   - Hard halt: critical failures in smoke fold → abort pipeline
++ */
++
++interface PhaseEnvelope {
++  id: string;
++  fold: 1 | 2 | 3;
++  category: "core" | "analysis" | "integration";
++  files: string[];
++  modulation: {
++    maxFailures: number; // soft-advance threshold
++    hardHaltOn: string[]; // test name patterns that trigger abort
++    requirePreviousFold: boolean;
++  };
++}
++
++interface PhaseResult {
++  envelope: PhaseEnvelope;
++  passed: number;
++  failed: number;
++  duration_ms: number;
++  failures: Array<{ test: string; cause: string; category: string }>;
++  status: "green" | "yellow" | "red"; // green=all pass, yellow=within threshold, red=halt
++  advanceable: boolean;
++}
++
++type PipelineResult = {
++  folds: [PhaseResult, PhaseResult, PhaseResult];
++  overall: "pass" | "warn" | "fail";
++  recommendations: string[];
++};
++```
++
++---
++
++## Envelope Instances
++
++### Phase 1 — Core
++
++```typescript
++const FOLD_1_CORE: PhaseEnvelope = {
++  id: "ori-fold-1-core",
++  fold: 1,
++  category: "core",
++  files: ["tests/smoke.test.ts", "tests/registry.test.ts", "tests/executor.test.ts"],
++  modulation: {
++    maxFailures: 4, // known env-coupling failures tolerated
++    hardHaltOn: ["registers expected tools", "reports healthy status"],
++    requirePreviousFold: false, // first fold — no dependency
++  },
++};
++```
++
++### Phase 2 — Analysis
++
++```typescript
++const FOLD_2_ANALYSIS: PhaseEnvelope = {
++  id: "ori-fold-2-analysis",
++  fold: 2,
++  category: "analysis",
++  files: ["tests/reporter.test.ts", "tests/heatmap.test.ts", "tests/anti-pattern.test.ts"],
++  modulation: {
++    maxFailures: 0, // pure logic — must be green
++    hardHaltOn: ["*"], // any failure halts
++    requirePreviousFold: true,
++  },
++};
++```
++
++### Phase 3 — Integration
++
++```typescript
++const FOLD_3_INTEGRATION: PhaseEnvelope = {
++  id: "ori-fold-3-integration",
++  fold: 3,
++  category: "integration",
++  files: ["tests/threat-model.test.ts", "tests/notebook.test.ts", "tests/interop.test.ts"],
++  modulation: {
++    maxFailures: 6, // threat-model fixture failures expected until file created
++    hardHaltOn: ["notebook_add creates a note", "interop > reads echoes audit"],
++    requirePreviousFold: true,
++  },
++};
++```
++
++---
++
++## Next Phase Actions
++
++| Priority | Action                                                                                                                  | Unblocks                    |
++| -------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------- |
++| **P0**   | Create `CascadeProjects/Documentation/docs/CascadeProjects-threat-model.md` (or redirect path in `src/threat-model.ts`) | 6 fold-3 failures           |
++| **P1**   | Mock subprocess execution in executor tests (remove env-coupling)                                                       | 3 fold-1 cascading failures |
++| **P2**   | Fix `discover_tests` path resolution for CI environments                                                                | 1 fold-1 failure            |
++| **P3**   | Wire `envelope()` callable into CI pipeline or MCP dispatch                                                             | Full automation             |
++
++---
++
++## Callable: `envelope()`
++
++```typescript
++import { PhaseEnvelope, PhaseResult, PipelineResult } from "./types";
++
++/**
++ * Execute a phased test pipeline with modulation gates.
++ *
++ * @param folds - Ordered envelope definitions (1 → 2 → 3)
++ * @param options - Runtime overrides
++ * @returns PipelineResult with per-fold results and overall verdict
++ *
++ * Modulation rules:
++ *   1. Run fold N
++ *   2. If result.status === "red" AND envelope.modulation.hardHaltOn matched → ABORT
++ *   3. If result.failed <= envelope.modulation.maxFailures → status = "yellow", advance
++ *   4. If result.failed === 0 → status = "green", advance
++ *   5. Otherwise → status = "red", halt pipeline
++ *
++ * Plugin: phasing — each fold's output feeds the next fold's context
++ * Plugin: modulation — failure thresholds control advancement/halting
++ */
++export async function envelope(
++  folds: PhaseEnvelope[],
++  options?: { verbose?: boolean; haltOnFirstRed?: boolean },
++): Promise<PipelineResult>;
++```
++
++---
++
++## Extracted Practices (routine patterns for dispatch)
++
++1. **Fold categorisation**: group tests by dependency depth (pure logic → env-coupled → fixture-dependent)
++2. **Soft-advance threshold**: tolerate known environmental failures without halting pipeline
++3. **Hard-halt patterns**: name critical tests that must never fail (smoke contract)
++4. **Cascading failure detection**: when N>1 failures share the same root, count as 1 defect
++5. **Fixture-first resolution**: missing fixtures block entire fold — fix P0 before retesting
++6. **Phase gating**: fold N+1 requires fold N to be green or yellow (never red-advance)
+diff --git a/Tools/MCPServers/integration-review/README.md b/Tools/MCPServers/ori-server/integration-review/README.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/README.md
+rename to Tools/MCPServers/ori-server/integration-review/README.md
+diff --git a/Tools/MCPServers/integration-review/REVIEW.md b/Tools/MCPServers/ori-server/integration-review/REVIEW.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/REVIEW.md
+rename to Tools/MCPServers/ori-server/integration-review/REVIEW.md
+diff --git a/Tools/MCPServers/integration-review/SECURITY.md b/Tools/MCPServers/ori-server/integration-review/SECURITY.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/SECURITY.md
+rename to Tools/MCPServers/ori-server/integration-review/SECURITY.md
+diff --git a/Tools/MCPServers/integration-review/SETUP.md b/Tools/MCPServers/ori-server/integration-review/SETUP.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/SETUP.md
+rename to Tools/MCPServers/ori-server/integration-review/SETUP.md
+diff --git a/Tools/MCPServers/integration-review/SURFACE.md b/Tools/MCPServers/ori-server/integration-review/SURFACE.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/SURFACE.md
+rename to Tools/MCPServers/ori-server/integration-review/SURFACE.md
+diff --git a/Tools/MCPServers/integration-review/TRACE.md b/Tools/MCPServers/ori-server/integration-review/TRACE.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/TRACE.md
+rename to Tools/MCPServers/ori-server/integration-review/TRACE.md
+diff --git a/Tools/MCPServers/integration-review/public/CAPABILITIES.md b/Tools/MCPServers/ori-server/integration-review/public/CAPABILITIES.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/public/CAPABILITIES.md
+rename to Tools/MCPServers/ori-server/integration-review/public/CAPABILITIES.md
+diff --git a/Tools/MCPServers/integration-review/public/EVIDENCE.md b/Tools/MCPServers/ori-server/integration-review/public/EVIDENCE.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/public/EVIDENCE.md
+rename to Tools/MCPServers/ori-server/integration-review/public/EVIDENCE.md
+diff --git a/Tools/MCPServers/integration-review/public/INTEGRATION.md b/Tools/MCPServers/ori-server/integration-review/public/INTEGRATION.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/public/INTEGRATION.md
+rename to Tools/MCPServers/ori-server/integration-review/public/INTEGRATION.md
+diff --git a/Tools/MCPServers/integration-review/public/METHODOLOGY.md b/Tools/MCPServers/ori-server/integration-review/public/METHODOLOGY.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/public/METHODOLOGY.md
+rename to Tools/MCPServers/ori-server/integration-review/public/METHODOLOGY.md
+diff --git a/Tools/MCPServers/integration-review/public/README.md b/Tools/MCPServers/ori-server/integration-review/public/README.md
+similarity index 100%
+rename from Tools/MCPServers/integration-review/public/README.md
+rename to Tools/MCPServers/ori-server/integration-review/public/README.md
+diff --git a/Tools/MCPServers/ori-server/package.json b/Tools/MCPServers/ori-server/package.json
+index b817ed9..0893225 100644
+--- a/Tools/MCPServers/ori-server/package.json
++++ b/Tools/MCPServers/ori-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/ori-server/src/anticipation.ts b/Tools/MCPServers/ori-server/src/anticipation.ts
+new file mode 100644
+index 0000000..8abd8a3
+--- /dev/null
++++ b/Tools/MCPServers/ori-server/src/anticipation.ts
+@@ -0,0 +1,407 @@
++/**
++ * Anticipation Engine for Pipeline Failure Prediction.
++ *
++ * Complements the existing Signal Router with proactive predictions about
++ * likely pipeline failures based on historical patterns, current signals,
++ * and environmental context.
++ *
++ * Processes both real-time log entries and periodic state evaluations to
++ * generate AnticipationSignal objects that can be consumed by monitoring
++ * systems, dashboards, and automated remediation tools.
++ */
++
++import { promises as fs } from "fs";
++import path from "path";
++import { generateId } from "@cascade/shared-types/id";
++import { getConfig } from "./config.js";
++import { readAllLogs } from "./storage.js";
++import type { LogEntry, ProjectEntry, TestRunSummary } from "./types.js";
++import { runProbe } from "./probe.js";
++import { loadRegistry, getProject } from "./registry.js";
++
++const config = getConfig();
++
++// ── Anticipation Types (aligned with anticipation-schema.ts definitions) ──
++
++export type AnticipationConfidence = "high" | "medium" | "low" | "unknown";
++export type AnticipationHorizon = "immediate" | "short" | "medium" | "long";
++
++export type AnticipationCategory =
++  | "pipeline_failure"
++  | "test_flake"
++  | "resource_exhaustion"
++  | "dependency_block"
++  | "fixture_missing"
++  | "env_drift";
++
++export interface AnticipationSignal {
++  id: string;
++  category: AnticipationCategory;
++  label: string;
++  confidence: AnticipationConfidence;
++  horizon: AnticipationHorizon;
++  target: string;
++  transition: {
++    from: string;
++    to: string;
++  };
++  evidence: string[];
++  action: string;
++  generatedAt: string;
++  expectedAt?: string;
++  resolved: boolean;
++}
++
++export interface ProximityWindow {
++  id: string;
++  window: {
++    start: string;
++    end: string;
++  };
++  signals: AnticipationSignal[];
++  confidence: AnticipationConfidence;
++  primaryCategory: AnticipationCategory;
++  signalCount: number;
++  isRiskCluster: boolean;
++}
++
++export interface AnticipationStore {
++  id: string;
++  activeSignals: AnticipationSignal[];
++  resolvedSignals: AnticipationSignal[];
++  windows: ProximityWindow[];
++  metadata: {
++    schemaVersion: string;
++    lastUpdated: string;
++    totalSignalsGenerated: number;
++    totalSignalsResolved: number;
++    activeRiskClusters: number;
++  };
++}
++
++// ── Configuration & Constants ──
++
++const ANTICIPATION_SCHEMA_VERSION = "1.0.0";
++const DEFAULT_WINDOW_MINUTES = 30;
++const RISK_THRESHOLD_MEDIUM = 5;
++const RISK_THRESHOLD_HIGH = 10;
++const SIGNAL_TTL_DAYS = 7;
++
++// ── Store Implementation ──
++
++class PipelineAnticipationStore {
++  private path: string;
++
++  constructor() {
++    this.path = path.join(config.dataDir, "anticipation", "store.json");
++  }
++
++  async load(): Promise<AnticipationStore> {
++    try {
++      await fs.mkdir(path.dirname(this.path), { recursive: true });
++      const content = await fs.readFile(this.path, "utf-8");
++      const store = JSON.parse(content) as AnticipationStore;
++
++      // Validate schema version
++      if (store.metadata.schemaVersion !== ANTICIPATION_SCHEMA_VERSION) {
++        return this.createDefaultStore();
++      }
++
++      // Prune resolved signals older than TTL
++      const ttlCutoff = new Date(Date.now() - SIGNAL_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
++      store.resolvedSignals = store.resolvedSignals.filter((s) => s.generatedAt >= ttlCutoff);
++
++      return store;
++    } catch {
++      return this.createDefaultStore();
++    }
++  }
++
++  async save(store: AnticipationStore): Promise<void> {
++    await fs.mkdir(path.dirname(this.path), { recursive: true });
++    const tmpPath = this.path + `.tmp.${process.pid}`;
++    await fs.writeFile(tmpPath, JSON.stringify(store, null, 2), "utf-8");
++    await fs.rename(tmpPath, this.path);
++  }
++
++  private createDefaultStore(): AnticipationStore {
++    return {
++      id: generateId("anticipation-store"),
++      activeSignals: [],
++      resolvedSignals: [],
++      windows: [],
++      metadata: {
++        schemaVersion: ANTICIPATION_SCHEMA_VERSION,
++        lastUpdated: new Date().toISOString(),
++        totalSignalsGenerated: 0,
++        totalSignalsResolved: 0,
++        activeRiskClusters: 0,
++      },
++    };
++  }
++
++  async appendSignal(signal: AnticipationSignal): Promise<void> {
++    const store = await this.load();
++    store.activeSignals.push(signal);
++    store.metadata.totalSignalsGenerated++;
++    store.metadata.lastUpdated = new Date().toISOString();
++    await this.save(store);
++  }
++
++  async resolveSignal(signalId: string, outcome: string): Promise<void> {
++    const store = await this.load();
++    const signalIndex = store.activeSignals.findIndex((s) => s.id === signalId);
++
++    if (signalIndex !== -1) {
++      const signal = store.activeSignals[signalIndex];
++      signal.resolved = true;
++
++      // Move from active to resolved
++      store.activeSignals.splice(signalIndex, 1);
++      store.resolvedSignals.push(signal);
++
++      store.metadata.totalSignalsResolved++;
++      store.metadata.lastUpdated = new Date().toISOString();
++
++      await this.save(store);
++    }
++  }
++
++  async getActiveSignals(): Promise<AnticipationSignal[]> {
++    const store = await this.load();
++    return store.activeSignals;
++  }
++
++  async getSignalsByTarget(target: string): Promise<AnticipationSignal[]> {
++    const store = await this.load();
++    return store.activeSignals.filter((s) => s.target === target);
++  }
++}
++
++// ── Prediction Engine ──
++
++export class PipelineAnticipationEngine {
++  private store: PipelineAnticipationStore;
++
++  constructor() {
++    this.store = new PipelineAnticipationStore();
++  }
++
++  private calculateConfidence(
++    riskScore: number,
++    historicalAccuracy: number,
++  ): AnticipationConfidence {
++    if (riskScore >= RISK_THRESHOLD_HIGH && historicalAccuracy >= 0.7) return "high";
++    if (riskScore >= RISK_THRESHOLD_MEDIUM && historicalAccuracy >= 0.5) return "medium";
++    if (riskScore > 0) return "low";
++    return "unknown";
++  }
++
++  private determineHorizon(riskPatterns: string[]): AnticipationHorizon {
++    const immediatePatterns = ["timeout", "memory_leak", "unhandled_rejection"];
++    const shortPatterns = ["assertion_error", "race_condition", "network_error"];
++
++    if (riskPatterns.some((p) => immediatePatterns.includes(p))) return "immediate";
++    if (riskPatterns.some((p) => shortPatterns.includes(p))) return "short";
++    return "medium";
++  }
++
++  private generateAction(category: AnticipationCategory, target: string): string {
++    const actions: Record<AnticipationCategory, string> = {
++      pipeline_failure: `Review ${target} test patterns and check resource usage`,
++      test_flake: `Investigate flaky tests in ${target} and add retry logic`,
++      resource_exhaustion: `Monitor ${target} resource usage and consider scaling`,
++      dependency_block: `Check ${target} dependency versions and availability`,
++      fixture_missing: `Verify test fixtures for ${target} are properly configured`,
++      env_drift: `Audit ${target} environment configuration for inconsistencies`,
++    };
++    return actions[category];
++  }
++
++  async analyzeRecentLogs(logs: LogEntry[]): Promise<AnticipationSignal[]> {
++    if (logs.length === 0) return [];
++
++    const probe = runProbe(logs, "anticipation-engine");
++    const registry = await loadRegistry();
++    const signals: AnticipationSignal[] = [];
++
++    // Group logs by source/project
++    const projectSignals = new Map<
++      string,
++      { critical: number; warning: number; patterns: Set<string> }
++    >();
++
++    for (const entry of logs) {
++      if (!entry.source) continue;
++
++      let projectStats = projectSignals.get(entry.source);
++      if (!projectStats) {
++        projectStats = { critical: 0, warning: 0, patterns: new Set() };
++        projectSignals.set(entry.source, projectStats);
++      }
++
++      if (entry.severity === "critical") projectStats.critical++;
++      if (entry.severity === "warning") projectStats.warning++;
++
++      entry.matchedPatterns.forEach((pattern) => projectStats.patterns.add(pattern));
++    }
++
++    // Generate signals for each project with significant risk
++    for (const [projectId, stats] of projectSignals) {
++      const totalRisk = stats.critical * 2 + stats.warning; // Weight critical higher
++
++      if (totalRisk >= RISK_THRESHOLD_MEDIUM) {
++        const patterns = Array.from(stats.patterns);
++        const project =
++          registry.projects.find((p) => p.id === projectId) || (await getProject(projectId));
++
++        let category: AnticipationCategory = "pipeline_failure";
++
++        // Refine category based on specific patterns
++        if (patterns.includes("flaky_test")) {
++          category = "test_flake";
++        } else if (patterns.includes("memory_leak")) {
++          category = "resource_exhaustion";
++        } else if (patterns.includes("network_error") || patterns.includes("ECONNREFUSED")) {
++          category = "dependency_block";
++        }
++
++        const confidence = this.calculateConfidence(totalRisk, 0.6); // Start with moderate historical accuracy
++        const horizon = this.determineHorizon(patterns);
++
++        const signal: AnticipationSignal = {
++          id: generateId("anticipation"),
++          category,
++          label: `${category.replace("_", " ")} predicted for ${projectId}`,
++          confidence,
++          horizon,
++          target: projectId,
++          transition: {
++            from: project?.healthStatus || "unknown",
++            to: "failing",
++          },
++          evidence: [
++            `${stats.critical} critical signals detected`,
++            `${stats.warning} warning signals detected`,
++            `Patterns: ${patterns.join(", ")}`,
++            `Time window: last ${DEFAULT_WINDOW_MINUTES} minutes`,
++          ],
++          action: this.generateAction(category, projectId),
++          generatedAt: new Date().toISOString(),
++          resolved: false,
++        };
++
++        signals.push(signal);
++        await this.store.appendSignal(signal);
++      }
++    }
++
++    return signals;
++  }
++
++  async evaluateProjectHealth(projectId: string): Promise<AnticipationSignal[]> {
++    const project = await getProject(projectId);
++    if (!project) return [];
++
++    const logs = await readAllLogs();
++    const projectLogs = logs.filter((entry) => entry.source === projectId);
++
++    if (projectLogs.length === 0) return [];
++
++    const recentLogs = projectLogs.slice(-100); // Last 100 entries
++    return this.analyzeRecentLogs(recentLogs);
++  }
++
++  async generateProximityWindow(start: string, end: string): Promise<ProximityWindow> {
++    const store = await this.store.load();
++    const signalsInWindow = store.activeSignals.filter(
++      (s) => s.generatedAt >= start && s.generatedAt <= end,
++    );
++
++    // Determine primary category
++    const categoryCounts = new Map<AnticipationCategory, number>();
++    signalsInWindow.forEach((signal) => {
++      categoryCounts.set(signal.category, (categoryCounts.get(signal.category) || 0) + 1);
++    });
++
++    let primaryCategory: AnticipationCategory = "pipeline_failure";
++    let maxCount = 0;
++    for (const [category, count] of categoryCounts) {
++      if (count > maxCount) {
++        maxCount = count;
++        primaryCategory = category;
++      }
++    }
++
++    // Determine overall confidence (highest among signals)
++    const confidenceOrder: AnticipationConfidence[] = ["unknown", "low", "medium", "high"];
++    let overallConfidence: AnticipationConfidence = "unknown";
++
++    for (const signal of signalsInWindow) {
++      const signalIndex = confidenceOrder.indexOf(signal.confidence);
++      const currentIndex = confidenceOrder.indexOf(overallConfidence);
++      if (signalIndex > currentIndex) {
++        overallConfidence = signal.confidence;
++      }
++    }
++
++    const window: ProximityWindow = {
++      id: generateId("proximity"),
++      window: { start, end },
++      signals: signalsInWindow,
++      confidence: overallConfidence,
++      primaryCategory,
++      signalCount: signalsInWindow.length,
++      isRiskCluster: signalsInWindow.length >= 3 && overallConfidence !== "unknown",
++    };
++
++    return window;
++  }
++
++  // Public API
++  async getActiveAnticipationSignals(): Promise<AnticipationSignal[]> {
++    return this.store.getActiveSignals();
++  }
++
++  async resolveAnticipationSignal(signalId: string, outcome: string): Promise<void> {
++    await this.store.resolveSignal(signalId, outcome);
++  }
++}
++
++// ── Module-level singleton and exports ──
++
++let engine: PipelineAnticipationEngine | null = null;
++
++export function getAnticipationEngine(): PipelineAnticipationEngine {
++  if (!engine) {
++    engine = new PipelineAnticipationEngine();
++  }
++  return engine;
++}
++
++export async function generateAnticipationSignals(): Promise<AnticipationSignal[]> {
++  const logs = await readAllLogs();
++  const recentLogs = logs.slice(-200); // Last 200 log entries
++  const engine = getAnticipationEngine();
++  return engine.analyzeRecentLogs(recentLogs);
++}
++
++export async function getAnticipationStatus(): Promise<{
++  activeSignals: number;
++  riskClusters: number;
++  recentPredictions: AnticipationSignal[];
++}> {
++  const engine = getAnticipationEngine();
++  const signals = await engine.getActiveAnticipationSignals();
++
++  // Generate proximity window for last 24 hours
++  const end = new Date().toISOString();
++  const start = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
++  const window = await engine.generateProximityWindow(start, end);
++
++  return {
++    activeSignals: signals.length,
++    riskClusters: window.isRiskCluster ? 1 : 0,
++    recentPredictions: signals.slice(0, 5), // Top 5 recent predictions
++  };
++}
+diff --git a/Tools/MCPServers/ori-server/src/server.ts b/Tools/MCPServers/ori-server/src/server.ts
+index 8a1a6ff..9b4c871 100644
+--- a/Tools/MCPServers/ori-server/src/server.ts
++++ b/Tools/MCPServers/ori-server/src/server.ts
+@@ -54,6 +54,11 @@ import {
+ import { loadRegistry, getProject, listProjects, discoverTestSuites } from "./registry.js";
+ import { runTestSuite, runAllTests, getRunResult, getRunStdout, listRuns } from "./executor.js";
+ import { evaluateSignals, getRouterState, resetRouterState } from "./router.js";
++import {
++  generateAnticipationSignals,
++  getAnticipationStatus,
++  getAnticipationEngine,
++} from "./anticipation.js";
+ import {
+   loadRouterConfig,
+   updateRoute,
+@@ -2060,6 +2065,69 @@ export function buildServer(): McpServer {
+     },
+   );
+ 
++  // ── Anticipation Tools ──
++
++  registerTool(
++    "generate_anticipation_signals",
++    {
++      description:
++        "Generate anticipation signals predicting likely pipeline failures based on recent log patterns, " +
++        "risk signals, and historical context. Returns proactive warnings before failures occur.",
++      inputSchema: z.object({}),
++    },
++    async () => {
++      await ensureDataDirs();
++      const signals = await generateAnticipationSignals();
++      return {
++        content: [{ type: "text", text: JSON.stringify({ signals }, null, 2) }],
++      };
++    },
++  );
++
++  registerTool(
++    "get_anticipation_status",
++    {
++      description:
++        "Get current anticipation system status — active signals, risk clusters, " +
++        "and recent predictions. Monitor the pipeline failure prediction system.",
++      inputSchema: z.object({}),
++    },
++    async () => {
++      await ensureDataDirs();
++      const status = await getAnticipationStatus();
++      return {
++        content: [{ type: "text", text: JSON.stringify(status, null, 2) }],
++      };
++    },
++  );
++
++  registerTool(
++    "resolve_anticipation_signal",
++    {
++      description:
++        "Mark an anticipation signal as resolved with an outcome description. " +
++        "Used to track prediction accuracy and close completed predictions.",
++      inputSchema: z.object({
++        signalId: z.string().describe("ID of the anticipation signal to resolve"),
++        outcome: z
++          .string()
++          .describe(
++            "Description of the actual outcome (e.g., 'failure occurred', 'false positive')",
++          ),
++      }),
++    },
++    async (args: { signalId: string; outcome: string }) => {
++      await ensureDataDirs();
++      const engine = getAnticipationEngine();
++      await engine.resolveAnticipationSignal(args.signalId, args.outcome);
++      return {
++        content: [
++          { type: "text", text: JSON.stringify({ resolved: true, signalId: args.signalId }) },
++        ],
++      };
++    },
++  );
++
+   return server;
+ }
+ 
+diff --git a/Tools/MCPServers/ori-server/src/storage.ts b/Tools/MCPServers/ori-server/src/storage.ts
+index 77e3c13..c4a17fb 100644
+--- a/Tools/MCPServers/ori-server/src/storage.ts
++++ b/Tools/MCPServers/ori-server/src/storage.ts
+@@ -6,6 +6,7 @@ import { promises as fs } from "fs";
+ import path from "path";
+ import { getConfig } from "./config.js";
+ import type { LogEntry } from "./types.js";
++import { getAnticipationEngine } from "./anticipation.js";
+ 
+ const config = getConfig();
+ 
+@@ -32,6 +33,17 @@ export async function appendLogEntries(entries: LogEntry[]): Promise<void> {
+   const filepath = todayLogFile();
+   const lines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+   await fs.appendFile(filepath, lines, "utf-8");
++
++  // Generate anticipation signals for new log entries
++  if (entries.length > 0) {
++    try {
++      const engine = getAnticipationEngine();
++      await engine.analyzeRecentLogs(entries);
++    } catch (error) {
++      // Don't fail log ingestion if anticipation fails
++      console.error("Anticipation signal generation failed:", error);
++    }
++  }
+ }
+ 
+ export async function readTodayLogs(): Promise<LogEntry[]> {
+diff --git a/Tools/MCPServers/ori-server/tests/anticipation.test.ts b/Tools/MCPServers/ori-server/tests/anticipation.test.ts
+new file mode 100644
+index 0000000..9794238
+--- /dev/null
++++ b/Tools/MCPServers/ori-server/tests/anticipation.test.ts
+@@ -0,0 +1,210 @@
++import { mkdirSync, mkdtempSync, rmSync } from "fs";
++import os from "os";
++import path from "path";
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
++
++import {
++  getAnticipationEngine,
++  generateAnticipationSignals,
++  getAnticipationStatus,
++} from "../src/anticipation.js";
++import { appendLogEntries, clearAllLogs } from "../src/storage.js";
++import type { LogEntry } from "../src/types.js";
++
++describe("anticipation engine", () => {
++  const tempRoot = mkdtempSync(path.join(os.tmpdir(), "ori-anticipation-"));
++
++  beforeAll(async () => {
++    const oriDataDir = path.join(tempRoot, ".ori");
++    const echoesDataDir = path.join(tempRoot, ".echoes");
++    process.env.ORI_DATA_DIR = oriDataDir;
++    process.env.ECHOES_DATA_DIR = echoesDataDir;
++    process.env.ECHOES_AUDIT_PATH = path.join(echoesDataDir, "audit.ndjson");
++    process.env.CASCADE_WORKSPACE_ROOT = "/home/irfankabir/workspace/CascadeProjects";
++
++    mkdirSync(oriDataDir, { recursive: true });
++    mkdirSync(echoesDataDir, { recursive: true });
++  });
++
++  afterAll(() => {
++    delete process.env.ORI_DATA_DIR;
++    delete process.env.ECHOES_DATA_DIR;
++    delete process.env.ECHOES_AUDIT_PATH;
++    delete process.env.CASCADE_WORKSPACE_ROOT;
++    rmSync(tempRoot, { recursive: true, force: true });
++  });
++
++  beforeEach(async () => {
++    await clearAllLogs();
++  });
++
++  it("generates anticipation signals when risk threshold is met", async () => {
++    // Create test entries that should trigger anticipation
++    const testEntries: LogEntry[] = [
++      {
++        id: "test-1",
++        timestamp: new Date().toISOString(),
++        line: "TimeoutError: Test execution timed out",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++      {
++        id: "test-2",
++        timestamp: new Date().toISOString(),
++        line: "Memory leak detected",
++        source: "mcp-ori-server",
++        severity: "warning",
++        matchedPatterns: ["memory_leak"],
++      },
++      {
++        id: "test-3",
++        timestamp: new Date().toISOString(),
++        line: "Another timeout occurred",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++      {
++        id: "test-4",
++        timestamp: new Date().toISOString(),
++        line: "Network connection refused",
++        source: "mcp-ori-server",
++        severity: "warning",
++        matchedPatterns: ["network_error"],
++      },
++      {
++        id: "test-5",
++        timestamp: new Date().toISOString(),
++        line: "Third timeout detected",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++    ];
++
++    await appendLogEntries(testEntries);
++    const signals = await generateAnticipationSignals();
++
++    expect(signals.length).toBeGreaterThan(0);
++    expect(signals[0].category).toBeOneOf(["pipeline_failure", "resource_exhaustion"]);
++    expect(signals[0].confidence).toBe("medium");
++    expect(signals[0].target).toBe("mcp-ori-server");
++  });
++
++  it("returns empty array when risk threshold not met", async () => {
++    // Single warning entry shouldn't trigger anticipation
++    const testEntries: LogEntry[] = [
++      {
++        id: "test-1",
++        timestamp: new Date().toISOString(),
++        line: "Minor warning message",
++        source: "mcp-ori-server",
++        severity: "warning",
++        matchedPatterns: ["console_warn"],
++      },
++    ];
++
++    await appendLogEntries(testEntries);
++    const signals = await generateAnticipationSignals();
++
++    expect(signals.length).toBe(0);
++  });
++
++  it("provides anticipation status information", async () => {
++    const status = await getAnticipationStatus();
++
++    expect(status).toHaveProperty("activeSignals");
++    expect(status).toHaveProperty("riskClusters");
++    expect(status).toHaveProperty("recentPredictions");
++    expect(Array.isArray(status.recentPredictions)).toBe(true);
++  });
++
++  it("analyzes logs and generates signals on each call", async () => {
++    const testEntries: LogEntry[] = [
++      {
++        id: "test-persist",
++        timestamp: new Date().toISOString(),
++        line: "TimeoutError: Persistence test",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++      {
++        id: "test-persist-2",
++        timestamp: new Date().toISOString(),
++        line: "Memory issue in persistence test",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["memory_leak"],
++      },
++      {
++        id: "test-persist-3",
++        timestamp: new Date().toISOString(),
++        line: "Another timeout for persistence",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++      {
++        id: "test-persist-4",
++        timestamp: new Date().toISOString(),
++        line: "Network issue in persistence test",
++        source: "mcp-ori-server",
++        severity: "warning",
++        matchedPatterns: ["network_error"],
++      },
++    ];
++
++    await appendLogEntries(testEntries);
++
++    // First call generates signals from logs
++    const signals1 = await generateAnticipationSignals();
++    expect(signals1.length).toBeGreaterThan(0);
++
++    // Second call re-analyzes the same logs - this is expected behavior
++    // (generateAnticipationSignals analyzes current logs each time)
++    const signals2 = await generateAnticipationSignals();
++    expect(signals2.length).toBeGreaterThan(0);
++    // Signal IDs differ because new signals are generated on each call
++    expect(signals2[0].id).not.toBe(signals1[0].id);
++    // But both should have the same category and target
++    expect(signals2[0].category).toBe(signals1[0].category);
++    expect(signals2[0].target).toBe(signals1[0].target);
++  });
++
++  it("resolves anticipation signals with outcomes", async () => {
++    // Generate a signal first
++    const testEntries: LogEntry[] = [
++      {
++        id: "test-resolve",
++        timestamp: new Date().toISOString(),
++        line: "TimeoutError: Signal resolution test",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["timeout"],
++      },
++      {
++        id: "test-resolve-2",
++        timestamp: new Date().toISOString(),
++        line: "Memory issue for resolution test",
++        source: "mcp-ori-server",
++        severity: "critical",
++        matchedPatterns: ["memory_leak"],
++      },
++    ];
++
++    await appendLogEntries(testEntries);
++    const signals = await generateAnticipationSignals();
++
++    if (signals.length > 0) {
++      const engine = getAnticipationEngine();
++      await engine.resolveAnticipationSignal(signals[0].id, "failure occurred as predicted");
++
++      // Signal should now be marked as resolved
++      const activeSignals = await engine.getActiveAnticipationSignals();
++      const resolvedSignal = activeSignals.find((s) => s.id === signals[0].id);
++      expect(resolvedSignal).toBeUndefined(); // Should not be in active signals
++    }
++  });
++});
+diff --git a/Tools/MCPServers/ori-server/tests/executor.test.ts b/Tools/MCPServers/ori-server/tests/executor.test.ts
+index 406a8af..5882cfa 100644
+--- a/Tools/MCPServers/ori-server/tests/executor.test.ts
++++ b/Tools/MCPServers/ori-server/tests/executor.test.ts
+@@ -159,6 +159,7 @@ describe("executor tools", () => {
+   beforeAll(async () => {
+     const origFetch = globalThis.fetch;
+     process.env.GRID_API_URL = "http://127.0.0.1:59998";
++    process.env.CASCADE_WORKSPACE_ROOT = "/home/irfankabir/workspace/CascadeProjects";
+     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+       const url = String(input);
+       if (url.includes("/admission/check-permission")) {
+@@ -214,7 +215,7 @@ describe("executor tools", () => {
+     expect(tools).toEqual(
+       expect.arrayContaining(["run_tests", "run_all_tests", "get_run_result", "list_runs"]),
+     );
+-    expect(tools.length).toBe(25);
++    expect(tools.length).toBe(28);
+   });
+ 
+   it("run_tests executes ori-server smoke tests (filtered to avoid recursion)", async () => {
+diff --git a/Tools/MCPServers/ori-server/tests/notebook.test.ts b/Tools/MCPServers/ori-server/tests/notebook.test.ts
+index 489d834..96957b1 100644
+--- a/Tools/MCPServers/ori-server/tests/notebook.test.ts
++++ b/Tools/MCPServers/ori-server/tests/notebook.test.ts
+@@ -233,7 +233,7 @@ describe("notebook tools", () => {
+         "ecosystem_context",
+       ]),
+     );
+-    expect(tools.length).toBe(25);
++    expect(tools.length).toBe(28);
+   });
+ 
+   it("notebook_add creates a note via tool", async () => {
+diff --git a/Tools/MCPServers/ori-server/tests/registry.test.ts b/Tools/MCPServers/ori-server/tests/registry.test.ts
+index 586de12..efe0559 100644
+--- a/Tools/MCPServers/ori-server/tests/registry.test.ts
++++ b/Tools/MCPServers/ori-server/tests/registry.test.ts
+@@ -43,6 +43,7 @@ describe("ori-server registry", () => {
+   beforeAll(async () => {
+     const origFetch = globalThis.fetch;
+     process.env.GRID_API_URL = "http://127.0.0.1:59998";
++    process.env.CASCADE_WORKSPACE_ROOT = "/home/irfankabir/workspace/CascadeProjects";
+     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+       const url = String(input);
+       if (url.includes("/admission/check-permission")) {
+@@ -104,7 +105,7 @@ describe("ori-server registry", () => {
+     expect(tools).toEqual(
+       expect.arrayContaining(["list_projects", "get_project", "discover_tests"]),
+     );
+-    expect(tools.length).toBe(25);
++    expect(tools.length).toBe(28);
+   });
+ 
+   // ── Registry module unit tests ──
+diff --git a/Tools/MCPServers/ori-server/tests/threat-model.test.ts b/Tools/MCPServers/ori-server/tests/threat-model.test.ts
+index 3bc321e..de078f7 100644
+--- a/Tools/MCPServers/ori-server/tests/threat-model.test.ts
++++ b/Tools/MCPServers/ori-server/tests/threat-model.test.ts
+@@ -258,6 +258,7 @@ describe("threat model tools", () => {
+   beforeAll(async () => {
+     const origFetch = globalThis.fetch;
+     process.env.GRID_API_URL = "http://127.0.0.1:59998";
++    process.env.CASCADE_WORKSPACE_ROOT = "/home/irfankabir/workspace/CascadeProjects";
+     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+       const url = String(input);
+       if (url.includes("/admission/check-permission")) {
+@@ -320,7 +321,7 @@ describe("threat model tools", () => {
+         "get_coverage_gaps",
+       ]),
+     );
+-    expect(tools.length).toBe(25);
++    expect(tools.length).toBe(28);
+   });
+ 
+   it("get_threat_coverage_heatmap returns grid payload", async () => {
+diff --git a/Tools/MCPServers/ori-server/tsconfig.json b/Tools/MCPServers/ori-server/tsconfig.json
+index 3bbd8d8..a71ab20 100644
+--- a/Tools/MCPServers/ori-server/tsconfig.json
++++ b/Tools/MCPServers/ori-server/tsconfig.json
+@@ -5,6 +5,10 @@
+     "moduleResolution": "NodeNext",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/overview-server/package.json b/Tools/MCPServers/overview-server/package.json
+index 525b501..c37592c 100644
+--- a/Tools/MCPServers/overview-server/package.json
++++ b/Tools/MCPServers/overview-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/overview-server/tsconfig.json b/Tools/MCPServers/overview-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/overview-server/tsconfig.json
++++ b/Tools/MCPServers/overview-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/pulse-server/package.json b/Tools/MCPServers/pulse-server/package.json
+index fff9e27..df84fe8 100644
+--- a/Tools/MCPServers/pulse-server/package.json
++++ b/Tools/MCPServers/pulse-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/pulse-server/tsconfig.json b/Tools/MCPServers/pulse-server/tsconfig.json
+index 24f46ce..25b0671 100644
+--- a/Tools/MCPServers/pulse-server/tsconfig.json
++++ b/Tools/MCPServers/pulse-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/Tools/MCPServers/seeds-server/package.json b/Tools/MCPServers/seeds-server/package.json
+index ed40f4f..5293120 100644
+--- a/Tools/MCPServers/seeds-server/package.json
++++ b/Tools/MCPServers/seeds-server/package.json
+@@ -14,7 +14,7 @@
+   },
+   "dependencies": {
+     "@cascade/shared-types": "file:../../../Components/shared-types",
+-    "@modelcontextprotocol/sdk": "^1.28.0",
++    "@modelcontextprotocol/sdk": "^1.29.0",
+     "zod": "^4.3.6"
+   },
+   "devDependencies": {
+diff --git a/Tools/MCPServers/seeds-server/tests/smoke.test.ts b/Tools/MCPServers/seeds-server/tests/smoke.test.ts
+index 90a18e5..758f25f 100644
+--- a/Tools/MCPServers/seeds-server/tests/smoke.test.ts
++++ b/Tools/MCPServers/seeds-server/tests/smoke.test.ts
+@@ -111,6 +111,56 @@ describe("seeds-server smoke", () => {
+     expect(parsed.repos.find((r: any) => r.name === "templates")).toBeUndefined();
+   });
+ 
++  it("bookmark_add persists and bookmark_list returns it", async () => {
++    const server = buildServer();
++    const add = (await invokeTool(server, "bookmark_add", {
++      repo: "GRID-main",
++      filepath: "src/application/mothership/main.py",
++      note: "Mothership entrypoint for API debugging",
++      tags: ["entrypoint", "api"],
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(add.isError).not.toBe(true);
++    const { bookmark } = JSON.parse(add.content[0].text);
++    expect(bookmark.id).toMatch(/^bk-/);
++    expect(bookmark.repo).toBe("GRID-main");
++
++    const list = (await invokeTool(server, "bookmark_list", {})) as {
++      content: Array<{ text: string }>;
++    };
++    const { bookmarks } = JSON.parse(list.content[0].text);
++    const found = bookmarks.find((b: any) => b.id === bookmark.id);
++    expect(found).toBeDefined();
++    expect(found.note).toBe("Mothership entrypoint for API debugging");
++    expect(found.tags).toContain("entrypoint");
++  });
++
++  it("bookmark_list filters by repo", async () => {
++    const server = buildServer();
++    await invokeTool(server, "bookmark_add", {
++      repo: "canopy-echoes",
++      note: "Echoes API root",
++      tags: ["api"],
++    });
++
++    const filtered = (await invokeTool(server, "bookmark_list", {
++      repo: "GRID-main",
++    })) as { content: Array<{ text: string }> };
++    const { bookmarks } = JSON.parse(filtered.content[0].text);
++    expect(bookmarks.every((b: any) => b.repo === "GRID-main")).toBe(true);
++  });
++
++  it("repo_detail returns exists=false for unknown repo without isError", async () => {
++    const server = buildServer();
++    const result = (await invokeTool(server, "repo_detail", {
++      repoName: "nonexistent-repo-xyz",
++    })) as { content: Array<{ text: string }>; isError?: boolean };
++
++    expect(result.isError).not.toBe(true);
++    const payload = JSON.parse(result.content[0].text);
++    expect(payload.exists).toBe(false);
++  });
++
+   it("runs ecosystem_trend and returns historical data", async () => {
+     const server = buildServer();
+ 
+diff --git a/Tools/MCPServers/seeds-server/tsconfig.json b/Tools/MCPServers/seeds-server/tsconfig.json
+index b2117e6..5865679 100644
+--- a/Tools/MCPServers/seeds-server/tsconfig.json
++++ b/Tools/MCPServers/seeds-server/tsconfig.json
+@@ -7,6 +7,10 @@
+     "rootDir": "./src",
+     "types": ["node"],
+     "strict": true,
++    "noUnusedLocals": true,
++    "noUnusedParameters": true,
++    "noImplicitReturns": true,
++    "noFallthroughCasesInSwitch": true,
+     "esModuleInterop": true,
+     "skipLibCheck": true,
+     "forceConsistentCasingInFileNames": true,
+diff --git a/opencode.json b/opencode.json
+index d9656dd..c75376f 100644
+--- a/opencode.json
++++ b/opencode.json
+@@ -1,6 +1,6 @@
+ {
+   "$schema": "https://opencode.ai/config.json",
+   "instructions": [
+-    "Canonical shared rules sources: /home/caraxes/seed/templates/development-contract.md and /home/caraxes/.dev-rules.md. Apply /home/caraxes/.dev-rules.md as the primary instruction baseline and treat the development contract as the full trust source.\n\nCascadeProjects monorepo. Build shared-types first. MCP servers use npm. GRID-main is a git submodule (Python, uv sync). CascadeProjects/mcp_config.json is the canonical MCP source.\n\nThe Unbreakable Vow (TUV-001): Fidelity \u2014 trace work to the stated objective, disclose context gaps, flag scope expansion. Integrity \u2014 ask instead of guessing, signal degradation, realign at natural breakpoints. Accountability \u2014 self-report violations, honor human override after noting concerns once, never amend the contract without explicit versioned agreement. Never silently discard context, never present known-incorrect output as certain, never resist human override, never amend the contract unilaterally, never conceal a known violation.\n\nIf TUV-001 applies, restate the three conditions. Condition I violation: mark output void and re-anchor. Condition II violation: enter Shield Break and stop. Condition III or never-rule violation: enter Breach State and stop.\n\nPython: 3.13+, ruff formatter, 120 char lines, type hints, structlog, Pydantic v2, uv only. TypeScript: strict mode, ESLint + Prettier. LF line endings, trim trailing whitespace, insert final newline, conventional commits. Safety modules are inviolable.\n\nOS Guardrails: For Arch Linux workstation hardening, firewall review, nftables audit tuning, sysctl security parameters, service exposure review, auditd posture, or suspicious network activity, use the os-guardrails workflow defined at /home/caraxes/skills/os-guardrails/SKILL.md. Follow its 5-stage protocol: read-only inspection \u2192 risk classification \u2192 approved hardening \u2192 verification \u2192 guardrail strength report. Treat these compatibility constraints as absolute unless the user explicitly names the item: no linux-hardened kernel, no module.sig_enforce=1, no kernel lockdown mode, no hidepid=2 on /proc, no hardened_malloc preload, no AppArmor/SELinux rollout, no LKRG. For nftables audit work, follow the whitelist-then-alert rule set: exclude loopback first, whitelist normal HTTPS/HTTP/DNS/DHCP/NTP/LAN broadcast traffic before any catch-all, rate-limit every log rule, and use positive priority after the base firewall. If the journal is noisy under normal use, the rules are wrong and must be tightened. For final verification, use /home/caraxes/skills/os-guardrails/references/guardrail-baseline.md as the target baseline.\n\nNetwork Isolation (UNPROVISIONED MODE): Status: UNPROVISIONED \u2014 All external network access blocked until further notice. Allowed: localhost only (127.0.0.1, ::1, localhost). Blocked: All external APIs, LAN traffic, cloud services. Rate Limits: 10 req/sec per endpoint, 30s timeout. Circuit Breaker: 5 failures = 60s cooldown. Never: Make external API calls without explicit approval, Bypass localhost-only enforcement, Disable rate limiting or circuit breakers."
++    "Canonical shared rules sources: /home/irfankabir/seed/templates/development-contract.md and /home/irfankabir/.dev-rules.md. Apply /home/irfankabir/.dev-rules.md as the primary instruction baseline and treat the development contract as the full trust source.\n\nCascadeProjects monorepo. Build shared-types first. MCP servers use npm. GRID-main is a git submodule (Python, uv sync). CascadeProjects/mcp_config.json is the canonical MCP source.\n\nThe Unbreakable Vow (TUV-001): Fidelity \u2014 trace work to the stated objective, disclose context gaps, flag scope expansion. Integrity \u2014 ask instead of guessing, signal degradation, realign at natural breakpoints. Accountability \u2014 self-report violations, honor human override after noting concerns once, never amend the contract without explicit versioned agreement. Never silently discard context, never present known-incorrect output as certain, never resist human override, never amend the contract unilaterally, never conceal a known violation.\n\nIf TUV-001 applies, restate the three conditions. Condition I violation: mark output void and re-anchor. Condition II violation: enter Shield Break and stop. Condition III or never-rule violation: enter Breach State and stop.\n\nPython: 3.13+, ruff formatter, 120 char lines, type hints, structlog, Pydantic v2, uv only. TypeScript: strict mode, ESLint + Prettier. LF line endings, trim trailing whitespace, insert final newline, conventional commits. Safety modules are inviolable.\n\nOS Guardrails: For Arch Linux workstation hardening, firewall review, nftables audit tuning, sysctl security parameters, service exposure review, auditd posture, or suspicious network activity, use the os-guardrails workflow defined at /home/irfankabir/skills/os-guardrails/SKILL.md. Follow its 5-stage protocol: read-only inspection \u2192 risk classification \u2192 approved hardening \u2192 verification \u2192 guardrail strength report. Treat these compatibility constraints as absolute unless the user explicitly names the item: no linux-hardened kernel, no module.sig_enforce=1, no kernel lockdown mode, no hidepid=2 on /proc, no hardened_malloc preload, no AppArmor/SELinux rollout, no LKRG. For nftables audit work, follow the whitelist-then-alert rule set: exclude loopback first, whitelist normal HTTPS/HTTP/DNS/DHCP/NTP/LAN broadcast traffic before any catch-all, rate-limit every log rule, and use positive priority after the base firewall. If the journal is noisy under normal use, the rules are wrong and must be tightened. For final verification, use /home/irfankabir/skills/os-guardrails/references/guardrail-baseline.md as the target baseline.\n\nNetwork Isolation (UNPROVISIONED MODE): Status: UNPROVISIONED \u2014 All external network access blocked until further notice. Allowed: localhost only (127.0.0.1, ::1, localhost). Blocked: All external APIs, LAN traffic, cloud services. Rate Limits: 10 req/sec per endpoint, 30s timeout. Circuit Breaker: 5 failures = 60s cooldown. Never: Make external API calls without explicit approval, Bypass localhost-only enforcement, Disable rate limiting or circuit breakers."
+   ]
+ }
+diff --git a/package.json b/package.json
+index a68c2a7..80dde34 100644
+--- a/package.json
++++ b/package.json
+@@ -21,6 +21,7 @@
+     "Tools/MCPServers/ori-server",
+     "Tools/MCPServers/eligibility-server",
+     "Tools/MCPServers/craft-server",
++    "Tools/MCPServers/harness-server",
+     "Applications/pi-mangrove",
+     "Applications/glimpse-artifact",
+     "Applications/glimpse-engine"

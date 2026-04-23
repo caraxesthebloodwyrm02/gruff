@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gruff.local/schemas/gruff-proportion-v1.schema.json",
+  "title": "Gruff Proportion Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "audioDrive", "theta", "weights", "sequence", "manifest", "compass", "provenance"],
+  "properties": {
+    "schemaVersion": { "const": "gruff-proportion-v1" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "audioDrive": { "type": "number", "minimum": 0, "maximum": 1 },
+    "theta": { "type": "number", "minimum": 0, "maximum": 1 },
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sound", "gesture", "calculation"],
+      "properties": {
+        "sound": { "type": "number", "minimum": 0, "maximum": 1 },
+        "gesture": { "type": "number", "minimum": 0, "maximum": 1 },
+        "calculation": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "sequence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stepName", "stepIndex"],
+      "properties": {
+        "stepName": { "type": "string", "minLength": 1 },
+        "stepIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["notebookId", "revisionId", "blockCount"],
+      "properties": {
+        "notebookId": { "type": "string" },
+        "revisionId": { "type": ["string", "null"] },
+        "blockCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "compass": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["boardTitle", "schemaVersion", "renderedAt"],
+      "properties": {
+        "boardTitle": { "type": "string" },
+        "schemaVersion": { "type": "string" },
+        "renderedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

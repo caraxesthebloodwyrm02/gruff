@@ -1,174 +1,146 @@
-from fastapi.testclient import TestClient
-from importlib.resources import files
+from __future__ import annotations
+
+from pathlib import Path
+
+import httpx
+import pytest
 
 from notebook_engine.api import build_app
-from notebook_engine.blocks import InMemoryBlockStore
+from notebook_engine.craft import CraftPreflight, CraftRenderResult
 from notebook_engine.grid import GridConfig
+from notebook_engine.service import NotebookService
 
 
-def make_client(*, cell_px: int = 24, margin_cols: int = 2) -> TestClient:
-    config = GridConfig(cell_px=cell_px, margin_cols=margin_cols)
-    app = build_app(config, store=InMemoryBlockStore())
-    return TestClient(app)
+class FakeCraftRenderer:
+    def __init__(self, tmp_path: Path):
+        self.tmp_path = tmp_path
+
+    def preflight(self) -> CraftPreflight:
+        return CraftPreflight(True, 'craft-server', 'fake renderer ready')
+
+    def render(self, *, manifest, metrics, profile, output_dir):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        artifact_path = output_dir / f'{manifest.notebook_id}-{profile}.png'
+        artifact_path.write_text('fake-render', encoding='utf-8')
+        return CraftRenderResult(
+            renderer='craft-server',
+            profile=profile,
+            artifact_path=str(artifact_path),
+            metadata={'fake': True, 'revision': manifest.current_revision_id},
+        )
 
 
-def test_get_grid_uses_config_values() -> None:
-    client = make_client(cell_px=32, margin_cols=3)
-    response = client.get('/api/grid')
-    assert response.status_code == 200
-    assert response.json() == {'cell_px': 32, 'margin_cols': 3}
-
-
-def test_block_lifecycle_bounds_shape() -> None:
-    client = make_client()
-    create = client.post(
-        '/api/blocks',
-        json={'min_col': 2, 'max_col': 4, 'min_row': 1, 'max_row': 3},
+@pytest.fixture
+def app(tmp_path: Path):
+    root = Path(__file__).resolve().parents[2]
+    service = NotebookService(
+        manifest_path=tmp_path / 'notebook.manifest.json',
+        grid_config=GridConfig(cell_px=24, margin_cols=2, cols=40, rows=30),
+        craft_renderer=FakeCraftRenderer(tmp_path),
+        schema_path=root / 'schemas' / 'trust-event-v1.schema.json',
+        bridge_schema_path=root / 'schemas' / 'gruff-proportion-v1.schema.json',
+        manifest_schema_path=root / 'schemas' / 'notebook-manifest-v1.schema.json',
+        craft_required=True,
     )
-    assert create.status_code == 201
-    created = create.json()
-    assert created['id']
-
-    listed = client.get('/api/blocks')
-    assert listed.status_code == 200
-    blocks = listed.json()
-    assert len(blocks) == 1
-    assert blocks[0]['id'] == created['id']
-
-    deleted = client.delete(f"/api/blocks/{created['id']}")
-    assert deleted.status_code == 204
-
-    listed_after = client.get('/api/blocks')
-    assert listed_after.status_code == 200
-    assert listed_after.json() == []
+    return build_app(service=service)
 
 
-def test_block_lifecycle_start_end_shape_and_clear() -> None:
-    client = make_client()
-
-    create_one = client.post(
-        '/api/blocks',
-        json={'start_col': 5, 'start_row': 6, 'end_col': 3, 'end_row': 2},
-    )
-    assert create_one.status_code == 201
-    body = create_one.json()
-    assert body['min_col'] == 3
-    assert body['max_col'] == 5
-    assert body['min_row'] == 2
-    assert body['max_row'] == 6
-
-    create_two = client.post(
-        '/api/blocks',
-        json={'min_col': 6, 'max_col': 7, 'min_row': 0, 'max_row': 1},
-    )
-    assert create_two.status_code == 201
-
-    clear = client.post('/api/blocks/clear')
-    assert clear.status_code == 204
-
-    listed_after = client.get('/api/blocks')
-    assert listed_after.status_code == 200
-    assert listed_after.json() == []
+@pytest.fixture
+async def client(app):
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url='http://testserver') as async_client:
+        yield async_client
 
 
-def test_invalid_payloads_return_422() -> None:
-    client = make_client()
+@pytest.mark.anyio
+async def test_health_and_manifest_endpoints(client: httpx.AsyncClient, app) -> None:
+    health = await client.get('/api/health')
+    assert health.status_code == 200
+    assert health.json()['craftReady'] is True
 
-    mixed = client.post(
+    manifest = await client.get('/api/manifest')
+    assert manifest.status_code == 200
+    body = manifest.json()
+    assert body['schema_version'] == 'notebook-manifest-v1'
+    assert body['current_revision_id']
+    assert any(getattr(route, 'path', None) == '/ws' for route in app.routes)
+
+
+@pytest.mark.anyio
+async def test_block_lifecycle_updates_manifest_and_revisions(client: httpx.AsyncClient) -> None:
+    created = await client.post(
         '/api/blocks',
         json={
             'min_col': 2,
-            'max_col': 3,
+            'max_col': 4,
             'min_row': 1,
-            'max_row': 2,
-            'start_col': 2,
-            'start_row': 1,
-            'end_col': 3,
-            'end_row': 2,
+            'max_row': 3,
+            'label': 'Daily Plan',
+            'tone': 'mint',
         },
     )
-    assert mixed.status_code == 422
+    assert created.status_code == 201
+    assert created.json()['label'] == 'Daily Plan'
 
-    invalid_range = client.post(
-        '/api/blocks',
-        json={'min_col': 4, 'max_col': 2, 'min_row': 1, 'max_row': 3},
-    )
-    assert invalid_range.status_code == 422
-    invalid_range_body = invalid_range.json()
-    assert isinstance(invalid_range_body['detail'], list)
-    assert invalid_range_body['detail'][0]['loc'] == ['body', 'max_col']
+    manifest = (await client.get('/api/manifest')).json()
+    assert len(manifest['blocks']) == 1
+    assert manifest['blocks'][0]['tone'] == 'mint'
 
-    margin_violation = client.post(
-        '/api/blocks',
-        json={'min_col': 1, 'max_col': 2, 'min_row': 0, 'max_row': 1},
-    )
-    assert margin_violation.status_code == 422
-    margin_violation_body = margin_violation.json()
-    assert isinstance(margin_violation_body['detail'], list)
-    assert margin_violation_body['detail'][0]['loc'] == ['body', 'min_col']
-    assert 'margin_cols' in margin_violation_body['detail'][0]['msg']
+    revisions = (await client.get('/api/revisions')).json()
+    assert revisions[-1]['summary'].startswith('Created block')
 
-    invalid_tone = client.post(
-        '/api/blocks',
-        json={'min_col': 2, 'max_col': 3, 'min_row': 0, 'max_row': 1, 'tone': 'neon'},
-    )
-    assert invalid_tone.status_code == 422
-    invalid_tone_body = invalid_tone.json()
-    assert isinstance(invalid_tone_body['detail'], list)
-    assert invalid_tone_body['detail'][0]['loc'] == ['body', 'tone']
+    deleted = await client.delete(f"/api/blocks/{created.json()['id']}")
+    assert deleted.status_code == 204
+    assert (await client.get('/api/manifest')).json()['blocks'] == []
 
 
-def test_delete_missing_block_returns_404() -> None:
-    client = make_client()
-    response = client.delete('/api/blocks/missing-id')
-    assert response.status_code == 404
+@pytest.mark.anyio
+async def test_csv_import_dry_run_vs_commit(client: httpx.AsyncClient) -> None:
+    csv_text = 'min_col,max_col,min_row,max_row,label,tone\n2,4,1,2,Imported block,azure\n'
+
+    dry_run = await client.post('/api/exports/csv-import?dry_run=true', content=csv_text, headers={'content-type': 'text/plain'})
+    assert dry_run.status_code == 200
+    assert dry_run.json()['dry_run'] is True
+    assert (await client.get('/api/manifest')).json()['blocks'] == []
+
+    committed = await client.post('/api/exports/csv-import', content=csv_text, headers={'content-type': 'text/plain'})
+    assert committed.status_code == 200
+    assert committed.json()['dry_run'] is False
+    assert len((await client.get('/api/manifest')).json()['blocks']) == 1
 
 
-def test_html_and_static_assets_smoke() -> None:
-    client = make_client()
+@pytest.mark.anyio
+async def test_compass_render_and_bridge_emit(client: httpx.AsyncClient) -> None:
+    await client.post('/api/blocks', json={'min_col': 2, 'max_col': 6, 'min_row': 2, 'max_row': 5, 'label': 'Compass lane', 'tone': 'amber'})
 
-    html = client.get('/')
-    assert html.status_code == 200
-    assert 'id="nb"' in html.text
+    rendered = await client.post('/api/compass/render?profile=diagnostic')
+    assert rendered.status_code == 200
+    payload = rendered.json()
+    assert payload['renderer'] == 'craft-server'
+    assert payload['artifact']['path'].endswith('.png')
+    assert payload['metrics']['block_count'] == 1
 
-    js = client.get('/static/notebook.js')
-    assert js.status_code == 200
-    assert "fetch('/api/grid')" in js.text
-    assert 'new WebSocket' in js.text
-    assert 'label: labelInput.value' in js.text
-    assert 'tone: toneSelect.value' in js.text
+    bridge = await client.post('/api/bridge/payload')
+    assert bridge.status_code == 200
+    bridge_payload = bridge.json()['payload']
+    assert bridge_payload['schemaVersion'] == 'gruff-proportion-v1'
+    assert bridge_payload['manifest']['blockCount'] == 1
+
+    bridge_status = await client.get('/api/bridge/payload')
+    assert bridge_status.status_code == 200
+    assert bridge_status.json()['payload']['schemaVersion'] == 'gruff-proportion-v1'
 
 
-def test_package_static_assets_exist() -> None:
-    static_dir = files('notebook_engine').joinpath('static')
-    assert static_dir.joinpath('index.html').is_file()
-    assert static_dir.joinpath('notebook.js').is_file()
+@pytest.mark.anyio
+async def test_markdown_export_and_event_log(client: httpx.AsyncClient) -> None:
+    created = await client.post('/api/blocks', json={'min_col': 2, 'max_col': 5, 'min_row': 1, 'max_row': 2, 'label': 'Feed', 'tone': 'rose'})
+    assert created.status_code == 201
 
+    events = await client.get('/api/events')
+    assert events.status_code == 200
+    event_payload = events.json()
+    assert any(event['kind'] == 'block.created' for event in event_payload)
 
-def test_websocket_hello_and_sync_on_create() -> None:
-    client = make_client()
-
-    with client.websocket_connect('/ws') as websocket:
-        hello = websocket.receive_json()
-        assert hello['type'] == 'hello'
-        assert hello['grid'] == {'cell_px': 24, 'margin_cols': 2}
-        assert hello['blocks'] == []
-
-        created = client.post(
-            '/api/blocks',
-            json={
-                'min_col': 2,
-                'max_col': 4,
-                'min_row': 1,
-                'max_row': 2,
-                'label': 'Daily Plan',
-                'tone': 'mint',
-            },
-        )
-        assert created.status_code == 201
-
-        sync = websocket.receive_json()
-        assert sync['type'] == 'blocks_sync'
-        assert len(sync['blocks']) == 1
-        assert sync['blocks'][0]['label'] == 'Daily Plan'
-        assert sync['blocks'][0]['tone'] == 'mint'
+    markdown = await client.get('/api/exports/markdown')
+    assert markdown.status_code == 200
+    assert 'LO7 Notebook Export' in markdown.text

@@ -1,0 +1,18 @@
+name: gate-contrast
+intent: |
+  render envelope diffs and policy-gate pass/fail contrasts to make
+  GATE-level decisions inspectable at a glance.
+trigger: manual
+timeout: 10m
+retry_policy:
+  max_attempts: 2
+  backoff: exponential
+  initial_delay_ms: 1000
+owner: prince
+lock_key: routine:gate-contrast
+dispatches: []
+produces: []
+status: draft
+references:
+  - ../../../design-system/assets/routine_gate_contrast.png
+  - ../../../CascadeProjects/Projects/GATE/README.md

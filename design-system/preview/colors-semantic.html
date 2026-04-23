@@ -1,0 +1,282 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+/* ════════════════════════════════════════════════════════════════
+ * GRID — Colors & Type
+ * Warm-orange reread of the source system (landing/branding.json
+ * + frontend/src/tokens). Single source of truth for the design
+ * system. Dark is primary; light exists. Amber/orange is primary.
+ * ══════════════════════════════════════════════════════════════── */
+
+/* Fonts — loaded via CDN to match GRID's Google Fonts spec.
+ * Display: Space Grotesk (landing), UI: Manrope (landing body),
+ * Mono: JetBrains Mono. Geist is the app runtime font — not
+ * available on GFonts as reliably, so we carry it on the app side
+ * via @font-face in index.css if needed. Here we standardize on
+ * Space Grotesk + Manrope + JetBrains Mono for portability. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── GRAPHITE (neutrals) ────────────────────────────────────── */
+  --graphite-50:  #FAFAFC;
+  --graphite-100: #F5F5F8;
+  --graphite-200: #E0E0E8;
+  --graphite-300: #BABAC8;
+  --graphite-400: #8A8A9E;
+  --graphite-500: #5A5A6E;
+  --graphite-600: #3A3A4A;
+  --graphite-700: #2A2A36;
+  --graphite-800: #1F1F28;
+  --graphite-900: #14141A;
+  --graphite-950: #0A0A0F;
+
+  /* ── AMBER / ORANGE (primary, warm) ─────────────────────────── */
+  --amber-300: #FCD34D;
+  --amber-400: #FBBF24;
+  --amber-500: #F59E0B;   /* primary */
+  --amber-600: #D97706;   /* hover/press */
+  --amber-700: #EA580C;   /* deep edge, outdoor rust */
+
+  /* ── EMBER (deep saturated orange-red, used sparingly) ──────── */
+  --ember-600: #C2410C;
+  --ember-700: #9A3412;
+
+  /* ── CYAN (kept as secondary accent — landing's "electric" pop) */
+  --cyan-300:  #66E8FF;
+  --cyan-500:  #00D9FF;
+  --cyan-700:  #0099B3;
+
+  /* ── SEMANTIC ───────────────────────────────────────────────── */
+  --success: #059669;
+  --warning: #D97706;   /* warning IS amber — warn tone is the brand */
+  --error:   #DC2626;
+  --info:    #0891B2;
+
+  /* ── CORE SURFACES (dark-first) ─────────────────────────────── */
+  --bg-0: var(--graphite-950);
+  --bg-1: var(--graphite-900);
+  --bg-2: var(--graphite-800);
+  --bg-3: var(--graphite-700);
+  --surface-card: #17171F;
+  --surface-raised: #1E1E28;
+  --surface-glass: rgba(30, 30, 40, 0.55);
+
+  /* ── FG (foreground / text) ─────────────────────────────────── */
+  --fg-1: #F5F5F8;      /* primary text */
+  --fg-2: #BABAC8;      /* secondary text */
+  --fg-3: #8A8A9E;      /* tertiary text / muted */
+  --fg-4: #5A5A6E;      /* placeholder / disabled */
+  --fg-inverse: #14141A;
+
+  /* ── BORDERS ────────────────────────────────────────────────── */
+  --border-1: rgba(255, 255, 255, 0.08);  /* hairline */
+  --border-2: rgba(255, 255, 255, 0.12);  /* default card */
+  --border-3: rgba(255, 255, 255, 0.18);  /* emphasized */
+  --border-amber: rgba(245, 158, 11, 0.35);
+
+  /* ── PRIMARY / ACCENT TOKENS ────────────────────────────────── */
+  --primary:        var(--amber-500);
+  --primary-hover:  var(--amber-400);
+  --primary-press:  var(--amber-600);
+  --primary-soft:   rgba(245, 158, 11, 0.14);
+  --primary-border: rgba(245, 158, 11, 0.35);
+  --primary-fg:     #1A0F00;  /* near-black on amber — WCAG safe */
+
+  --accent:         var(--cyan-500);
+  --accent-soft:    rgba(0, 217, 255, 0.12);
+
+  /* ── TYPOGRAPHY FAMILIES ────────────────────────────────────── */
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body:    'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* ── TYPE SCALE (rem-based, 16px root) ──────────────────────── */
+  --fs-xs:   0.75rem;   /* 12 — tag, caption */
+  --fs-sm:   0.8125rem; /* 13 — meta, small UI */
+  --fs-base: 0.9375rem; /* 15 — body default */
+  --fs-md:   1rem;      /* 16 — body emphasized */
+  --fs-lg:   1.125rem;  /* 18 — lede, card title */
+  --fs-xl:   1.375rem;  /* 22 — section title */
+  --fs-2xl:  1.75rem;   /* 28 — page title */
+  --fs-3xl:  2.25rem;   /* 36 — display sm */
+  --fs-4xl:  3rem;      /* 48 — display md */
+  --fs-5xl:  4rem;      /* 64 — hero */
+
+  --lh-tight:   1.1;
+  --lh-snug:    1.25;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.7;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --tracking-tight:   -0.02em;
+  --tracking-snug:    -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.06em;
+  --tracking-widest:  0.15em;  /* GRID wordmark */
+
+  /* ── SPACING (4px base) ─────────────────────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── RADIUS ─────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-full: 9999px;
+
+  /* ── SHADOWS / GLOW ─────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.40);
+  --shadow-xl:  0 24px 60px rgba(0, 0, 0, 0.50);
+  --glow-amber:        0 0 32px rgba(245, 158, 11, 0.28);
+  --glow-amber-strong: 0 0 60px rgba(245, 158, 11, 0.45);
+  --glow-cyan:         0 0 32px rgba(0, 217, 255, 0.25);
+
+  /* ── MOTION ─────────────────────────────────────────────────── */
+  --dur-fast:    120ms;
+  --dur-normal:  200ms;
+  --dur-slow:    350ms;
+  --dur-organic: 600ms;
+  --ease-std:       cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decel:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-accel:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-organic:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z ──────────────────────────────────────────────────────── */
+  --z-base: 1;
+  --z-nav: 10;
+  --z-sticky: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 600;
+
+  /* ── SEMANTIC TYPE (ready-to-use element recipes) ───────────── */
+  --h1-font: var(--font-display); --h1-size: var(--fs-3xl);  --h1-lh: var(--lh-tight); --h1-weight: 700; --h1-tracking: var(--tracking-tight);
+  --h2-font: var(--font-display); --h2-size: var(--fs-2xl);  --h2-lh: var(--lh-tight); --h2-weight: 700; --h2-tracking: var(--tracking-tight);
+  --h3-font: var(--font-display); --h3-size: var(--fs-xl);   --h3-lh: var(--lh-snug);  --h3-weight: 600; --h3-tracking: var(--tracking-snug);
+  --h4-font: var(--font-display); --h4-size: var(--fs-lg);   --h4-lh: var(--lh-snug);  --h4-weight: 600; --h4-tracking: 0;
+  --p-font:  var(--font-body);    --p-size:  var(--fs-base); --p-lh:  var(--lh-relaxed); --p-weight: 400;
+  --lede-font: var(--font-body);  --lede-size: var(--fs-lg); --lede-lh: var(--lh-normal); --lede-weight: 400;
+  --meta-font: var(--font-body);  --meta-size: var(--fs-xs); --meta-lh: var(--lh-normal); --meta-weight: 500; --meta-tracking: var(--tracking-wide);
+  --code-font: var(--font-mono);  --code-size: 0.875rem;     --code-weight: 400;
+  --wordmark-font: var(--font-display); --wordmark-tracking: var(--tracking-widest); --wordmark-weight: 700;
+}
+
+/* ── Light theme override (opt-in on ancestor) ─────────────── */
+[data-theme="light"] {
+  --bg-0: #FAFAFC;
+  --bg-1: #FFFFFF;
+  --bg-2: #F5F5F8;
+  --bg-3: #E0E0E8;
+  --surface-card: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --fg-1: #14141A;
+  --fg-2: #3A3A4A;
+  --fg-3: #5A5A6E;
+  --fg-4: #8A8A9E;
+  --fg-inverse: #FFFFFF;
+  --border-1: rgba(10, 10, 15, 0.06);
+  --border-2: rgba(10, 10, 15, 0.10);
+  --border-3: rgba(10, 10, 15, 0.16);
+  --shadow-sm: 0 1px 2px rgba(10, 10, 15, 0.06);
+  --shadow-md: 0 4px 12px rgba(10, 10, 15, 0.08);
+  --shadow-lg: 0 12px 32px rgba(10, 10, 15, 0.10);
+}
+
+/* ── Ready-to-use element recipes ─────────────────────────── */
+.ds-h1 { font-family: var(--h1-font); font-size: var(--h1-size); line-height: var(--h1-lh); font-weight: var(--h1-weight); letter-spacing: var(--h1-tracking); color: var(--fg-1); margin: 0; }
+.ds-h2 { font-family: var(--h2-font); font-size: var(--h2-size); line-height: var(--h2-lh); font-weight: var(--h2-weight); letter-spacing: var(--h2-tracking); color: var(--fg-1); margin: 0; }
+.ds-h3 { font-family: var(--h3-font); font-size: var(--h3-size); line-height: var(--h3-lh); font-weight: var(--h3-weight); letter-spacing: var(--h3-tracking); color: var(--fg-1); margin: 0; }
+.ds-h4 { font-family: var(--h4-font); font-size: var(--h4-size); line-height: var(--h4-lh); font-weight: var(--h4-weight); color: var(--fg-1); margin: 0; }
+.ds-p  { font-family: var(--p-font);  font-size: var(--p-size);  line-height: var(--p-lh);  font-weight: var(--p-weight);  color: var(--fg-2); margin: 0; }
+.ds-lede { font-family: var(--lede-font); font-size: var(--lede-size); line-height: var(--lede-lh); color: var(--fg-2); margin: 0; }
+.ds-meta { font-family: var(--meta-font); font-size: var(--meta-size); line-height: var(--meta-lh); font-weight: var(--meta-weight); letter-spacing: var(--meta-tracking); color: var(--fg-3); text-transform: uppercase; margin: 0; }
+.ds-code { font-family: var(--code-font); font-size: var(--code-size); font-weight: var(--code-weight); color: var(--amber-400); background: rgba(245, 158, 11, 0.08); padding: 2px 6px; border-radius: 4px; }
+.ds-wordmark { font-family: var(--wordmark-font); letter-spacing: var(--wordmark-tracking); font-weight: var(--wordmark-weight); text-transform: uppercase; color: var(--fg-1); }
+
+/* ── Base page reset (use on preview cards, UI kits, slides) ── */
+.ds-surface { background: var(--bg-1); color: var(--fg-1); font-family: var(--font-body); font-size: var(--p-size); line-height: var(--p-lh); }
+
+/* Shared card frame for all /preview/*.html files. Each card is
+ * authored at 700×H and previewed via register_assets viewport. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.card {
+  width: 700px;
+  padding: 24px;
+  background: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 10px; }
+.grid { display: grid; gap: 12px; }
+
+.meta {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-2);
+}
+
+</style><title>Colors — semantic + accent</title></head><body>
+<div class="card">
+  <div class="row" style="justify-content:space-between;">
+    <div class="meta">Semantic · accent · background layers</div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr); gap:12px;">
+    <div class="col" style="gap:6px;"><div style="height:56px; background:#059669; border-radius:10px;"></div><div class="label">success</div><div class="value">#059669</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:#D97706; border-radius:10px;"></div><div class="label">warning</div><div class="value">#D97706</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:#DC2626; border-radius:10px;"></div><div class="label">error</div><div class="value">#DC2626</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:#0891B2; border-radius:10px;"></div><div class="label">info</div><div class="value">#0891B2</div></div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(4,1fr); gap:12px;">
+    <div class="col" style="gap:6px;"><div style="height:56px; background:#00D9FF; border-radius:10px; box-shadow:0 0 24px rgba(0,217,255,.25);"></div><div class="label" style="color:#66E8FF;">cyan-500 (accent)</div><div class="value">#00D9FF</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.35); border-radius:10px;"></div><div class="label">primary-soft</div><div class="value">amber 14% α</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:rgba(30,30,40,0.55); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.06); border-radius:10px;"></div><div class="label">surface-glass</div><div class="value">blur 12 · 55% α</div></div>
+    <div class="col" style="gap:6px;"><div style="height:56px; background:radial-gradient(circle at 50% 0%, rgba(245,158,11,0.35), transparent 70%), #0A0A0F; border-radius:10px;"></div><div class="label">hero-halo</div><div class="value">radial amber</div></div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,49 @@
+name: gitignore-safety
+intent: |
+  probe gitignore coverage for session/state artifacts across Mangrove repos;
+  check each candidate file against active ignore rules;
+  enforce exit-code-0 contract per pattern;
+  emit a structured safety report on violation;
+  verify no tracked paths match current ignore rules.
+trigger: on-change  # fire when .gitignore is modified in any REPO_ROOT
+dispatches:
+  - shell: ~/scripts/gitignore-audit.sh --report ~/.maintain-server/reports/gitignore-audit.md
+  - verify: |
+      cd ~/workspace/CascadeProjects &&
+      touch .dirty-state-report.md &&
+      git check-ignore -v .dirty-state-report.md &&
+      rm -f .dirty-state-report.md
+  - verify: |
+      cd ~/workspace/CascadeProjects &&
+      touch test-dirty-state.md &&
+      git check-ignore -v test-dirty-state.md &&
+      rm -f test-dirty-state.md
+produces:
+  - ~/.maintain-server/reports/gitignore-audit.md
+  - ~/workspace/gitignore-safety-report.md
+status: active
+owner: prince
+references:
+  - ../../../workspace/CascadeProjects/.gitignore
+  - ../../../workspace/gitignore-safety-report.md
+  - ../../../scripts/gitignore-audit.sh
+  - ../../../seed/templates/gitignore-node-strict.template
+  - ../../../seed/templates/gitignore-python-uv.template
+patterns:
+  - deviation   # signal when exit code diverges from expected 0
+  - cause       # trace pattern gap to root section in .gitignore
+hooks:
+  pre: git check-ignore --version  # assert git ≥ 2.x available
+  on-fail: |
+    echo "GITIGNORE SAFETY VIOLATION: pattern missing" &&
+    echo "Add pattern to SESSION & PROGRESS FILES section of .gitignore" &&
+    exit 1
+generalized:
+  scope: any-git-repo
+  trigger-pattern: "*.gitignore modified OR new session-artifact family detected"
+  probe-verb: check
+  enforce-verb: verify
+  emit-verb: report
+  escalate-verb: block-commit
+  target-section: SESSION & PROGRESS FILES
+  defense-strategy: specific-pattern + wildcard-family

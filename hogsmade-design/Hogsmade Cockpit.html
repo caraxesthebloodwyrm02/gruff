@@ -1,0 +1,1395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Hogsmade Cockpit — Unified Interface</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+  /* -------- tokens -------- */
+  :root{
+    --bg: #0e1014;
+    --panel: #151921;
+    --panel-2: #1b2029;
+    --line: #242a36;
+    --line-2: #2f3646;
+    --ink: #e6e9ef;
+    --ink-dim: #9aa3b2;
+    --ink-faint: #5e6676;
+    --accent: oklch(72% 0.14 170);
+    --accent-2: oklch(72% 0.14 55);
+    --warn: oklch(72% 0.14 40);
+    --bad: oklch(68% 0.18 25);
+    --ok: oklch(74% 0.14 155);
+    --radius: 6px;
+    --gap: 14px;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --sans: "Inter", system-ui, sans-serif;
+    --pad: 14px;
+  }
+  [data-density="compact"]{ --gap: 10px; --pad: 10px; }
+  [data-density="roomy"]{ --gap: 20px; --pad: 20px; }
+
+  [data-theme="light"]{
+    --bg:#f6f5f1; --panel:#fff; --panel-2:#faf9f4;
+    --line:#e7e3d8; --line-2:#d7d2c4;
+    --ink:#1a1a1a; --ink-dim:#5a5a5a; --ink-faint:#8a8a8a;
+    --accent: oklch(55% 0.13 170);
+    --accent-2: oklch(55% 0.14 55);
+  }
+
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  *{box-sizing:border-box;}
+  button{font:inherit;color:inherit;}
+  ::selection{background:var(--accent);color:#000;}
+
+  /* -------- top chrome -------- */
+  .chrome{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; gap:18px;
+    padding:10px 18px; background:var(--bg);
+    border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;}
+  .brand .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px var(--accent);}
+  .brand small{color:var(--ink-dim);font-weight:400;}
+  .modes{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+  .modes button{padding:6px 12px;background:transparent;border:0;cursor:pointer;color:var(--ink-dim);}
+  .modes button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);}
+  .chrome .spacer{flex:1;}
+  .chrome .status{display:flex;gap:14px;color:var(--ink-dim);}
+  .chrome .status b{color:var(--ink);font-weight:500;}
+  .pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(120,220,170,.6);}70%{box-shadow:0 0 0 8px rgba(120,220,170,0);}100%{box-shadow:0 0 0 0 rgba(120,220,170,0);}}
+
+  /* -------- view containers -------- */
+  .view{display:none;}
+  .view[data-active="true"]{display:block;}
+
+  /* ============================================================
+     WIREFRAME SHEET
+     ============================================================ */
+  .wire-sheet{
+    padding:32px;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,.08) 1px, transparent 0) 0 0/22px 22px,
+      #f3efe4;
+    min-height:calc(100vh - 50px);
+    color:#222;
+  }
+  .wire-sheet h1{
+    font-family:"Caveat",cursive; font-size:42px; margin:0 0 4px; color:#222;
+  }
+  .wire-sheet .lede{font-family:"Caveat",cursive;font-size:22px;color:#555;margin-bottom:22px;}
+  .wire-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:28px;
+    max-width:1400px; margin:0 auto;
+  }
+  .wire{
+    background:#fffdf6; border:1.5px solid #2a2a2a; border-radius:3px;
+    padding:18px; position:relative;
+    box-shadow: 3px 4px 0 rgba(0,0,0,.08);
+    transform: rotate(var(--tilt,0deg));
+  }
+  .wire:nth-child(1){--tilt:-0.2deg;}
+  .wire:nth-child(2){--tilt:0.3deg;}
+  .wire:nth-child(3){--tilt:-0.3deg;}
+  .wire:nth-child(4){--tilt:0.2deg;}
+  .wire:nth-child(5){--tilt:-0.15deg;}
+  .wire h3{font-family:"Caveat",cursive;font-size:28px;margin:0 0 2px;}
+  .wire .tag{font-family:"Caveat",cursive;color:#777;font-size:16px;margin-bottom:12px;}
+  .wire svg{width:100%;height:auto;display:block;}
+  .wire .note{font-family:"Caveat",cursive;font-size:16px;color:#444;margin-top:10px;line-height:1.35;}
+  .wire .pick{
+    position:absolute;top:-12px;right:-10px;
+    background:oklch(72% 0.14 55); color:#111; font-family:"Caveat",cursive;
+    font-size:18px; padding:3px 10px; border:1.5px solid #111; border-radius:3px;
+    transform:rotate(6deg);
+  }
+  /* sketchy stroke helpers */
+  .sk{stroke:#2a2a2a;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+  .sk-fill{fill:#efe9d8;stroke:#2a2a2a;stroke-width:1.5;}
+  .sk-accent{fill:oklch(72% 0.14 170);stroke:#2a2a2a;stroke-width:1.5;}
+  .sk-warn{fill:oklch(72% 0.14 55);stroke:#2a2a2a;stroke-width:1.5;}
+  .sk-text{font-family:"JetBrains Mono",monospace;font-size:9px;fill:#333;}
+  .sk-label{font-family:"Caveat",cursive;font-size:14px;fill:#555;}
+
+  .arch{
+    max-width:1400px;margin:0 auto 28px;
+    background:#fffdf6;border:1.5px solid #2a2a2a;padding:22px;border-radius:3px;
+    box-shadow: 3px 4px 0 rgba(0,0,0,.08);
+  }
+  .arch h2{font-family:"Caveat",cursive;font-size:30px;margin:0 0 10px;}
+  .arch svg{width:100%;height:auto;}
+
+  /* ============================================================
+     HI-FI PROTOTYPE
+     ============================================================ */
+  .app{
+    display:grid;
+    grid-template-columns: 240px 1fr 320px;
+    grid-template-rows: 1fr;
+    height: calc(100vh - 50px);
+    background: var(--bg);
+    font-size: 13px;
+  }
+  [data-layout="palette"] .app{ grid-template-columns: 1fr; }
+  [data-layout="tabs"] .app{ grid-template-columns: 1fr; grid-template-rows: 40px 1fr; }
+
+  .sidebar{
+    border-right:1px solid var(--line);
+    background:var(--panel);
+    padding: var(--pad);
+    overflow-y:auto;
+    font-family:var(--mono);
+    font-size:12px;
+  }
+  [data-layout="palette"] .sidebar,
+  [data-layout="tabs"] .sidebar{ display:none; }
+
+  .sidebar h4{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
+    color:var(--ink-faint); margin:18px 0 6px; font-weight:500;
+  }
+  .sidebar h4:first-child{margin-top:0;}
+  .side-item{
+    display:flex; align-items:center; gap:8px;
+    padding:5px 8px; margin:1px -8px; border-radius:4px; cursor:pointer;
+    color:var(--ink-dim);
+  }
+  .side-item:hover{background:var(--panel-2);color:var(--ink);}
+  .side-item[aria-selected="true"]{background:var(--panel-2);color:var(--ink);}
+  .side-item[aria-selected="true"]::before{
+    content:""; width:2px; height:14px; background:var(--accent);
+    position:absolute; left:0;
+  }
+  .side-item{position:relative;}
+  .side-item .bad{color:var(--bad);}
+  .side-item .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);}
+  .side-item .dot.warn{background:var(--warn);}
+  .side-item .dot.bad{background:var(--bad);}
+  .side-item .count{margin-left:auto;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+
+  .main{
+    overflow-y:auto;
+    display:flex; flex-direction:column;
+  }
+  .plane-head{
+    padding: var(--pad) calc(var(--pad) + 4px);
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:14px;
+    background: var(--bg);
+    position: sticky; top:0; z-index:4;
+  }
+  .plane-head h2{
+    margin:0; font-size:14px; font-family:var(--mono); font-weight:500;
+    display:flex; align-items:center; gap:10px;
+  }
+  .plane-head .crumb{color:var(--ink-faint);}
+  .plane-head .crumb b{color:var(--ink);}
+  .plane-head .meta{margin-left:auto;display:flex;gap:16px;color:var(--ink-dim);font-family:var(--mono);font-size:11px;}
+
+  .cmdbar{
+    margin: var(--pad);
+    background: var(--panel);
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display:flex; align-items:center; gap:10px;
+    font-family:var(--mono); font-size:13px;
+  }
+  .cmdbar .prompt{color:var(--accent);}
+  .cmdbar input{
+    flex:1; background:transparent; border:0; outline:0; color:var(--ink);
+    font:inherit; caret-color:var(--accent);
+  }
+  .cmdbar kbd{
+    font-family:var(--mono); font-size:10px;
+    padding:2px 6px; background:var(--panel-2);
+    border:1px solid var(--line-2); border-radius:3px; color:var(--ink-dim);
+  }
+
+  .grid{
+    display:grid; gap: var(--gap);
+    padding: 0 var(--pad) var(--pad);
+  }
+  .grid-4{grid-template-columns: repeat(4,1fr);}
+  .grid-3{grid-template-columns: repeat(3,1fr);}
+  .grid-2{grid-template-columns: repeat(2,1fr);}
+  @media (max-width: 1100px){
+    .grid-4{grid-template-columns:repeat(2,1fr);}
+    .grid-3{grid-template-columns:repeat(2,1fr);}
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--pad);
+    position:relative;
+  }
+  .card h3{
+    margin:0 0 8px; font-size:12px; font-family:var(--mono); font-weight:500;
+    color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.1em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .kpi{ font-family:var(--mono); font-size:28px; font-weight:500; letter-spacing:-0.02em; }
+  .kpi .unit{color:var(--ink-faint);font-size:14px;margin-left:4px;}
+  .sub{color:var(--ink-dim);font-family:var(--mono);font-size:11px;margin-top:4px;}
+
+  /* service card */
+  .service{
+    display:flex; flex-direction:column; gap:6px;
+    cursor:pointer; transition: border-color .15s;
+  }
+  .service:hover{border-color:var(--line-2);}
+  .service .row{display:flex;align-items:center;gap:8px;}
+  .service .name{font-family:var(--mono);font-weight:500;font-size:13px;}
+  .service .ns{color:var(--ink-faint);font-family:var(--mono);font-size:11px;}
+  .service .caps{color:var(--ink-dim);font-size:12px;}
+  .badge{
+    font-family:var(--mono); font-size:10px; padding:2px 6px;
+    border-radius:3px; background:var(--panel-2); color:var(--ink-dim);
+    border:1px solid var(--line);
+  }
+  .badge.ok{color:var(--ok);border-color:color-mix(in oklch, var(--ok) 40%, var(--line));}
+  .badge.warn{color:var(--warn);border-color:color-mix(in oklch, var(--warn) 40%, var(--line));}
+  .badge.bad{color:var(--bad);border-color:color-mix(in oklch, var(--bad) 40%, var(--line));}
+
+  /* run row */
+  .runs{display:flex;flex-direction:column;}
+  .run{
+    display:grid; grid-template-columns: 14px 1fr 110px 80px 100px;
+    gap:12px; align-items:center;
+    padding:10px var(--pad);
+    border-top:1px solid var(--line);
+    font-family:var(--mono); font-size:12px;
+  }
+  .run:first-child{border-top:0;}
+  .run:hover{background:var(--panel-2);}
+  .run .title{color:var(--ink);}
+  .run .title small{color:var(--ink-faint);margin-left:8px;}
+  .run .progress{
+    height:4px; background:var(--line); border-radius:2px; overflow:hidden; position:relative;
+  }
+  .run .progress .bar{
+    position:absolute; top:0;left:0;bottom:0; background:var(--accent);
+    transition: width .4s ease;
+  }
+  .run .dur{color:var(--ink-dim);text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* right rail */
+  .rail{
+    border-left:1px solid var(--line);
+    background:var(--panel);
+    padding: var(--pad);
+    overflow-y:auto;
+    font-family:var(--mono); font-size:12px;
+  }
+  [data-layout="palette"] .rail,
+  [data-layout="tabs"] .rail{ display:none; }
+  .rail h4{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
+    color:var(--ink-faint); margin:0 0 8px; font-weight:500;
+  }
+  .rail section{margin-bottom:20px;}
+  .log{
+    font-size:11px; line-height:1.55;
+    max-height: 260px; overflow-y:auto;
+    border:1px solid var(--line); border-radius:4px; padding:8px;
+    background:var(--bg);
+  }
+  .log-line{display:flex;gap:8px;}
+  .log-line .t{color:var(--ink-faint);white-space:nowrap;}
+  .log-line .s{color:var(--accent);white-space:nowrap;}
+  .log-line .m{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  /* command palette overlay */
+  .palette-shell{
+    position:fixed; inset:0; z-index:100;
+    background: rgba(8,10,14,0.72); backdrop-filter: blur(6px);
+    display:none; align-items:flex-start; justify-content:center; padding-top:12vh;
+  }
+  .palette-shell[data-open="true"]{display:flex;}
+  .palette{
+    width:min(720px, 92vw);
+    background: var(--panel);
+    border:1px solid var(--line-2);
+    border-radius:8px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    overflow:hidden;
+  }
+  .palette .box{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+    font-family:var(--mono);
+  }
+  .palette input{
+    flex:1;background:transparent;border:0;outline:0;color:var(--ink);
+    font:inherit;font-size:14px;
+  }
+  .palette .hits{max-height:50vh;overflow-y:auto;}
+  .hit{
+    padding:10px 16px; display:flex; align-items:center; gap:12px;
+    font-family:var(--mono); font-size:12px; cursor:pointer;
+    border-top:1px solid var(--line);
+  }
+  .hit:first-child{border-top:0;}
+  .hit[data-focus="true"], .hit:hover{background:var(--panel-2);}
+  .hit .kind{color:var(--ink-faint);width:70px;flex-shrink:0;}
+  .hit .title{color:var(--ink);flex:1;}
+  .hit .ns{color:var(--ink-dim);}
+
+  /* tabs layout */
+  .tabbar{
+    display:none;
+    padding:0 14px; gap:4px; align-items:center;
+    border-bottom:1px solid var(--line);
+    font-family:var(--mono); font-size:12px;
+  }
+  [data-layout="tabs"] .tabbar{display:flex;}
+  .tabbar button{
+    background:transparent;border:0;color:var(--ink-dim);
+    padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;
+  }
+  .tabbar button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--accent);}
+
+  /* tweaks panel */
+  .tweaks{
+    display:none;
+    position:fixed; right:16px; bottom:16px; z-index:80;
+    width:280px; background:var(--panel); border:1px solid var(--line-2);
+    border-radius:8px; padding:14px; box-shadow: 0 10px 40px rgba(0,0,0,.4);
+    font-family:var(--mono); font-size:12px;
+  }
+  [data-tweaks="on"] .tweaks{display:block;}
+  .tweaks h5{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-dim);font-weight:500;display:flex;align-items:center;gap:8px;}
+  .tweaks h5::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .tweaks .row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;gap:10px;}
+  .tweaks label{color:var(--ink-dim);}
+  .tweaks select, .tweaks input[type="range"]{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font:inherit;padding:4px 6px;border-radius:3px;
+  }
+  .tweaks input[type="range"]{padding:0;}
+  .tweaks .seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+  .tweaks .seg button{background:transparent;border:0;color:var(--ink-dim);padding:4px 8px;cursor:pointer;font:inherit;}
+  .tweaks .seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);}
+
+  /* detail overlay */
+  .detail{
+    position:fixed; inset: 50px 0 0 auto; width: min(560px, 90vw);
+    background:var(--panel); border-left:1px solid var(--line-2);
+    z-index: 60; transform: translateX(100%); transition: transform .25s ease;
+    display:flex; flex-direction:column;
+  }
+  .detail[data-open="true"]{transform:translateX(0);}
+  .detail header{padding:var(--pad);border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;font-family:var(--mono);}
+  .detail header .close{margin-left:auto;background:transparent;border:0;color:var(--ink-dim);cursor:pointer;}
+  .detail .body{padding:var(--pad);overflow-y:auto;flex:1;font-family:var(--mono);font-size:12px;}
+  .detail .body h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-faint);margin:16px 0 6px;font-weight:500;}
+  .detail .body h4:first-child{margin-top:0;}
+  .tools{display:flex;flex-direction:column;gap:4px;}
+  .tools .tool{display:flex;justify-content:space-between;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--bg);}
+  .tools .tool .name{color:var(--ink);}
+  .tools .tool .args{color:var(--ink-faint);}
+
+  /* spark */
+  .spark{display:flex;align-items:flex-end;gap:2px;height:28px;margin-top:6px;}
+  .spark i{display:block;width:4px;background:var(--accent);opacity:.7;border-radius:1px;}
+
+  /* empty state text */
+  .empty{padding:var(--pad);color:var(--ink-faint);font-family:var(--mono);font-size:12px;}
+
+</style>
+</head>
+<body data-view="wires" data-theme="dark" data-density="comfortable" data-layout="sidebar" data-tweaks="off">
+
+<!-- ================= TOP CHROME ================= -->
+<div class="chrome">
+  <div class="brand">
+    <div class="dot"></div>
+    <div>HOGSMADE<small>&nbsp;cockpit</small></div>
+  </div>
+  <div class="modes" role="tablist">
+    <button id="m-wires" aria-pressed="true">wireframes</button>
+    <button id="m-proto" aria-pressed="false">prototype</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="status">
+    <span><span class="pulse"></span>&nbsp; bus <b>online</b></span>
+    <span>services <b id="s-services">—</b></span>
+    <span>runs <b id="s-runs">—</b></span>
+    <span>↑ <b id="s-uptime">—</b></span>
+  </div>
+</div>
+
+<!-- ================= WIREFRAME VIEW ================= -->
+<div class="view" id="view-wires" data-active="true">
+  <div class="wire-sheet">
+    <h1>unified interface — architecture sketch</h1>
+    <div class="lede">collapse ~30 surfaces into 4 planes behind one spine</div>
+
+    <!-- architecture diagram -->
+    <div class="arch">
+      <h2>the simplification</h2>
+      <svg viewBox="0 0 1000 340" preserveAspectRatio="xMidYMid meet">
+        <!-- before side -->
+        <text x="20" y="24" class="sk-label" style="font-size:16px;">BEFORE — 30 surfaces</text>
+        <g transform="translate(20,40)">
+          <g>
+            <!-- scattered chaos -->
+            <rect class="sk-fill" x="0" y="0" width="70" height="28" rx="2"/><text x="8" y="18" class="sk-text">MCP×12</text>
+            <rect class="sk-fill" x="80" y="12" width="60" height="28" rx="2"/><text x="88" y="30" class="sk-text">GRID</text>
+            <rect class="sk-fill" x="150" y="4" width="50" height="28" rx="2"/><text x="158" y="22" class="sk-text">DIO</text>
+            <rect class="sk-fill" x="210" y="18" width="50" height="28" rx="2"/><text x="218" y="36" class="sk-text">GATE</text>
+            <rect class="sk-fill" x="40" y="50" width="60" height="28" rx="2"/><text x="48" y="68" class="sk-text">Glimpse</text>
+            <rect class="sk-fill" x="110" y="58" width="70" height="28" rx="2"/><text x="118" y="76" class="sk-text">Hogwarts</text>
+            <rect class="sk-fill" x="190" y="46" width="50" height="28" rx="2"/><text x="198" y="64" class="sk-text">Vision</text>
+            <rect class="sk-fill" x="0" y="96" width="70" height="28" rx="2"/><text x="8" y="114" class="sk-text">apiguard</text>
+            <rect class="sk-fill" x="80" y="108" width="60" height="28" rx="2"/><text x="88" y="126" class="sk-text">lots-exp</text>
+            <rect class="sk-fill" x="150" y="100" width="60" height="28" rx="2"/><text x="158" y="118" class="sk-text">pulse</text>
+            <rect class="sk-fill" x="220" y="110" width="60" height="28" rx="2"/><text x="228" y="128" class="sk-text">pi-man.</text>
+            <rect class="sk-fill" x="40" y="146" width="70" height="28" rx="2"/><text x="48" y="164" class="sk-text">echoes</text>
+            <rect class="sk-fill" x="120" y="152" width="60" height="28" rx="2"/><text x="128" y="170" class="sk-text">seeds</text>
+            <rect class="sk-fill" x="190" y="144" width="60" height="28" rx="2"/><text x="198" y="162" class="sk-text">ori</text>
+            <!-- tangled lines -->
+            <path class="sk" d="M20,80 C80,120 180,40 260,100" stroke-dasharray="3 3"/>
+            <path class="sk" d="M40,160 C120,80 60,40 240,140" stroke-dasharray="3 3"/>
+            <path class="sk" d="M80,20 C160,180 20,120 220,180" stroke-dasharray="3 3"/>
+          </g>
+        </g>
+
+        <!-- arrow -->
+        <g transform="translate(330,130)">
+          <path class="sk" d="M0,30 L60,30 M50,22 L60,30 L50,38"/>
+          <text x="0" y="14" class="sk-label">collapse</text>
+        </g>
+
+        <!-- after side -->
+        <text x="410" y="24" class="sk-label" style="font-size:16px;">AFTER — 4 planes, 1 spine</text>
+        <g transform="translate(410,40)">
+          <!-- spine -->
+          <rect x="0" y="10" width="560" height="40" rx="3" class="sk-accent"/>
+          <text x="12" y="35" class="sk-text" style="font-weight:700;">COMMAND BUS  ·  one event stream, one API, one palette</text>
+
+          <!-- 4 planes below -->
+          <g transform="translate(0,70)">
+            <rect class="sk-fill" x="0" y="0" width="130" height="100" rx="3"/>
+            <text x="10" y="18" class="sk-text" style="font-weight:700;">1 · SERVICES</text>
+            <text x="10" y="36" class="sk-text">every MCP server,</text>
+            <text x="10" y="50" class="sk-text">grid-api, vision,</text>
+            <text x="10" y="64" class="sk-text">as capabilities</text>
+            <text x="10" y="84" class="sk-label" style="font-size:11px;fill:#888;">what you CAN do</text>
+
+            <rect class="sk-fill" x="145" y="0" width="130" height="100" rx="3"/>
+            <text x="155" y="18" class="sk-text" style="font-weight:700;">2 · RUNS</text>
+            <text x="155" y="36" class="sk-text">GRID jobs, DIO</text>
+            <text x="155" y="50" class="sk-text">episodes, lots</text>
+            <text x="155" y="64" class="sk-text">experiments</text>
+            <text x="155" y="84" class="sk-label" style="font-size:11px;fill:#888;">what IS happening</text>
+
+            <rect class="sk-fill" x="290" y="0" width="130" height="100" rx="3"/>
+            <text x="300" y="18" class="sk-text" style="font-weight:700;">3 · ARTIFACTS</text>
+            <text x="300" y="36" class="sk-text">GATE envelopes,</text>
+            <text x="300" y="50" class="sk-text">audits, snapshots,</text>
+            <text x="300" y="64" class="sk-text">contracts</text>
+            <text x="300" y="84" class="sk-label" style="font-size:11px;fill:#888;">what it PRODUCED</text>
+
+            <rect class="sk-fill" x="435" y="0" width="125" height="100" rx="3"/>
+            <text x="445" y="18" class="sk-text" style="font-weight:700;">4 · SURFACES</text>
+            <text x="445" y="36" class="sk-text">Glimpse, Hogwarts,</text>
+            <text x="445" y="50" class="sk-text">Vision — views on</text>
+            <text x="445" y="64" class="sk-text">the other 3 planes</text>
+            <text x="445" y="84" class="sk-label" style="font-size:11px;fill:#888;">how you SEE it</text>
+
+            <!-- connectors from spine -->
+            <path class="sk" d="M65,-20 L65,0"/>
+            <path class="sk" d="M210,-20 L210,0"/>
+            <path class="sk" d="M355,-20 L355,0"/>
+            <path class="sk" d="M497,-20 L497,0"/>
+          </g>
+
+          <!-- contracts below planes -->
+          <g transform="translate(0,200)">
+            <rect x="0" y="0" width="560" height="30" rx="3" class="sk-warn"/>
+            <text x="12" y="20" class="sk-text" style="font-weight:700;">shared contracts · shared-types · shared-resilience · audit schema</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 5 layout wireframes -->
+    <div class="wire-grid">
+      <!-- A -->
+      <div class="wire">
+        <span class="pick">✓ hi-fi picks this</span>
+        <h3>A · palette + planes</h3>
+        <div class="tag">cmd-K centric · 3-col · dense but readable</div>
+        <svg viewBox="0 0 440 260">
+          <rect x="6" y="6" width="428" height="16" class="sk-fill"/>
+          <text x="12" y="17" class="sk-text">⌘K  services · runs · artifacts · surfaces</text>
+          <rect x="6" y="28" width="90" height="226" class="sk-fill"/>
+          <text x="12" y="42" class="sk-text">services</text>
+          <line x1="12" y1="48" x2="88" y2="48" class="sk"/>
+          <text x="12" y="60" class="sk-text">· afloat</text>
+          <text x="12" y="72" class="sk-text">· echoes</text>
+          <text x="12" y="84" class="sk-text">· grid</text>
+          <text x="12" y="96" class="sk-text">· lots</text>
+          <text x="12" y="108" class="sk-text">· pulse</text>
+          <text x="12" y="130" class="sk-text">runs</text>
+          <line x1="12" y1="136" x2="88" y2="136" class="sk"/>
+          <text x="12" y="148" class="sk-text">· 3 active</text>
+          <text x="12" y="160" class="sk-text">· 12 queued</text>
+          <text x="12" y="182" class="sk-text">artifacts</text>
+          <line x1="12" y1="188" x2="88" y2="188" class="sk"/>
+          <text x="12" y="200" class="sk-text">· envelopes</text>
+          <text x="12" y="212" class="sk-text">· audits</text>
+          <!-- main -->
+          <rect x="102" y="28" width="226" height="226" class="sk-fill"/>
+          <rect x="110" y="36" width="210" height="20" class="sk-accent"/>
+          <text x="116" y="50" class="sk-text">&gt; type a command…</text>
+          <rect x="110" y="62" width="100" height="40" class="sk-fill"/>
+          <text x="116" y="78" class="sk-text">KPI · active</text>
+          <text x="116" y="94" class="sk-text" style="font-size:14px;">3</text>
+          <rect x="216" y="62" width="104" height="40" class="sk-fill"/>
+          <text x="222" y="78" class="sk-text">KPI · p50 lat</text>
+          <text x="222" y="94" class="sk-text" style="font-size:14px;">42ms</text>
+          <rect x="110" y="108" width="210" height="140" class="sk-fill"/>
+          <text x="116" y="122" class="sk-text">12 services (grid)</text>
+          <line x1="110" y1="128" x2="320" y2="128" class="sk"/>
+          <g font-family="JetBrains Mono" font-size="9" fill="#333">
+            <text x="116" y="142">afloat     ok  7 tools</text>
+            <text x="116" y="156">echoes     ok  4 tools</text>
+            <text x="116" y="170">grid       ok 11 tools</text>
+            <text x="116" y="184">lots       ok  5 tools</text>
+            <text x="116" y="198">maintain   ok  3 tools</text>
+            <text x="116" y="212">mangrove   !   2 tools</text>
+            <text x="116" y="226">overview   ok  6 tools</text>
+            <text x="116" y="240">pulse      ok  8 tools</text>
+          </g>
+          <!-- right rail -->
+          <rect x="334" y="28" width="100" height="226" class="sk-fill"/>
+          <text x="340" y="42" class="sk-text">live log</text>
+          <line x1="340" y1="48" x2="428" y2="48" class="sk"/>
+          <g font-family="JetBrains Mono" font-size="8" fill="#555">
+            <text x="340" y="62">10:42 grid  ok</text>
+            <text x="340" y="74">10:42 lots  run</text>
+            <text x="340" y="86">10:41 gate  seal</text>
+            <text x="340" y="98">10:41 dio   tick</text>
+            <text x="340" y="110">10:40 pulse brf</text>
+            <text x="340" y="122">10:40 grid  ok</text>
+            <text x="340" y="134">10:39 maint gc</text>
+          </g>
+          <text x="340" y="160" class="sk-text">context</text>
+          <line x1="340" y1="166" x2="428" y2="166" class="sk"/>
+          <text x="340" y="180" class="sk-text">run #4821</text>
+          <text x="340" y="194" class="sk-text">owner: me</text>
+          <text x="340" y="208" class="sk-text">env: dev</text>
+        </svg>
+        <div class="note">sidebar = "what exists". main = "what I'm doing". rail = "what just happened". command bar is the primary input for everything — servers, runs, artifacts search the same index.</div>
+      </div>
+
+      <!-- B -->
+      <div class="wire">
+        <h3>B · terminal-first</h3>
+        <div class="tag">one big REPL · panes open on demand</div>
+        <svg viewBox="0 0 440 260">
+          <rect x="6" y="6" width="428" height="248" class="sk-fill"/>
+          <text x="12" y="22" class="sk-text">hogsmade@local  ~  $</text>
+          <rect x="6" y="28" width="428" height="1" class="sk"/>
+          <g font-family="JetBrains Mono" font-size="9" fill="#333">
+            <text x="12" y="46">&gt; services list</text>
+            <text x="12" y="60">  afloat       ok   7 tools   /Tools/MCPServers/afloat-server</text>
+            <text x="12" y="74">  echoes       ok   4 tools   /Tools/MCPServers/echoes-server</text>
+            <text x="12" y="88">  grid         ok  11 tools   /Tools/MCPServers/grid-server</text>
+            <text x="12" y="102">  lots         ok   5 tools   /Tools/MCPServers/lots-server</text>
+            <text x="12" y="116">&gt; runs tail --follow</text>
+            <text x="12" y="130">  [4821] grid.train          12% ▮▮▯▯▯▯▯▯  eta 4m12s</text>
+            <text x="12" y="144">  [4822] lots.exp-1775253…   45% ▮▮▮▮▮▯▯▯  eta 2m01s</text>
+            <text x="12" y="158">  [4823] dio.episode-017     running</text>
+            <text x="12" y="172">&gt; gate seal --run 4821</text>
+            <text x="12" y="186">  ✓ envelope sealed  sha256:a1b2…</text>
+            <text x="12" y="200">&gt; _</text>
+          </g>
+          <rect x="12" y="216" width="416" height="30" class="sk" stroke-dasharray="2 2"/>
+          <text x="20" y="234" class="sk-text">optional pane: detail view slides in when you click a line</text>
+        </svg>
+        <div class="note">pure keyboard. great for power users. hard for newcomers — every concept is hidden behind a verb. rejected as default; kept as a mode (press <b>`</b>).</div>
+      </div>
+
+      <!-- C -->
+      <div class="wire">
+        <h3>C · graph / dependency map</h3>
+        <div class="tag">see the whole system as a topology</div>
+        <svg viewBox="0 0 440 260">
+          <rect x="6" y="6" width="428" height="248" class="sk-fill"/>
+          <!-- spine node -->
+          <rect x="180" y="118" width="80" height="34" rx="4" class="sk-accent"/>
+          <text x="192" y="140" class="sk-text" style="font-weight:700;">BUS</text>
+          <!-- services ring -->
+          <g>
+            <circle cx="60" cy="60" r="16" class="sk-fill"/><text x="46" y="62" class="sk-text">afloat</text>
+            <circle cx="120" cy="40" r="16" class="sk-fill"/><text x="108" y="42" class="sk-text">echoes</text>
+            <circle cx="220" cy="40" r="16" class="sk-fill"/><text x="212" y="42" class="sk-text">grid</text>
+            <circle cx="320" cy="40" r="16" class="sk-fill"/><text x="312" y="42" class="sk-text">lots</text>
+            <circle cx="380" cy="60" r="16" class="sk-fill"/><text x="368" y="62" class="sk-text">pulse</text>
+            <circle cx="380" cy="200" r="16" class="sk-fill"/><text x="368" y="202" class="sk-text">seeds</text>
+            <circle cx="320" cy="220" r="16" class="sk-fill"/><text x="308" y="222" class="sk-text">mang.</text>
+            <circle cx="220" cy="220" r="16" class="sk-fill"/><text x="212" y="222" class="sk-text">ori</text>
+            <circle cx="120" cy="220" r="16" class="sk-fill"/><text x="106" y="222" class="sk-text">maint.</text>
+            <circle cx="60" cy="200" r="16" class="sk-fill"/><text x="44" y="202" class="sk-text">overv.</text>
+          </g>
+          <!-- lines -->
+          <g class="sk" stroke-opacity=".5">
+            <line x1="76" y1="66" x2="186" y2="130"/>
+            <line x1="136" y1="50" x2="190" y2="126"/>
+            <line x1="220" y1="56" x2="220" y2="120"/>
+            <line x1="304" y1="50" x2="244" y2="124"/>
+            <line x1="364" y1="66" x2="254" y2="132"/>
+            <line x1="364" y1="194" x2="254" y2="142"/>
+            <line x1="304" y1="210" x2="244" y2="148"/>
+            <line x1="220" y1="204" x2="220" y2="152"/>
+            <line x1="136" y1="210" x2="190" y2="148"/>
+            <line x1="76" y1="194" x2="186" y2="140"/>
+          </g>
+        </svg>
+        <div class="note">beautiful for explaining the system once. bad for daily work — nodes don't do anything except open detail. kept as an optional "map" tab.</div>
+      </div>
+
+      <!-- D -->
+      <div class="wire">
+        <h3>D · classic tabs</h3>
+        <div class="tag">one tab per plane · familiar · flat</div>
+        <svg viewBox="0 0 440 260">
+          <rect x="6" y="6" width="428" height="248" class="sk-fill"/>
+          <rect x="6" y="6" width="86" height="22" class="sk-accent"/>
+          <text x="14" y="20" class="sk-text">services</text>
+          <rect x="92" y="6" width="60" height="22" class="sk-fill"/>
+          <text x="100" y="20" class="sk-text">runs</text>
+          <rect x="152" y="6" width="80" height="22" class="sk-fill"/>
+          <text x="160" y="20" class="sk-text">artifacts</text>
+          <rect x="232" y="6" width="76" height="22" class="sk-fill"/>
+          <text x="240" y="20" class="sk-text">surfaces</text>
+          <!-- grid of cards -->
+          <g>
+            <rect x="14" y="40" width="130" height="64" class="sk-fill"/><text x="22" y="56" class="sk-text">afloat</text><text x="22" y="72" class="sk-text">7 tools</text><text x="22" y="88" class="sk-text">ok · 42ms p50</text>
+            <rect x="154" y="40" width="130" height="64" class="sk-fill"/><text x="162" y="56" class="sk-text">echoes</text><text x="162" y="72" class="sk-text">4 tools</text><text x="162" y="88" class="sk-text">ok · 18ms p50</text>
+            <rect x="294" y="40" width="130" height="64" class="sk-fill"/><text x="302" y="56" class="sk-text">grid</text><text x="302" y="72" class="sk-text">11 tools</text><text x="302" y="88" class="sk-text">ok · 110ms</text>
+            <rect x="14" y="114" width="130" height="64" class="sk-fill"/><text x="22" y="130" class="sk-text">lots</text>
+            <rect x="154" y="114" width="130" height="64" class="sk-fill"/><text x="162" y="130" class="sk-text">pulse</text>
+            <rect x="294" y="114" width="130" height="64" class="sk-fill"/><text x="302" y="130" class="sk-text">seeds</text>
+            <rect x="14" y="188" width="130" height="58" class="sk-fill"/><text x="22" y="204" class="sk-text">mangrove</text>
+            <rect x="154" y="188" width="130" height="58" class="sk-fill"/><text x="162" y="204" class="sk-text">overview</text>
+            <rect x="294" y="188" width="130" height="58" class="sk-fill"/><text x="302" y="204" class="sk-text">ori</text>
+          </g>
+        </svg>
+        <div class="note">safe and boring. we get it for free by toggling layout — but loses context: you can't see runs while reading a service.</div>
+      </div>
+
+      <!-- E -->
+      <div class="wire">
+        <h3>E · governance board (Hogwarts flavor)</h3>
+        <div class="tag">houses = planes · arena = runs · board = decisions</div>
+        <svg viewBox="0 0 440 260">
+          <rect x="6" y="6" width="428" height="248" class="sk-fill"/>
+          <g>
+            <rect x="12" y="14" width="100" height="110" class="sk-fill"/><text x="20" y="30" class="sk-text" style="font-weight:700;">services</text><text x="20" y="48" class="sk-text">house of</text><text x="20" y="62" class="sk-text">capabilities</text>
+            <rect x="116" y="14" width="100" height="110" class="sk-fill"/><text x="124" y="30" class="sk-text" style="font-weight:700;">runs</text><text x="124" y="48" class="sk-text">house of</text><text x="124" y="62" class="sk-text">motion</text>
+            <rect x="220" y="14" width="100" height="110" class="sk-fill"/><text x="228" y="30" class="sk-text" style="font-weight:700;">artifacts</text><text x="228" y="48" class="sk-text">house of</text><text x="228" y="62" class="sk-text">memory</text>
+            <rect x="324" y="14" width="100" height="110" class="sk-fill"/><text x="332" y="30" class="sk-text" style="font-weight:700;">surfaces</text><text x="332" y="48" class="sk-text">house of</text><text x="332" y="62" class="sk-text">windows</text>
+
+            <rect x="12" y="134" width="412" height="110" class="sk-fill"/>
+            <text x="20" y="150" class="sk-text" style="font-weight:700;">the arena · live runs · contests · eligibility</text>
+            <g font-family="JetBrains Mono" font-size="9" fill="#333">
+              <text x="20" y="172">run 4821 · grid.train     ▮▮▯▯▯▯▯▯  seconder: dio</text>
+              <text x="20" y="186">run 4822 · lots.exp-…     ▮▮▮▮▮▯▯▯  seconder: echoes</text>
+              <text x="20" y="200">run 4823 · dio.episode    running        seconder: pulse</text>
+              <text x="20" y="222">board: 2 pending promotions · 1 eligibility vote</text>
+            </g>
+          </g>
+        </svg>
+        <div class="note">on-brand and fun. but the metaphor taxes newcomers — "what's a seconder?" adds cognitive cost for a cockpit. great as a <b>skin</b> toggle over layout A.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= HI-FI PROTOTYPE VIEW ================= -->
+<div class="view" id="view-proto">
+  <div class="tabbar">
+    <button data-plane="services" aria-pressed="true">services</button>
+    <button data-plane="runs" aria-pressed="false">runs</button>
+    <button data-plane="artifacts" aria-pressed="false">artifacts</button>
+    <button data-plane="surfaces" aria-pressed="false">surfaces</button>
+  </div>
+
+  <div class="app">
+    <!-- sidebar -->
+    <aside class="sidebar">
+      <h4>Planes</h4>
+      <div class="side-item" data-nav="plane:services" aria-selected="true">
+        <span class="dot"></span> services <span class="count" id="side-svc">12</span>
+      </div>
+      <div class="side-item" data-nav="plane:runs">
+        <span class="dot warn"></span> runs <span class="count" id="side-runs">0</span>
+      </div>
+      <div class="side-item" data-nav="plane:artifacts">
+        <span class="dot"></span> artifacts <span class="count">1,284</span>
+      </div>
+      <div class="side-item" data-nav="plane:surfaces">
+        <span class="dot"></span> surfaces <span class="count">4</span>
+      </div>
+
+      <h4>Services</h4>
+      <div id="side-services"></div>
+
+      <h4>Pinned</h4>
+      <div class="side-item" data-nav="pin:run-4821">⌁ run #4821 grid.train</div>
+      <div class="side-item" data-nav="pin:gate-latest">⌁ gate latest envelope</div>
+
+      <h4>Shortcuts</h4>
+      <div class="side-item"><span style="color:var(--ink-faint)">⌘K</span> <span style="margin-left:6px">command palette</span></div>
+      <div class="side-item"><span style="color:var(--ink-faint)">g s</span> <span style="margin-left:6px">go services</span></div>
+      <div class="side-item"><span style="color:var(--ink-faint)">g r</span> <span style="margin-left:6px">go runs</span></div>
+      <div class="side-item"><span style="color:var(--ink-faint)">.</span> <span style="margin-left:6px">tweaks</span></div>
+    </aside>
+
+    <!-- main -->
+    <main class="main">
+      <div class="plane-head">
+        <h2 id="crumb"><span class="crumb">plane · <b>services</b></span></h2>
+        <div class="meta">
+          <span>events/s <b id="m-eps">0</b></span>
+          <span>p50 <b id="m-p50">0ms</b></span>
+          <span>err <b id="m-err">0.00%</b></span>
+        </div>
+      </div>
+
+      <div class="cmdbar" id="cmdbar-inline">
+        <span class="prompt">&gt;</span>
+        <input id="cmdinput" placeholder="type a command or search services, runs, artifacts…   (press ⌘K for palette)" />
+        <kbd>⌘K</kbd>
+      </div>
+
+      <!-- SERVICES PLANE -->
+      <section id="plane-services" class="plane">
+        <div class="grid grid-4">
+          <div class="card"><h3>services</h3><div class="kpi" id="k-svc">12</div><div class="sub">10 green · 1 warn · 1 idle</div></div>
+          <div class="card"><h3>capabilities</h3><div class="kpi" id="k-caps">84</div><div class="sub">tools exposed on the bus</div></div>
+          <div class="card"><h3>p50 latency</h3><div class="kpi" id="k-lat">42<span class="unit">ms</span></div><div class="sub">rolling 5 min</div></div>
+          <div class="card"><h3>events / min</h3><div class="kpi" id="k-eps">—</div>
+            <div class="spark" id="spark"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="card" style="grid-column: span 3; padding:0;">
+            <h3 style="padding: var(--pad) var(--pad) 0;">all services</h3>
+            <div id="svc-list" style="padding: 6px var(--pad) var(--pad);"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RUNS PLANE -->
+      <section id="plane-runs" class="plane" style="display:none;">
+        <div class="grid grid-4">
+          <div class="card"><h3>active</h3><div class="kpi" id="k-run-active">3</div><div class="sub">across 3 services</div></div>
+          <div class="card"><h3>queued</h3><div class="kpi">12</div><div class="sub">avg wait 4m</div></div>
+          <div class="card"><h3>completed (24h)</h3><div class="kpi">47</div><div class="sub">2 failed · 45 ok</div></div>
+          <div class="card"><h3>success rate</h3><div class="kpi">95.7<span class="unit">%</span></div><div class="sub">7-day rolling</div></div>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr;">
+          <div class="card" style="padding:0;">
+            <h3 style="padding: var(--pad);">active runs</h3>
+            <div class="runs" id="runs-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ARTIFACTS PLANE -->
+      <section id="plane-artifacts" class="plane" style="display:none;">
+        <div class="grid grid-4">
+          <div class="card"><h3>envelopes</h3><div class="kpi">284</div><div class="sub">GATE · sealed</div></div>
+          <div class="card"><h3>audits</h3><div class="kpi">891</div><div class="sub">echoes · ndjson</div></div>
+          <div class="card"><h3>snapshots</h3><div class="kpi">67</div><div class="sub">seeds · ecosystem</div></div>
+          <div class="card"><h3>contracts</h3><div class="kpi">42</div><div class="sub">CONTRACT_TEMPLATE · v2</div></div>
+        </div>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>recent envelopes</h3>
+            <div id="env-list" style="font-family:var(--mono);font-size:12px;"></div>
+          </div>
+          <div class="card">
+            <h3>audit stream</h3>
+            <div class="log" id="audit-log"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SURFACES PLANE -->
+      <section id="plane-surfaces" class="plane" style="display:none;">
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>glimpse</h3>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);">
+              cognitive engine · visualization<br/>
+              <span style="color:var(--ok);">● running</span> · /Applications/glimpse-*
+            </div>
+            <div class="spark" style="margin-top:12px;" id="spark-g"></div>
+          </div>
+          <div class="card">
+            <h3>hogwarts</h3>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);">
+              governance sim · board + houses<br/>
+              <span style="color:var(--warn);">● 2 pending votes</span> · /Hogwarts/
+            </div>
+          </div>
+          <div class="card">
+            <h3>vision</h3>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);">
+              LLM docs · learning data · UI_UX<br/>
+              <span style="color:var(--ok);">● idle</span> · /Projects/Vision/
+            </div>
+          </div>
+          <div class="card">
+            <h3>grid-main</h3>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--ink-dim);">
+              python · fastapi · submodule<br/>
+              <span style="color:var(--ok);">● mothership up</span> · /Projects/GRID-main/
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- rail -->
+    <aside class="rail">
+      <section>
+        <h4>live bus</h4>
+        <div class="log" id="bus-log"></div>
+      </section>
+      <section>
+        <h4>context</h4>
+        <div style="color:var(--ink-dim);line-height:1.7;">
+          user · <span style="color:var(--ink)">caraxes</span><br/>
+          env · <span style="color:var(--ink)">dev</span><br/>
+          branch · <span style="color:var(--ink)">main</span><br/>
+          workspace · <span style="color:var(--ink)">~/CascadeProjects</span>
+        </div>
+      </section>
+      <section>
+        <h4>quick actions</h4>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div class="side-item" data-cmd="run grid.train" style="margin:0;">▶ run grid.train</div>
+          <div class="side-item" data-cmd="seal gate" style="margin:0;">⎘ seal envelope</div>
+          <div class="side-item" data-cmd="pulse brief" style="margin:0;">☼ pulse brief</div>
+          <div class="side-item" data-cmd="diag all" style="margin:0;">✓ diag all</div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- detail drawer -->
+  <div class="detail" id="detail">
+    <header>
+      <b id="detail-title" style="font-family:var(--mono);">—</b>
+      <span style="color:var(--ink-faint);font-family:var(--mono);" id="detail-sub">—</span>
+      <button class="close" id="detail-close">✕</button>
+    </header>
+    <div class="body" id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ================= PALETTE ================= -->
+<div class="palette-shell" id="palette-shell">
+  <div class="palette">
+    <div class="box">
+      <span style="color:var(--accent);font-weight:700;">&gt;</span>
+      <input id="palette-input" placeholder="search services · runs · artifacts · actions"/>
+      <kbd>esc</kbd>
+    </div>
+    <div class="hits" id="palette-hits"></div>
+  </div>
+</div>
+
+<!-- ================= TWEAKS ================= -->
+<div class="tweaks" id="tweaks">
+  <h5>Tweaks</h5>
+  <div class="row">
+    <label>theme</label>
+    <div class="seg" id="tw-theme">
+      <button data-v="dark" aria-pressed="true">dark</button>
+      <button data-v="light">light</button>
+    </div>
+  </div>
+  <div class="row">
+    <label>density</label>
+    <div class="seg" id="tw-density">
+      <button data-v="compact">compact</button>
+      <button data-v="comfortable" aria-pressed="true">comfy</button>
+      <button data-v="roomy">roomy</button>
+    </div>
+  </div>
+  <div class="row">
+    <label>layout</label>
+    <div class="seg" id="tw-layout">
+      <button data-v="sidebar" aria-pressed="true">sidebar</button>
+      <button data-v="tabs">tabs</button>
+      <button data-v="palette">palette</button>
+    </div>
+  </div>
+  <div class="row">
+    <label>mock speed</label>
+    <input type="range" id="tw-speed" min="0" max="3" step="1" value="1" style="width:130px;"/>
+  </div>
+  <div class="row" style="margin-top:10px;">
+    <label style="color:var(--ink-faint);font-size:10px;">persisted via host</label>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   TWEAK DEFAULTS (persisted via host ·  do NOT rename markers)
+   ========================================================= */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "density": "roomy",
+  "layout": "tabs",
+  "mockSpeed": 2,
+  "startView": "wires"
+}/*EDITMODE-END*/;
+
+/* =========================================================
+   DATA — derived from your actual CascadeProjects monorepo
+   ========================================================= */
+const SERVICES = [
+  {ns:"mcp", name:"afloat-server",     caps:7,  ns2:"workflow orchestration",   status:"ok",   p50:38,  path:"Tools/MCPServers/afloat-server"},
+  {ns:"mcp", name:"echoes-server",     caps:4,  ns2:"audit · telemetry",         status:"ok",   p50:18,  path:"Tools/MCPServers/echoes-server"},
+  {ns:"mcp", name:"grid-server",       caps:11, ns2:"GRID/GATE bridge",          status:"ok",   p50:110, path:"Tools/MCPServers/grid-server"},
+  {ns:"mcp", name:"lots-server",       caps:5,  ns2:"experiment catalog",        status:"ok",   p50:42,  path:"Tools/MCPServers/lots-server"},
+  {ns:"mcp", name:"maintain-server",   caps:3,  ns2:"diagnostics · cleanup",     status:"ok",   p50:22,  path:"Tools/MCPServers/maintain-server"},
+  {ns:"mcp", name:"overview-server",   caps:6,  ns2:"checkpoints · health",      status:"ok",   p50:14,  path:"Tools/MCPServers/overview-server"},
+  {ns:"mcp", name:"pulse-server",      caps:8,  ns2:"briefings · focus",         status:"ok",   p50:67,  path:"Tools/MCPServers/pulse-server"},
+  {ns:"mcp", name:"seeds-server",      caps:5,  ns2:"ecosystem snapshots",       status:"ok",   p50:31,  path:"Tools/MCPServers/seeds-server"},
+  {ns:"mcp", name:"glimpse-server",    caps:4,  ns2:"analyze · compress",        status:"ok",   p50:55,  path:"Tools/MCPServers/glimpse-server"},
+  {ns:"mcp", name:"mangrove-server",   caps:6,  ns2:"DIO bridge · security",     status:"warn", p50:180, path:"Tools/MCPServers/mangrove-server"},
+  {ns:"mcp", name:"eligibility-server",caps:4,  ns2:"promotion · hierarchy",     status:"ok",   p50:26,  path:"Tools/MCPServers/eligibility-server"},
+  {ns:"mcp", name:"ori-server",        caps:5,  ns2:"ori protocol",              status:"idle", p50:0,   path:"Tools/MCPServers/ori-server"},
+];
+
+const RUNS = [
+  {id:4821, kind:"grid.train",     service:"grid-server",    progress:12, eta:"4m12s", owner:"caraxes"},
+  {id:4822, kind:"lots.exp",       service:"lots-server",    progress:45, eta:"2m01s", owner:"caraxes"},
+  {id:4823, kind:"dio.episode",    service:"mangrove-server",progress:68, eta:"42s",   owner:"dio"},
+];
+
+const BUS_SEED = [
+  ["10:42:07","grid",   "train step 124/1000"],
+  ["10:42:06","lots",   "exp-1775253 sample 18/40"],
+  ["10:42:04","gate",   "envelope sealed sha:a1b2…"],
+  ["10:42:01","dio",    "episode-017 tick 42"],
+  ["10:41:58","pulse",  "brief generated (ctx 4k)"],
+  ["10:41:55","grid",   "eval loss 0.284"],
+  ["10:41:52","maint",  "gc reclaimed 42mb"],
+  ["10:41:50","echoes", "audit.ndjson +12 rows"],
+];
+
+const ACTIONS = [
+  {kind:"action", title:"run grid.train",   detail:"grid-server · pyproject → train"},
+  {kind:"action", title:"run lots.exp new", detail:"lots-server · from catalog"},
+  {kind:"action", title:"seal envelope",    detail:"gate · CONTRACT_TEMPLATE.json"},
+  {kind:"action", title:"diag all",         detail:"maintain-server · full sweep"},
+  {kind:"action", title:"pulse brief",      detail:"pulse-server · focus today"},
+  {kind:"action", title:"snapshot ecosystem", detail:"seeds-server · full scan"},
+];
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const state = {
+  view: TWEAK_DEFAULTS.startView || "wires",
+  plane: "services",
+  theme: TWEAK_DEFAULTS.theme,
+  density: TWEAK_DEFAULTS.density,
+  layout: TWEAK_DEFAULTS.layout,
+  mockSpeed: TWEAK_DEFAULTS.mockSpeed,
+  tweaks: false,
+  bus: [...BUS_SEED],
+  runs: RUNS.map(r => ({...r})),
+  sparkData: Array.from({length:32}, () => 20 + Math.random()*40),
+};
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+const $ = (s,r=document) => r.querySelector(s);
+const $$ = (s,r=document) => [...r.querySelectorAll(s)];
+
+function applyHostAttrs(){
+  document.body.dataset.view = state.view;
+  document.body.dataset.theme = state.theme;
+  document.body.dataset.density = state.density;
+  document.body.dataset.layout = state.layout;
+  document.body.dataset.tweaks = state.tweaks ? "on" : "off";
+  $("#view-wires").dataset.active = state.view === "wires";
+  $("#view-proto").dataset.active = state.view === "proto";
+  $("#m-wires").setAttribute("aria-pressed", state.view === "wires");
+  $("#m-proto").setAttribute("aria-pressed", state.view === "proto");
+}
+
+function renderSidebar(){
+  const el = $("#side-services");
+  el.innerHTML = SERVICES.map(s => `
+    <div class="side-item" data-nav="svc:${s.name}">
+      <span class="dot ${s.status==='warn'?'warn':s.status==='idle'?'':''}" style="${s.status==='idle'?'background:var(--ink-faint);':''}"></span>
+      ${s.name.replace("-server","")}
+      <span class="count">${s.caps}</span>
+    </div>
+  `).join("");
+  $("#side-svc").textContent = SERVICES.length;
+  $("#side-runs").textContent = state.runs.length;
+}
+
+function renderServices(){
+  const el = $("#svc-list");
+  el.innerHTML = SERVICES.map(s => `
+    <div class="card service" data-svc="${s.name}" style="margin-top:10px;">
+      <div class="row">
+        <span class="name">${s.name}</span>
+        <span class="ns">${s.ns2}</span>
+        <span style="margin-left:auto;" class="badge ${s.status==='ok'?'ok':s.status==='warn'?'warn':''}">${s.status}</span>
+      </div>
+      <div class="caps">${s.caps} capabilities · p50 ${s.p50}ms · <span style="color:var(--ink-faint)">${s.path}</span></div>
+    </div>
+  `).join("");
+}
+
+function renderRuns(){
+  const el = $("#runs-list");
+  el.innerHTML = state.runs.map(r => `
+    <div class="run" data-run="${r.id}">
+      <span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--accent);"></span>
+      <span class="title">#${r.id} ${r.kind}<small>${r.service} · ${r.owner}</small></span>
+      <span class="progress"><span class="bar" style="width:${r.progress}%;"></span></span>
+      <span class="dur">${r.progress}%</span>
+      <span class="dur">${r.eta}</span>
+    </div>
+  `).join("");
+  $("#k-run-active").textContent = state.runs.length;
+}
+
+function renderEnvelopes(){
+  const el = $("#env-list");
+  if(!el) return;
+  const rows = [
+    ["env-4821","grid.train","sealed","2m ago"],
+    ["env-4819","lots.exp-1775253","sealed","8m ago"],
+    ["env-4817","dio.episode-016","sealed","14m ago"],
+    ["env-4812","pulse.brief","sealed","1h ago"],
+    ["env-4805","seeds.snapshot","sealed","3h ago"],
+  ];
+  el.innerHTML = rows.map(([id,src,st,when]) => `
+    <div style="display:grid;grid-template-columns: 90px 1fr 60px 80px;gap:10px;padding:6px 0;border-top:1px solid var(--line);">
+      <span style="color:var(--ink-faint)">${id}</span>
+      <span>${src}</span>
+      <span class="badge ok">${st}</span>
+      <span style="color:var(--ink-dim);text-align:right;">${when}</span>
+    </div>
+  `).join("");
+}
+
+function renderBus(){
+  const el = $("#bus-log");
+  el.innerHTML = state.bus.slice(0, 40).map(([t,s,m]) => `
+    <div class="log-line"><span class="t">${t}</span><span class="s">${s}</span><span class="m">${m}</span></div>
+  `).join("");
+  const aud = $("#audit-log");
+  if(aud) aud.innerHTML = el.innerHTML;
+}
+
+function renderSpark(){
+  const root = $("#spark");
+  if(!root) return;
+  const max = Math.max(...state.sparkData);
+  root.innerHTML = state.sparkData.map(v => `<i style="height:${(v/max)*100}%"></i>`).join("");
+  const g = $("#spark-g");
+  if(g) g.innerHTML = root.innerHTML;
+}
+
+function renderKPIs(){
+  const total = SERVICES.length;
+  const caps = SERVICES.reduce((a,b)=>a+b.caps,0);
+  const p50  = Math.round(SERVICES.reduce((a,b)=>a+b.p50,0) / total);
+  $("#k-svc").textContent = total;
+  $("#k-caps").textContent = caps;
+  $("#k-lat").innerHTML = `${p50}<span class="unit">ms</span>`;
+  const eps = state.sparkData[state.sparkData.length-1].toFixed(1);
+  $("#k-eps").textContent = eps;
+  $("#s-services").textContent = total;
+  $("#s-runs").textContent = state.runs.length;
+  $("#s-uptime").textContent = "14h 22m";
+  $("#m-eps").textContent = eps;
+  $("#m-p50").textContent = p50 + "ms";
+  $("#m-err").textContent = "0.03%";
+}
+
+function showPlane(p){
+  state.plane = p;
+  $$(".plane").forEach(el => el.style.display = "none");
+  const target = $(`#plane-${p}`);
+  if(target) target.style.display = "";
+  $("#crumb").innerHTML = `<span class="crumb">plane · <b>${p}</b></span>`;
+  $$(".side-item[data-nav^='plane:']").forEach(el => {
+    el.setAttribute("aria-selected", el.dataset.nav === `plane:${p}`);
+  });
+  $$(".tabbar button").forEach(b => b.setAttribute("aria-pressed", b.dataset.plane === p));
+  if(p === "services") renderServices();
+  if(p === "runs") renderRuns();
+  if(p === "artifacts"){ renderEnvelopes(); renderBus(); }
+}
+
+/* =========================================================
+   SIMULATION
+   ========================================================= */
+const BUS_MESSAGES = [
+  ["grid","train step "],["lots","exp sample "],["dio","episode tick "],
+  ["pulse","focus refresh "],["echoes","audit append "],["gate","envelope draft "],
+  ["maint","gc reclaim "],["seeds","snapshot slice "],["ori","protocol ack "],
+];
+function tick(){
+  // bus
+  const m = BUS_MESSAGES[Math.floor(Math.random()*BUS_MESSAGES.length)];
+  const now = new Date();
+  const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  state.bus.unshift([t, m[0], m[1] + Math.floor(Math.random()*1000)]);
+  if(state.bus.length > 60) state.bus.pop();
+  // spark
+  state.sparkData.shift();
+  state.sparkData.push(20 + Math.random()*50);
+  // runs
+  state.runs.forEach(r => {
+    r.progress = Math.min(100, r.progress + Math.random()*2.5*state.mockSpeed);
+    if(r.progress >= 100){ r.progress = 0; r.id = r.id + 1; }
+  });
+  if(state.view === "proto"){
+    renderBus(); renderSpark(); renderKPIs();
+    if(state.plane === "runs") renderRuns();
+  }
+}
+
+let timer = null;
+function startSim(){
+  stopSim();
+  const speedMap = [0, 1500, 700, 300];
+  const interval = speedMap[state.mockSpeed] || 700;
+  if(interval === 0) return;
+  timer = setInterval(tick, interval);
+}
+function stopSim(){ if(timer){ clearInterval(timer); timer = null; } }
+
+/* =========================================================
+   PALETTE
+   ========================================================= */
+function searchAll(q){
+  q = (q||"").trim().toLowerCase();
+  const hits = [];
+  SERVICES.forEach(s => hits.push({kind:"service", title:s.name, ns:s.ns2, onOpen:()=>openService(s)}));
+  state.runs.forEach(r => hits.push({kind:"run",  title:`#${r.id} ${r.kind}`, ns:r.service, onOpen:()=>{ showPlane("runs"); }}));
+  ACTIONS.forEach(a => hits.push({kind:"action", title:a.title, ns:a.detail, onOpen:()=>runAction(a.title)}));
+  ["services","runs","artifacts","surfaces"].forEach(p =>
+    hits.push({kind:"plane", title:`go to ${p}`, ns:`plane · ${p}`, onOpen:()=>showPlane(p)})
+  );
+  if(!q) return hits.slice(0, 14);
+  return hits.filter(h =>
+    h.title.toLowerCase().includes(q) || (h.ns||"").toLowerCase().includes(q)
+  ).slice(0, 20);
+}
+function renderPalette(){
+  const q = $("#palette-input").value;
+  const hits = searchAll(q);
+  const el = $("#palette-hits");
+  el.innerHTML = hits.map((h,i) => `
+    <div class="hit" data-i="${i}" data-focus="${i===0}">
+      <span class="kind">${h.kind}</span>
+      <span class="title">${h.title}</span>
+      <span class="ns">${h.ns||""}</span>
+    </div>
+  `).join("") || `<div class="empty">no matches</div>`;
+  el._hits = hits;
+}
+function openPalette(){
+  $("#palette-shell").dataset.open = "true";
+  $("#palette-input").value = "";
+  renderPalette();
+  setTimeout(()=>$("#palette-input").focus(), 10);
+}
+function closePalette(){ $("#palette-shell").dataset.open = "false"; }
+
+function openService(s){
+  $("#detail-title").textContent = s.name;
+  $("#detail-sub").textContent = s.ns + " · " + s.path;
+  $("#detail-body").innerHTML = `
+    <h4>status</h4>
+    <div>${s.status.toUpperCase()} · p50 ${s.p50}ms · ${s.caps} capabilities</div>
+    <h4>capabilities (sampled)</h4>
+    <div class="tools">
+      ${Array.from({length: Math.min(s.caps, 6)}).map((_,i)=>`
+        <div class="tool">
+          <span class="name">${s.name.replace("-server","")}.${["list","get","create","run","snapshot","diag"][i]||"tool"+i}</span>
+          <span class="args">{ scope, opts }</span>
+        </div>
+      `).join("")}
+    </div>
+    <h4>recent events on this service</h4>
+    <div class="log">${state.bus.filter(b=>b[1]===s.name.replace("-server","")).slice(0,6).map(b=>`<div class="log-line"><span class="t">${b[0]}</span><span class="s">${b[1]}</span><span class="m">${b[2]}</span></div>`).join("") || '<div style="color:var(--ink-faint)">no recent traffic</div>'}</div>
+    <h4>actions</h4>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="badge" style="cursor:pointer;padding:6px 10px;">ping</button>
+      <button class="badge" style="cursor:pointer;padding:6px 10px;">open logs</button>
+      <button class="badge" style="cursor:pointer;padding:6px 10px;">view spec</button>
+    </div>
+  `;
+  $("#detail").dataset.open = "true";
+}
+function runAction(title){
+  const now = new Date();
+  const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  state.bus.unshift([t, "you", "▶ " + title]);
+  renderBus();
+}
+
+/* =========================================================
+   TWEAKS
+   ========================================================= */
+function persistTweak(key, value){
+  // live
+  state[key] = value;
+  if(key === "theme" || key === "density" || key === "layout") applyHostAttrs();
+  if(key === "mockSpeed") startSim();
+  // tell host
+  try{
+    window.parent.postMessage({type: "__edit_mode_set_keys", edits: {[key]: value}}, "*");
+  }catch(e){}
+}
+function initTweaks(){
+  function seg(id, key){
+    $$("#"+id+" button").forEach(b => {
+      b.setAttribute("aria-pressed", b.dataset.v === state[key]);
+      b.onclick = () => {
+        $$("#"+id+" button").forEach(x => x.setAttribute("aria-pressed", x===b));
+        persistTweak(key, b.dataset.v);
+      };
+    });
+  }
+  seg("tw-theme","theme");
+  seg("tw-density","density");
+  seg("tw-layout","layout");
+  const speed = $("#tw-speed");
+  speed.value = state.mockSpeed;
+  speed.oninput = () => persistTweak("mockSpeed", parseInt(speed.value,10));
+}
+
+/* edit mode protocol */
+window.addEventListener("message", (e) => {
+  const d = e.data || {};
+  if(d.type === "__activate_edit_mode"){ state.tweaks = true; applyHostAttrs(); }
+  if(d.type === "__deactivate_edit_mode"){ state.tweaks = false; applyHostAttrs(); }
+});
+setTimeout(()=>{ try{ window.parent.postMessage({type:"__edit_mode_available"}, "*"); }catch(e){} }, 50);
+
+/* =========================================================
+   WIRING
+   ========================================================= */
+function setView(v){
+  state.view = v;
+  applyHostAttrs();
+  try{ localStorage.setItem("hogsmade.view", v); }catch(e){}
+}
+
+function wire(){
+  $("#m-wires").onclick = () => setView("wires");
+  $("#m-proto").onclick = () => setView("proto");
+
+  document.addEventListener("click", (e) => {
+    const nav = e.target.closest("[data-nav]");
+    if(nav){
+      const [kind, id] = nav.dataset.nav.split(":");
+      if(kind === "plane") showPlane(id);
+      if(kind === "svc"){
+        const svc = SERVICES.find(s=>s.name===id);
+        if(svc) openService(svc);
+      }
+      return;
+    }
+    const svc = e.target.closest("[data-svc]");
+    if(svc){
+      const s = SERVICES.find(x=>x.name===svc.dataset.svc);
+      if(s) openService(s);
+      return;
+    }
+    const tab = e.target.closest(".tabbar button");
+    if(tab){ showPlane(tab.dataset.plane); return; }
+    const cmd = e.target.closest("[data-cmd]");
+    if(cmd){ runAction(cmd.dataset.cmd); return; }
+  });
+
+  $("#detail-close").onclick = () => $("#detail").dataset.open = "false";
+
+  // palette
+  document.addEventListener("keydown", (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if(meta && e.key.toLowerCase() === "k"){ e.preventDefault(); openPalette(); return; }
+    if(e.key === "Escape"){ closePalette(); $("#detail").dataset.open = "false"; return; }
+    if(e.key === "." && !e.target.matches("input")){
+      state.tweaks = !state.tweaks; applyHostAttrs();
+    }
+  });
+  $("#palette-input").addEventListener("input", renderPalette);
+  $("#palette-input").addEventListener("keydown", (e) => {
+    const hits = $("#palette-hits")._hits || [];
+    const cur = $$("#palette-hits .hit").findIndex(x => x.dataset.focus === "true");
+    if(e.key === "ArrowDown"){ e.preventDefault(); const n = Math.min(hits.length-1, cur+1); $$("#palette-hits .hit").forEach((x,i)=>x.dataset.focus = i===n); }
+    if(e.key === "ArrowUp"){ e.preventDefault(); const n = Math.max(0, cur-1); $$("#palette-hits .hit").forEach((x,i)=>x.dataset.focus = i===n); }
+    if(e.key === "Enter"){ e.preventDefault(); const h = hits[cur] || hits[0]; if(h){ closePalette(); setView("proto"); h.onOpen(); } }
+  });
+  $("#palette-hits").addEventListener("click", (e) => {
+    const hit = e.target.closest(".hit");
+    if(!hit) return;
+    const hits = $("#palette-hits")._hits;
+    const h = hits[parseInt(hit.dataset.i,10)];
+    if(h){ closePalette(); setView("proto"); h.onOpen(); }
+  });
+
+  // inline cmd
+  $("#cmdinput").addEventListener("focus", openPalette);
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+function boot(){
+  try{
+    const v = localStorage.getItem("hogsmade.view");
+    if(v) state.view = v;
+  }catch(e){}
+  applyHostAttrs();
+  renderSidebar();
+  renderServices();
+  renderRuns();
+  renderEnvelopes();
+  renderBus();
+  renderSpark();
+  renderKPIs();
+  initTweaks();
+  wire();
+  startSim();
+}
+boot();
+</script>
+</body>
+</html>

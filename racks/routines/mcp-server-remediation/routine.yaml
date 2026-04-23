@@ -1,0 +1,60 @@
+name: mcp-server-remediation
+intent: |
+  one-shot pre-deep-work routine to repair the Mangrove MCP fleet.
+  P0: harness-server absent from npm workspace (startup blocker).
+  P1: SDK version drift (^1.28.0 → ^1.29.0), tsconfig strict-flag gaps (13 servers).
+  P2: emitAudit missing from 5 servers (afloat, craft, echoes, glimpse, mangrove).
+  P3: integration-review misplacement (docs inside MCPServers/, not ori-server/).
+  Execution blocks on P0 before proceeding to P1+.
+trigger: manual
+timeout: 45m
+retry_policy:
+  max_attempts: 2
+  backoff: exponential
+  initial_delay_ms: 1000
+owner: prince
+lock_key: routine:mcp-server-remediation
+dispatches: []
+produces: []
+steps:
+  - name: p0-add-harness-server-to-workspace
+    priority: P0
+    blocking: true
+    target: CascadeProjects/package.json
+    post_action: npm install from CascadeProjects/
+  - name: p1-pin-sdk-version-to-1-29
+    priority: P1
+    target: 12x Tools/MCPServers/*/package.json
+    post_action: npm install from CascadeProjects/
+  - name: p1-add-tsconfig-strict-flags
+    priority: P1
+    target: 13x Tools/MCPServers/*/tsconfig.json
+    post_action: tsc --noEmit per server (document new errors, don't block)
+  - name: p2-add-emit-audit-afloat-server
+    priority: P2
+    target: Tools/MCPServers/afloat-server/src/server.ts
+  - name: p2-add-emit-audit-craft-server
+    priority: P2
+    target: [craft-server/package.json, craft-server/src/server.ts]
+    post_action: npm install (shared-types dep added)
+  - name: p2-add-emit-audit-echoes-server
+    priority: P2
+    target: Tools/MCPServers/echoes-server/src/server.ts
+  - name: p2-add-emit-audit-glimpse-server
+    priority: P2
+    target: Tools/MCPServers/glimpse-server/src/server.ts
+  - name: p2-add-emit-audit-mangrove-server
+    priority: P2
+    target: [mangrove-server/package.json, mangrove-server/src/server.ts]
+    post_action: npm install (shared-types dep added)
+  - name: p3-relocate-integration-review
+    priority: P3
+    target: Tools/MCPServers/integration-review/ → ori-server/integration-review/
+status: completed
+references:
+  - ../governance/routine.yaml
+  - ../../../CascadeProjects/package.json
+  - ../../../CascadeProjects/mcp_config.json
+  - ../../../CascadeProjects/Tools/MCPServers/eligibility-server/tsconfig.json
+  - ../../../CascadeProjects/Components/shared-types/src/audit-client.ts
+  - ../../../CascadeProjects/Tools/MCPServers/grid-server/src/server.ts

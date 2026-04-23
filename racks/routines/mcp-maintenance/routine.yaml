@@ -1,0 +1,135 @@
+name: mcp-maintenance
+intent: |
+  scheduled routine to probe MCP server configuration health, detect path
+  drift, validate transport compliance, and verify filesystem-manifest
+  consistency across the Mangrove ecosystem. fires on schedule or on-demand
+  before server start / post-migration / post-deploy.
+trigger: scheduled  # weekly + on-demand
+schedule:
+  cron: "0 3 * * 0"  # Sunday 03:00 UTC (09:00 UTC+6)
+  on-demand: true
+  pre-triggers:
+    - ".gitignore modified in workspace/CascadeProjects"
+    - "mcp_config.json modified"
+    - "package.json modified in any MCPServers/*"
+    - "post-migration event"
+owner: prince
+
+# ─── SIGNAL VERBS ────────────────────────────────────────────────────────────
+# Each verb maps to a probe action with pass/fail semantics.
+signal_verbs:
+  probe: "walk config files for path drift (caraxes remnants)"
+  check: "validate each server entry resolves to existing file on disk"
+  verify: "run verify_mcp_inventory.py for manifest-filesystem consistency"
+  assert: "confirm transport compliance (SDK vs custom JSON-RPC)"
+  detect: "find stale build artifacts with outdated config snapshots"
+  guard: "ensure no writes to archived mount at /mnt/arch_data/"
+  report: "emit structured findings to ~/.maintain-server/reports/"
+  escalate: "block startup if critical path mismatch detected"
+
+# ─── DISPATCHES ──────────────────────────────────────────────────────────────
+dispatches:
+  # Probe 1: Path drift detection
+  - name: path-drift-scan
+    verb: probe
+    shell: |
+      grep -rcl "caraxes" ~/workspace/CascadeProjects/ \
+        --include="*.json" --include="*.ts" --include="*.py" \
+        | head -20
+    pass: "exit 0 + empty stdout"
+    fail: "any file with caraxes reference → DRIFT"
+
+  # Probe 2: Config-to-filesystem resolution
+  - name: config-resolve
+    verb: check
+    shell: ~/scripts/mcp-probe.sh --check-paths
+    pass: "all server script paths exist on disk"
+    fail: "MISS: path in mcp_config.json does not resolve"
+
+  # Probe 3: Manifest consistency
+  - name: manifest-verify
+    verb: verify
+    shell: |
+      cd ~/workspace/CascadeProjects &&
+      python3 Components/scripts/verify_mcp_inventory.py
+    pass: "exit 0"
+    fail: "key set mismatch or filesystem drift"
+
+  # Probe 4: Transport compliance audit
+  - name: transport-compliance
+    verb: assert
+    shell: ~/scripts/mcp-probe.sh --check-transport
+    pass: "all servers use MCP SDK stdio_server pattern"
+    fail: "NON_COMPLIANT: custom JSON-RPC loop detected"
+    known_violations:
+      - code_analysis_mcp_server.py  # MCP-D02 documented
+      - test_runner_mcp_server.py    # MCP-D02 documented
+
+  # Probe 5: Stale build artifact detection
+  - name: stale-artifact-scan
+    verb: detect
+    shell: |
+      find ~/workspace/CascadeProjects -path "*/dist/data/mcp_config.json" \
+        -exec grep -l "caraxes" {} \;
+    pass: "no stale config snapshots in dist/"
+    fail: "STALE: rebuild required for artifact"
+
+  # Probe 6: Archive mount write guard
+  - name: archive-write-guard
+    verb: guard
+    shell: |
+      mount | grep arch_data | grep -q "rw," && echo "WARNING: arch_data is RW" || echo "OK"
+    pass: "mount is ro or absent"
+    fail: "WARNING: /mnt/arch_data is read-write — risk of divergence"
+
+  # Probe 7: Dangerous symlink detection
+  - name: shadow-symlink-guard
+    verb: guard
+    shell: |
+      readlink ~/CascadeProjects 2>/dev/null | grep -q "arch_data" && \
+        echo "SHADOW: ~/CascadeProjects → archived mount" || echo "OK"
+    pass: "no shadow symlinks to archived mount"
+    fail: "SHADOW: dangerous symlink bypasses workspace boundary"
+
+# ─── PRODUCES ────────────────────────────────────────────────────────────────
+produces:
+  - ~/.maintain-server/reports/mcp-probe-latest.md
+  - ~/.maintain-server/reports/mcp-drift-log.ndjson
+
+# ─── STATUS ──────────────────────────────────────────────────────────────────
+status: active  # post-urgent 2026-04-20 — 26 pass, 1 fail (ACT/WATCH), 1 warn (context-only)
+
+# ─── REFERENCES ──────────────────────────────────────────────────────────────
+references:
+  - ../../../workspace/CascadeProjects/mcp_config.json
+  - ../../../workspace/CascadeProjects/mcp_inventory.manifest.json
+  - ../../../workspace/CascadeProjects/Components/scripts/verify_mcp_inventory.py
+  - ../../../workspace/CascadeProjects/Tools/MCPServers/grid-server/src/config.ts
+  - ../../../workspace/CascadeProjects/Tools/MCPServers/echoes-server/src/config.ts
+  - ../../../scripts/mcp-probe.sh
+
+# ─── PATTERNS (cognitive overlay) ────────────────────────────────────────────
+patterns:
+  - deviation    # detect path drift from expected norm
+  - repetition   # recurring probe cycle on schedule
+  - cause        # trace failure to root path mismatch
+
+# ─── GENERALIZED ─────────────────────────────────────────────────────────────
+generalized:
+  scope: any-mcp-ecosystem
+  target: mcp_config.json + server filesystem + manifest
+  defense-strategy: canonical-source-of-truth + scheduled-probe
+  escalation-path: report → block-startup → human-gated-fix
+  known-issues:
+    - id: SHADOW-SYMLINK
+      desc: "~/CascadeProjects → /mnt/arch_data/home/caraxes/CascadeProjects"
+      severity: high
+      recommendation: "rm ~/CascadeProjects (remove symlink to archive)"
+    - id: MCP-D02
+      desc: "code_analysis + test_runner use custom JSON-RPC, not MCP SDK"
+      severity: medium
+      recommendation: "migrate to SDK pattern or formally deprecate"
+    - id: STALE-DIST
+      desc: "glimpse-artifact/dist/data/mcp_config.json is pre-migration snapshot"
+      severity: low
+      recommendation: "rebuild glimpse-artifact to regenerate config snapshot"

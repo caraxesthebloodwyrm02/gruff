@@ -1,0 +1,19 @@
+name: attention
+intent: |
+  surface high-priority signals from cross-source correlation (ori-server)
+  and rank them as a focus list.
+trigger: manual
+timeout: 10m
+retry_policy:
+  max_attempts: 2
+  backoff: exponential
+  initial_delay_ms: 1000
+owner: prince
+lock_key: routine:attention
+dispatches: []
+action: "echo 'Processing attention signals...' && sleep 2 && echo 'Done.'"
+produces: []
+status: draft
+references:
+  - ../../../design-system/assets/routine_attention.png
+  - ../../../CascadeProjects/Tools/MCPServers/ori-server/src/router-config.ts

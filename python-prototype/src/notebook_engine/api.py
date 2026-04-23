@@ -1,27 +1,21 @@
 from __future__ import annotations
 
-from contextlib import ExitStack, asynccontextmanager
-from importlib.resources import as_file, files
+import csv
+from io import StringIO
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response, WebSocket, status
+from fastapi import Body, FastAPI, HTTPException, Query, Response, WebSocket, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.websockets import WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
-from notebook_engine.blocks import (
-    Block,
-    BlockCreate,
-    BlockStore,
-    BlockValidationError,
-    InMemoryBlockStore,
-    create_block_for_grid,
-)
-from notebook_engine.grid import GridConfig
+from notebook_engine.blocks import Block, BlockCreate, BlockValidationError
+from notebook_engine.manifest import NotebookManifest
+from notebook_engine.service import NotebookService
 
 
-class LiveBlocksHub:
+class LiveNotebookHub:
     def __init__(self) -> None:
         self._connections: set[WebSocket] = set()
 
@@ -32,115 +26,180 @@ class LiveBlocksHub:
     def disconnect(self, websocket: WebSocket) -> None:
         self._connections.discard(websocket)
 
-    async def broadcast_blocks(self, blocks: list[Block]) -> None:
+    async def broadcast(self, event_type: str, payload: dict[str, object]) -> None:
         if not self._connections:
             return
 
-        payload = {
-            'type': 'blocks_sync',
-            'blocks': [block.model_dump() for block in blocks],
-        }
+        message = {'type': event_type, **payload}
         stale_connections: list[WebSocket] = []
         for websocket in self._connections:
             try:
-                await websocket.send_json(payload)
+                await websocket.send_json(message)
             except RuntimeError:
                 stale_connections.append(websocket)
             except WebSocketDisconnect:
                 stale_connections.append(websocket)
-
         for websocket in stale_connections:
             self.disconnect(websocket)
 
-
-def _load_static_dir() -> tuple[ExitStack, Path]:
-    resource_stack = ExitStack()
-    static_dir = Path(resource_stack.enter_context(as_file(files('notebook_engine').joinpath('static'))))
-    return resource_stack, static_dir
-
-
-def build_app(
-    config: GridConfig,
-    *,
-    store: BlockStore | None = None,
-) -> FastAPI:
-    static_stack, static_dir = _load_static_dir()
-
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        try:
-            yield
-        finally:
-            static_stack.close()
-
-    app = FastAPI(title='notebook-engine', version='0.1.0', lifespan=lifespan)
-    block_store = store or InMemoryBlockStore()
-    live_hub = LiveBlocksHub()
+def build_app(*, service: NotebookService) -> FastAPI:
+    service.startup_preflight()
+    static_dir = Path(__file__).resolve().parent / 'static'
+    hub = LiveNotebookHub()
     index_html = (static_dir / 'index.html').read_text(encoding='utf-8')
+    app = FastAPI(title='notebook-engine', version='0.2.0')
 
-    async def publish_blocks() -> None:
-        await live_hub.broadcast_blocks(block_store.list())
+    async def publish_manifest(event_type: str, *, extra: dict[str, object] | None = None) -> None:
+        manifest = service.get_manifest()
+        payload: dict[str, object] = {
+            'revisionId': manifest.current_revision_id,
+            'manifest': manifest.model_dump(mode='json'),
+            'blocks': [block.model_dump(mode='json') for block in manifest.blocks],
+        }
+        if extra:
+            payload.update(extra)
+        await hub.broadcast(event_type, payload)
+        await hub.broadcast(
+            'revision.created',
+            {
+                'revision': manifest.revisions[-1].model_dump(mode='json'),
+                'event': manifest.events[-1].model_dump(mode='json'),
+            },
+        )
 
     @app.get('/', response_class=HTMLResponse, include_in_schema=False)
     async def index() -> str:
         return index_html
 
-    @app.get('/api/grid', response_model=GridConfig)
-    async def api_grid() -> GridConfig:
-        return config
+    @app.get('/api/health')
+    async def api_health() -> dict[str, object]:
+        status_report = service.health_status()
+        return {
+            'craftReady': status_report.craft_ready,
+            'craftDetail': status_report.craft_detail,
+            'manifestPath': status_report.manifest_path,
+            'schemaPath': status_report.schema_path,
+            'bridgeSchemaPath': status_report.bridge_schema_path,
+            'currentRevisionId': status_report.current_revision_id,
+        }
+
+    @app.get('/api/grid')
+    async def api_grid() -> dict[str, object]:
+        return service.get_grid().model_dump(mode='json')
 
     @app.get('/api/blocks', response_model=list[Block])
     async def api_blocks() -> list[Block]:
-        return block_store.list()
+        return service.list_blocks()
 
-    @app.post(
-        '/api/blocks',
-        response_model=Block,
-        status_code=status.HTTP_201_CREATED,
-    )
+    @app.post('/api/blocks', response_model=Block, status_code=status.HTTP_201_CREATED)
     async def api_blocks_create(payload: BlockCreate) -> Block:
         try:
-            created = create_block_for_grid(
-                store=block_store,
-                payload=payload,
-                margin_cols=config.margin_cols,
-            )
+            manifest, block = service.create_block(payload)
         except BlockValidationError as exc:
             raise RequestValidationError([exc.to_request_error()]) from exc
-        await publish_blocks()
-        return created
+        await publish_manifest('manifest.updated', extra={'block': block.model_dump(mode='json')})
+        return block
 
     @app.delete('/api/blocks/{block_id}', status_code=status.HTTP_204_NO_CONTENT)
     async def api_blocks_delete(block_id: str) -> Response:
-        if not block_store.delete(block_id):
+        manifest, deleted = service.delete_block(block_id)
+        if not deleted:
             raise HTTPException(status_code=404, detail='Block not found')
-        await publish_blocks()
+        await publish_manifest('manifest.updated', extra={'blockId': block_id})
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post('/api/blocks/clear', status_code=status.HTTP_204_NO_CONTENT)
     async def api_blocks_clear() -> Response:
-        block_store.clear()
-        await publish_blocks()
+        service.clear_blocks()
+        await publish_manifest('manifest.updated', extra={'cleared': True})
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+    @app.get('/api/manifest')
+    async def api_manifest() -> dict[str, object]:
+        return service.get_manifest().model_dump(mode='json')
+
+    @app.put('/api/manifest')
+    async def api_manifest_put(
+        manifest_payload: dict[str, object] = Body(...),
+        expected_revision_id: str | None = Query(default=None),
+    ) -> dict[str, object]:
+        try:
+            manifest = NotebookManifest.model_validate(manifest_payload)
+            updated = service.replace_manifest(manifest, expected_revision_id=expected_revision_id, actor='api')
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        await publish_manifest('manifest.updated')
+        return updated.model_dump(mode='json')
+
+    @app.get('/api/revisions')
+    async def api_revisions(limit: int = Query(default=20, ge=1, le=200)) -> list[dict[str, object]]:
+        return [revision.model_dump(mode='json') for revision in service.list_revisions(limit=limit)]
+
+    @app.get('/api/events')
+    async def api_events(limit: int = Query(default=50, ge=1, le=200)) -> list[dict[str, object]]:
+        return [event.model_dump(mode='json') for event in service.list_events(limit=limit)]
+
+    @app.get('/api/exports/markdown', response_class=PlainTextResponse)
+    async def api_export_markdown() -> str:
+        return service.export_markdown()
+
+    @app.post('/api/exports/csv-import')
+    async def api_csv_import(
+        csv_text: str = Body(..., media_type='text/plain'),
+        dry_run: bool = Query(default=False),
+    ) -> dict[str, object]:
+        payload = service.import_csv(csv_text, dry_run=dry_run)
+        if not dry_run:
+            await publish_manifest('manifest.updated', extra={'csvImport': payload})
+        return payload
+
+    @app.get('/api/compass/status')
+    async def api_compass_status() -> dict[str, object]:
+        return service.compass_status()
+
+    @app.post('/api/compass/render')
+    async def api_compass_render(profile: str = Query(default='default')) -> dict[str, object]:
+        await hub.broadcast('compass.render.started', {'profile': profile})
+        try:
+            payload = service.render_compass(profile=profile)
+        except RuntimeError as exc:
+            await hub.broadcast('compass.render.failed', {'profile': profile, 'error': str(exc)})
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        await hub.broadcast('compass.render.completed', payload)
+        return payload
+
+    @app.get('/api/bridge/payload')
+    async def api_bridge_payload() -> dict[str, object]:
+        latest = service.latest_bridge_payload()
+        if latest is None:
+            raise HTTPException(status_code=404, detail='No bridge payload has been emitted yet')
+        return latest
+
+    @app.post('/api/bridge/payload')
+    async def api_bridge_payload_emit() -> dict[str, object]:
+        payload = service.emit_bridge_payload()
+        await hub.broadcast('export.generated', payload)
+        return payload
+
     @app.websocket('/ws')
-    async def websocket_blocks(websocket: WebSocket) -> None:
-        await live_hub.connect(websocket)
+    async def websocket_events(websocket: WebSocket) -> None:
+        await hub.connect(websocket)
+        manifest = service.get_manifest()
         try:
             await websocket.send_json(
                 {
                     'type': 'hello',
-                    'grid': config.model_dump(),
-                    'blocks': [block.model_dump() for block in block_store.list()],
-                },
+                    'manifest': manifest.model_dump(mode='json'),
+                    'blocks': [block.model_dump(mode='json') for block in manifest.blocks],
+                    'revisions': [revision.model_dump(mode='json') for revision in service.list_revisions(limit=5)],
+                }
             )
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
             pass
         finally:
-            live_hub.disconnect(websocket)
+            hub.disconnect(websocket)
 
     app.mount('/static', StaticFiles(directory=str(static_dir)), name='static')
-
     return app

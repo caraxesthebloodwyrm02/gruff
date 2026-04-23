@@ -1,107 +1,99 @@
+import { GestureCanvas } from '/static/gesture_canvas.js';
+
 const canvas = document.getElementById('nb');
-const ctx = canvas.getContext('2d');
-const cellDisplay = document.getElementById('cell-display');
-const clearBtn = document.getElementById('clear-btn');
-const liveDot = document.getElementById('live-dot');
-const liveText = document.getElementById('live-text');
 const labelInput = document.getElementById('label-input');
 const toneSelect = document.getElementById('tone-select');
+const profileSelect = document.getElementById('profile-select');
+const renderBtn = document.getElementById('render-btn');
+const bridgeBtn = document.getElementById('bridge-btn');
+const markdownBtn = document.getElementById('markdown-btn');
+const clearBtn = document.getElementById('clear-btn');
 
-let gridConfig = null;
-let blocks = [];
-let dragState = null;
+const runtimeFeed = document.getElementById('runtime-feed');
+const craftStatus = document.getElementById('craft-status');
+const wsStatus = document.getElementById('ws-status');
+const chipNotebook = document.getElementById('chip-notebook');
+const chipRevision = document.getElementById('chip-revision');
+const revisionList = document.getElementById('revision-list');
+const metricBlocks = document.getElementById('metric-blocks');
+const metricDensity = document.getElementById('metric-density');
+const metricMargin = document.getElementById('metric-margin');
+const metricGesture = document.getElementById('metric-gesture');
+
+let manifest = null;
 let liveSocket = null;
 let reconnectTimer = null;
 let reconnectDelayMs = 800;
 
-const MAX_RECONNECT_DELAY_MS = 8000;
 const TONES = {
-    amber: {
-        border: '#F59E0B',
-        fill: 'rgba(245, 158, 11, 0.14)',
-        glow: 'rgba(245, 158, 11, 0.28)',
-        text: '#FDE68A',
-    },
-    mint: {
-        border: '#34D399',
-        fill: 'rgba(52, 211, 153, 0.14)',
-        glow: 'rgba(52, 211, 153, 0.26)',
-        text: '#A7F3D0',
-    },
-    azure: {
-        border: '#60A5FA',
-        fill: 'rgba(96, 165, 250, 0.14)',
-        glow: 'rgba(96, 165, 250, 0.24)',
-        text: '#BFDBFE',
-    },
-    rose: {
-        border: '#F472B6',
-        fill: 'rgba(244, 114, 182, 0.14)',
-        glow: 'rgba(244, 114, 182, 0.24)',
-        text: '#FBCFE8',
-    },
-    slate: {
-        border: '#94A3B8',
-        fill: 'rgba(148, 163, 184, 0.14)',
-        glow: 'rgba(148, 163, 184, 0.24)',
-        text: '#E2E8F0',
-    },
+    amber: { border: '#ffb703', fill: 'rgba(255, 183, 3, 0.16)', glow: 'rgba(255, 183, 3, 0.32)', text: '#ffe8a3' },
+    mint: { border: '#2ec4b6', fill: 'rgba(46, 196, 182, 0.16)', glow: 'rgba(46, 196, 182, 0.28)', text: '#b8f4ee' },
+    azure: { border: '#6cb8ff', fill: 'rgba(108, 184, 255, 0.15)', glow: 'rgba(108, 184, 255, 0.28)', text: '#d4ecff' },
+    rose: { border: '#f28482', fill: 'rgba(242, 132, 130, 0.16)', glow: 'rgba(242, 132, 130, 0.26)', text: '#ffd4d3' },
+    slate: { border: '#94a3b8', fill: 'rgba(148, 163, 184, 0.16)', glow: 'rgba(148, 163, 184, 0.24)', text: '#e2e8f0' },
 };
 
-async function init() {
-    await loadInitialState();
-    connectLiveChannel();
+function logFeed(message, payload = null) {
+    const lines = [message];
+    if (payload) {
+        lines.push(JSON.stringify(payload, null, 2));
+    }
+    runtimeFeed.textContent = lines.join('\n');
+}
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerCancel);
-    canvas.addEventListener('contextmenu', onContextMenu);
-    clearBtn.addEventListener('click', onClearBoard);
+function setManifest(nextManifest) {
+    manifest = nextManifest;
+    chipNotebook.textContent = manifest.notebook_id;
+    chipRevision.textContent = manifest.current_revision_id || '-';
+    metricBlocks.textContent = String(manifest.blocks.length);
 
-    window.addEventListener('keydown', async (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-            e.preventDefault();
-            if (blocks.length === 0) return;
-            const last = blocks[blocks.length - 1];
-            try {
-                const deleted = await deleteBlock(last.id);
-                if (deleted) {
-                    blocks.pop();
-                } else {
-                    await reloadBlocks();
-                }
-            } catch (err) {
-                console.error('Undo failed:', err);
-                await reloadBlocks();
-            }
-            draw();
+    const metrics = manifest.integration?.compass?.last_metrics;
+    metricDensity.textContent = metrics ? `${Math.round(metrics.density * 100)}%` : '0%';
+    metricMargin.textContent = metrics ? `${Math.round(metrics.margin_adherence * 100)}%` : '0%';
+    metricGesture.textContent = metrics ? `${Math.round(metrics.gesture_velocity_proxy * 100)}%` : '0%';
+    renderRevisions(manifest.revisions || []);
+    renderer.setGrid(manifest.grid);
+    renderer.draw();
+}
+
+function renderRevisions(revisions) {
+    revisionList.innerHTML = '';
+    const recent = revisions.slice(-6).reverse();
+    for (const revision of recent) {
+        const item = document.createElement('li');
+        item.innerHTML = `<strong>${revision.summary}</strong><span>${revision.revision_id} • ${revision.actor}</span>`;
+        revisionList.appendChild(item);
+    }
+}
+
+function blockAt(col, row) {
+    if (!manifest) {
+        return null;
+    }
+    for (let index = manifest.blocks.length - 1; index >= 0; index -= 1) {
+        const block = manifest.blocks[index];
+        if (col >= block.min_col && col <= block.max_col && row >= block.min_row && row <= block.max_row) {
+            return block;
         }
-    });
+    }
+    return null;
+}
 
-    draw();
+async function request(url, options = {}) {
+    const response = await fetch(url, options);
+    const contentType = response.headers.get('content-type') || '';
+    const body = contentType.includes('application/json') ? await response.json() : await response.text();
+    if (!response.ok) {
+        throw new Error(typeof body === 'string' ? body : JSON.stringify(body));
+    }
+    return body;
 }
 
 async function loadInitialState() {
-    try {
-        const gridResp = await fetch('/api/grid');
-        if (!gridResp.ok) {
-            throw new Error(`GET /api/grid failed: ${gridResp.status}`);
-        }
-        gridConfig = await gridResp.json();
-
-        const blocksResp = await fetch('/api/blocks');
-        if (!blocksResp.ok) {
-            throw new Error(`GET /api/blocks failed: ${blocksResp.status}`);
-        }
-        blocks = await blocksResp.json();
-    } catch (err) {
-        console.error('Failed to initialize notebook state:', err);
-        gridConfig = { cell_px: 24, margin_cols: 2 };
-        blocks = [];
-    }
+    const [health, nextManifest] = await Promise.all([request('/api/health'), request('/api/manifest')]);
+    craftStatus.textContent = health.craftReady ? 'ready' : `blocked: ${health.craftDetail}`;
+    setManifest(nextManifest);
+    logFeed('Loaded manifest', { revision: nextManifest.current_revision_id, blocks: nextManifest.blocks.length });
 }
 
 function connectLiveChannel() {
@@ -112,338 +104,209 @@ function connectLiveChannel() {
     liveSocket = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
     liveSocket.addEventListener('open', () => {
-        setLiveStatus('online');
+        wsStatus.textContent = 'live';
         reconnectDelayMs = 800;
     });
 
     liveSocket.addEventListener('message', (event) => {
-        let payload = null;
-        try {
-            payload = JSON.parse(event.data);
-        } catch (err) {
-            console.warn('Ignoring non-JSON websocket message');
-            return;
+        const payload = JSON.parse(event.data);
+        if (payload.manifest) {
+            setManifest(payload.manifest);
         }
-        if (!payload || !Array.isArray(payload.blocks)) {
-            return;
-        }
-        blocks = payload.blocks;
-        if (payload.type === 'hello' && payload.grid) {
-            gridConfig = payload.grid;
-        }
-        draw();
+        logFeed(`WS ${payload.type}`, payload.type === 'hello' ? { revision: payload.manifest?.current_revision_id } : payload);
     });
 
     liveSocket.addEventListener('close', () => {
-        setLiveStatus('reconnecting');
-        scheduleReconnect();
+        wsStatus.textContent = 'reconnecting';
+        if (!reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                connectLiveChannel();
+            }, reconnectDelayMs);
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, 8000);
+        }
     });
 
     liveSocket.addEventListener('error', () => {
-        setLiveStatus('offline');
-        liveSocket.close();
+        wsStatus.textContent = 'error';
     });
 }
 
-function scheduleReconnect() {
-    if (reconnectTimer) {
-        return;
+function roundRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+function drawBlock(ctx, block, cellOrigin) {
+    const tone = TONES[block.tone] || TONES.amber;
+    const [x1, y1] = cellOrigin(block.min_col, block.min_row);
+    const [x2, y2] = cellOrigin(block.max_col + 1, block.max_row + 1);
+    const width = x2 - x1;
+    const height = y2 - y1;
+
+    ctx.save();
+    ctx.shadowColor = tone.glow;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = tone.fill;
+    roundRect(ctx, x1, y1, width, height, 5);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = tone.border;
+    ctx.lineWidth = 1.6;
+    roundRect(ctx, x1, y1, width, height, 5);
+    ctx.stroke();
+
+    if (block.label) {
+        ctx.fillStyle = tone.text;
+        ctx.font = '600 13px Manrope, sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText(block.label, x1 + 8, y1 + 7, Math.max(0, width - 16));
     }
-    reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        connectLiveChannel();
-    }, reconnectDelayMs);
-    reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
 }
 
-function setLiveStatus(state) {
-    liveDot.classList.toggle('online', state === 'online');
-    if (state === 'online') {
-        liveText.textContent = 'live';
-        return;
-    }
-    if (state === 'reconnecting') {
-        liveText.textContent = 'reconnecting';
-        return;
-    }
-    liveText.textContent = 'offline';
-}
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    draw();
-}
-
-function quantize(x, y) {
-    const col = Math.max(
-        gridConfig.margin_cols,
-        Math.floor(x / gridConfig.cell_px)
-    );
-    const row = Math.floor(y / gridConfig.cell_px);
-    return [col, row];
-}
-
-function cellOrigin(col, row) {
-    return [
-        col * gridConfig.cell_px,
-        row * gridConfig.cell_px,
-    ];
-}
-
-function onPointerDown(e) {
-    if (e.button !== 0) {
-        return;
-    }
-
-    const [col, row] = quantize(e.offsetX, e.offsetY);
-    dragState = { startCol: col, startRow: row, endCol: col, endRow: row };
-    updateCellDisplay(col, row);
-    draw();
-}
-
-function onPointerMove(e) {
-    const [col, row] = quantize(e.offsetX, e.offsetY);
-    updateCellDisplay(col, row);
-    if (!dragState) return;
-    dragState.endCol = col;
-    dragState.endRow = row;
-    draw();
-}
-
-async function onPointerUp() {
-    if (!dragState) return;
-    const startCol = dragState.startCol;
-    const startRow = dragState.startRow;
-    const endCol = dragState.endCol;
-    const endRow = dragState.endRow;
-    dragState = null;
-
-    try {
-        const created = await createBlock({
-            start_col: startCol,
-            start_row: startRow,
-            end_col: endCol,
-            end_row: endRow,
-            label: labelInput.value,
-            tone: toneSelect.value,
+const renderer = new GestureCanvas(canvas, {
+    onHover(cell) {
+        const hovered = blockAt(cell.col, cell.row);
+        canvas.style.cursor = hovered ? 'pointer' : 'crosshair';
+    },
+    async onGestureEnd(block) {
+        const created = await request('/api/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...block,
+                label: labelInput.value,
+                tone: toneSelect.value,
+            }),
         });
-        blocks.push(created);
-    } catch (err) {
-        console.error('Failed to create block:', err);
-        await reloadBlocks();
+        logFeed('Created block', created);
+    },
+    draw({ ctx, dragState, cellOrigin, viewport, cellPx, marginCols }) {
+        ctx.fillStyle = '#081019';
+        ctx.fillRect(0, 0, viewport.width, viewport.height);
+
+        const cols = Math.ceil(viewport.width / cellPx) + 1;
+        const rows = Math.ceil(viewport.height / cellPx) + 1;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 0.6;
+        for (let row = 1; row < rows; row += 1) {
+            const y = row * cellPx;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(viewport.width, y);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        for (let col = 0; col < cols; col += 1) {
+            for (let row = 0; row < rows; row += 1) {
+                ctx.beginPath();
+                ctx.arc(col * cellPx, row * cellPx, 1.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        ctx.strokeStyle = 'rgba(255,183,3,0.32)';
+        ctx.beginPath();
+        ctx.moveTo(marginCols * cellPx, 0);
+        ctx.lineTo(marginCols * cellPx, viewport.height);
+        ctx.stroke();
+
+        if (manifest) {
+            manifest.blocks.forEach((block) => drawBlock(ctx, block, cellOrigin));
+        }
+
+        if (dragState) {
+            const preview = {
+                min_col: Math.min(dragState.start.col, dragState.current.col),
+                max_col: Math.max(dragState.start.col, dragState.current.col),
+                min_row: Math.min(dragState.start.row, dragState.current.row),
+                max_row: Math.max(dragState.start.row, dragState.current.row),
+                tone: toneSelect.value,
+                label: labelInput.value,
+            };
+            const [x1, y1] = cellOrigin(preview.min_col, preview.min_row);
+            const [x2, y2] = cellOrigin(preview.max_col + 1, preview.max_row + 1);
+            ctx.strokeStyle = 'rgba(255,183,3,0.75)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([6, 5]);
+            roundRect(ctx, x1, y1, x2 - x1, y2 - y1, 5);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    },
+});
+
+async function onRenderCompass() {
+    renderBtn.disabled = true;
+    try {
+        const payload = await request(`/api/compass/render?profile=${encodeURIComponent(profileSelect.value)}`, { method: 'POST' });
+        logFeed('Compass rendered', payload);
+    } finally {
+        renderBtn.disabled = false;
     }
-
-    draw();
 }
 
-function onPointerCancel() {
-    dragState = null;
-    draw();
-}
-
-function updateCellDisplay(col, row) {
-    cellDisplay.textContent = `${col},${row}`;
-}
-
-async function reloadBlocks() {
-    const resp = await fetch('/api/blocks');
-    if (!resp.ok) {
-        throw new Error(`GET /api/blocks failed: ${resp.status}`);
+async function onEmitBridge() {
+    bridgeBtn.disabled = true;
+    try {
+        const payload = await request('/api/bridge/payload', { method: 'POST' });
+        logFeed('Bridge payload emitted', payload);
+    } finally {
+        bridgeBtn.disabled = false;
     }
-    blocks = await resp.json();
 }
 
-async function createBlock(payload) {
-    const resp = await fetch('/api/blocks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-        const errorText = await resp.text();
-        throw new Error(`POST /api/blocks failed: ${resp.status} ${errorText}`);
-    }
-    return await resp.json();
-}
-
-async function deleteBlock(blockId) {
-    const resp = await fetch(`/api/blocks/${encodeURIComponent(blockId)}`, {
-        method: 'DELETE',
-    });
-    if (resp.status === 404) return false;
-    if (!resp.ok) {
-        const errorText = await resp.text();
-        throw new Error(`DELETE /api/blocks/${blockId} failed: ${resp.status} ${errorText}`);
-    }
-    return true;
-}
-
-async function clearBlocks() {
-    const resp = await fetch('/api/blocks/clear', {
-        method: 'POST',
-    });
-    if (!resp.ok) {
-        const errorText = await resp.text();
-        throw new Error(`POST /api/blocks/clear failed: ${resp.status} ${errorText}`);
-    }
+async function onMarkdownExport() {
+    const markdown = await request('/api/exports/markdown');
+    logFeed('Markdown export', { preview: markdown.split('\n').slice(0, 8).join('\n') });
 }
 
 async function onClearBoard() {
     clearBtn.disabled = true;
     try {
-        await clearBlocks();
-        blocks = [];
-        draw();
-    } catch (err) {
-        console.error('Failed to clear blocks:', err);
-        await reloadBlocks();
-        draw();
+        await request('/api/blocks/clear', { method: 'POST' });
+        logFeed('Cleared board');
     } finally {
         clearBtn.disabled = false;
     }
 }
 
-function draw() {
-    ctx.fillStyle = '#0A0A0F';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawGrid();
-
-    blocks.forEach((block) => drawBlock(block));
-
-    if (dragState) {
-        const minCol = Math.min(dragState.startCol, dragState.endCol);
-        const maxCol = Math.max(dragState.startCol, dragState.endCol);
-        const minRow = Math.min(dragState.startRow, dragState.endRow);
-        const maxRow = Math.max(dragState.startRow, dragState.endRow);
-
-        const [x1, y1] = cellOrigin(minCol, minRow);
-        const [x2, y2] = cellOrigin(maxCol + 1, maxRow + 1);
-        const w = x2 - x1;
-        const h = y2 - y1;
-
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([5, 4]);
-        roundRect(ctx, x1, y1, w, h, 3);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-}
-
-function drawGrid() {
-    const cellPx = gridConfig.cell_px;
-    const marginPx = gridConfig.margin_cols * cellPx;
-    const cols = Math.ceil(canvas.width / cellPx) + 1;
-    const rows = Math.ceil(canvas.height / cellPx) + 1;
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 0.5;
-    for (let row = 1; row < rows; row++) {
-        const y = row * cellPx;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    for (let col = 0; col < cols; col++) {
-        for (let row = 0; row < rows; row++) {
-            const x = col * cellPx;
-            const y = row * cellPx;
-            ctx.beginPath();
-            ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(marginPx, 0);
-    ctx.lineTo(marginPx, canvas.height);
-    ctx.stroke();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-}
-
-function drawBlock(block) {
-    const [x1, y1] = cellOrigin(block.min_col, block.min_row);
-    const [x2, y2] = cellOrigin(block.max_col + 1, block.max_row + 1);
-    const w = x2 - x1;
-    const h = y2 - y1;
-    const r = 3;
-
-    const tone = TONES[block.tone] || TONES.amber;
-
-    ctx.save();
-    ctx.shadowColor = tone.glow;
-    ctx.shadowBlur = 16;
-    ctx.fillStyle = tone.fill;
-    roundRect(ctx, x1, y1, w, h, r);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.strokeStyle = tone.border;
-    ctx.lineWidth = 1.5;
-    roundRect(ctx, x1, y1, w, h, r);
-    ctx.stroke();
-
-    const label = (block.label || '').trim();
-    if (!label) {
+canvas.addEventListener('contextmenu', async (event) => {
+    event.preventDefault();
+    const cell = renderer.quantize(event.offsetX, event.offsetY);
+    const target = blockAt(cell.col, cell.row);
+    if (!target) {
         return;
     }
+    await request(`/api/blocks/${encodeURIComponent(target.id)}`, { method: 'DELETE' });
+    logFeed('Deleted block', { blockId: target.id });
+});
 
-    ctx.save();
-    roundRect(ctx, x1, y1, w, h, r);
-    ctx.clip();
-    ctx.fillStyle = tone.text;
-    ctx.font = '600 13px Manrope, sans-serif';
-    ctx.textBaseline = 'top';
-    ctx.fillText(label, x1 + 8, y1 + 6, Math.max(0, w - 16));
-    ctx.restore();
-}
-
-function blockAt(col, row) {
-    return blocks.findIndex((block) =>
-        col >= block.min_col && col <= block.max_col &&
-        row >= block.min_row && row <= block.max_row
-    );
-}
-
-async function onContextMenu(e) {
-    e.preventDefault();
-    const [col, row] = quantize(e.offsetX, e.offsetY);
-    const idx = blockAt(col, row);
-    if (idx === -1) return;
-
-    const target = blocks[idx];
-    try {
-        const deleted = await deleteBlock(target.id);
-        if (deleted) {
-            blocks.splice(idx, 1);
-        } else {
-            await reloadBlocks();
-        }
-        draw();
-    } catch (err) {
-        console.error('Failed to delete block:', err);
-        await reloadBlocks();
-        draw();
+window.addEventListener('keydown', async (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && manifest?.blocks.length) {
+        event.preventDefault();
+        const latest = manifest.blocks[manifest.blocks.length - 1];
+        await request(`/api/blocks/${encodeURIComponent(latest.id)}`, { method: 'DELETE' });
     }
-}
+});
 
-init();
+renderBtn.addEventListener('click', onRenderCompass);
+bridgeBtn.addEventListener('click', onEmitBridge);
+markdownBtn.addEventListener('click', onMarkdownExport);
+clearBtn.addEventListener('click', onClearBoard);
+
+await loadInitialState();
+renderer.mount();
+connectLiveChannel();

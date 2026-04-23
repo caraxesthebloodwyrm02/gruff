@@ -1,0 +1,46 @@
+/* Shared card frame for all /preview/*.html files. Each card is
+ * authored at 700×H and previewed via register_assets viewport. */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.card {
+  width: 700px;
+  padding: 24px;
+  background: var(--bg-1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 10px; }
+.grid { display: grid; gap: 12px; }
+
+.meta {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-3);
+}
+.value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-2);
+}

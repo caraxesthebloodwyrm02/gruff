@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LO7 WebSocket Watch</title>
+    <style>
+        body { background: #081019; color: #eef7ff; font-family: monospace; margin: 0; padding: 24px; }
+        pre { white-space: pre-wrap; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <h1>LO7 WebSocket Watch</h1>
+    <pre id="feed">connecting...</pre>
+    <script>
+        const feed = document.getElementById('feed');
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws`);
+        ws.addEventListener('message', (event) => {
+            const payload = JSON.parse(event.data);
+            feed.textContent = JSON.stringify(payload, null, 2);
+        });
+    </script>
+</body>
+</html>

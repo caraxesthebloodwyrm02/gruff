@@ -18,3 +18,7 @@ This directory (`~/gruff/`) serves as the local filesystem umbrella holding the 
 1. **For Project & NPM info:** Read the [Workspace README](./workspace/README.md).
 2. **For District-level Navigation:** Open the [Central Plaza Map](./workspace/CENTRAL_PLAZA.md).
 3. **To start developing:** `cd workspace/`
+
+### Documentation
+
+- Notebook engine guide: [docs/notebook-engine-guide.md](/home/irfankabir/gruff/workspace/docs/notebook-engine-guide.md)

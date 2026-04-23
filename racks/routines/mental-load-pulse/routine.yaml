@@ -1,0 +1,7 @@
+name: mental-load-pulse
+description: "Rhythmic pulse for mental load balancing and cognitive health check."
+action: "python3 workspace/seed/archive/Atmosphere/mental-load-balancer/mental_load_balancer.py --pulse"
+schedule: "*/15 * * * *" # Every 15 minutes
+metadata:
+  character: "Maestro"
+  tempo: 120

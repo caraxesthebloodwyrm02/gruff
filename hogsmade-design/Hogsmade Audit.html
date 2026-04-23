@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Hogsmade — Repository & Routing Audit</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --bg:#f6f5f1; --panel:#fff; --panel-2:#faf9f4;
+    --line:#e7e3d8; --line-2:#d7d2c4;
+    --ink:#1a1a1a; --ink-dim:#5a5a5a; --ink-faint:#8a8a8a;
+    --accent: oklch(55% 0.13 170);
+    --accent-2: oklch(55% 0.14 55);
+    --ok: oklch(55% 0.14 155);
+    --warn: oklch(62% 0.16 55);
+    --bad: oklch(55% 0.18 25);
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --sans: "Inter", system-ui, sans-serif;
+    --sketchy: "Caveat", cursive;
+    --pad: 20px; --gap: 18px;
+  }
+  [data-density="compact"]{--pad:12px;--gap:10px;}
+  [data-density="roomy"]{--pad:26px;--gap:22px;}
+  [data-theme="dark"]{
+    --bg:#0e1014; --panel:#151921; --panel-2:#1b2029;
+    --line:#242a36; --line-2:#2f3646;
+    --ink:#e6e9ef; --ink-dim:#9aa3b2; --ink-faint:#5e6676;
+    --accent: oklch(72% 0.14 170);
+    --accent-2: oklch(72% 0.14 55);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;}
+  button{font:inherit;color:inherit;cursor:pointer;}
+  ::selection{background:var(--accent);color:#fff;}
+
+  /* chrome */
+  .chrome{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;gap:18px;
+    padding:10px 20px;background:var(--bg);
+    border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;}
+  .brand .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+  .brand small{color:var(--ink-dim);font-weight:400;}
+  .modes{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+  .modes button{padding:6px 12px;background:transparent;border:0;color:var(--ink-dim);}
+  .modes button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);}
+  .chrome .spacer{flex:1;}
+  .chrome .stat{color:var(--ink-dim);}
+  .chrome .stat b{color:var(--ink);font-weight:500;}
+
+  /* layout */
+  main{padding: var(--pad);}
+  h1,h2,h3,h4{margin:0;}
+  .page-title{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px;}
+  .page-sub{color:var(--ink-dim);font-family:var(--mono);font-size:12px;margin-bottom:20px;}
+
+  .section{margin: 28px 0 14px;display:flex;align-items:baseline;gap:12px;}
+  .section h2{font-size:13px;font-family:var(--mono);font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-dim);}
+  .section small{color:var(--ink-faint);font-family:var(--mono);font-size:11px;}
+
+  /* architecture diagram */
+  .arch{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:var(--pad);
+  }
+  .arch svg{width:100%;height:auto;max-width:100%;display:block;}
+  .sk{stroke:var(--line-2);fill:none;stroke-width:1.3;}
+  .sk-fill{fill:var(--panel-2);stroke:var(--line-2);stroke-width:1.3;}
+  .sk-ok{fill:color-mix(in oklch, var(--ok) 18%, var(--panel)); stroke:var(--ok); stroke-width:1.3;}
+  .sk-warn{fill:color-mix(in oklch, var(--warn) 20%, var(--panel)); stroke:var(--warn); stroke-width:1.3;}
+  .sk-bad{fill:color-mix(in oklch, var(--bad) 18%, var(--panel)); stroke:var(--bad); stroke-width:1.3;}
+  .sk-accent{fill:color-mix(in oklch, var(--accent) 18%, var(--panel)); stroke:var(--accent); stroke-width:1.4;}
+  .sk-label{font-family:var(--mono);font-size:10px;fill:var(--ink);}
+  .sk-label-dim{font-family:var(--mono);font-size:9px;fill:var(--ink-dim);}
+  .sk-title{font-family:var(--mono);font-size:11px;font-weight:700;fill:var(--ink);}
+
+  /* grid of planes */
+  .planes{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);}
+  @media(max-width:1100px){.planes{grid-template-columns:repeat(2,1fr);}}
+  .plane{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:var(--pad);display:flex;flex-direction:column;gap:10px;
+  }
+  .plane h3{
+    display:flex;align-items:baseline;gap:8px;font-family:var(--mono);font-size:12px;
+    font-weight:500;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-dim);
+  }
+  .plane h3 .n{color:var(--accent);font-weight:700;}
+  .plane h3 .c{margin-left:auto;color:var(--ink-faint);font-size:10px;}
+  .plane .lede{font-size:12px;color:var(--ink-dim);line-height:1.5;margin-bottom:4px;}
+  .repo{
+    display:flex;align-items:center;gap:8px;
+    padding:7px 10px;border:1px solid var(--line);border-radius:5px;
+    background:var(--bg);cursor:pointer;transition:border-color .15s;
+    font-family:var(--mono);font-size:11px;
+  }
+  .repo:hover{border-color:var(--line-2);}
+  .repo[data-issue="true"]{border-color:color-mix(in oklch, var(--warn) 50%, var(--line));}
+  .repo .name{color:var(--ink);font-weight:500;flex:1;}
+  .repo .kind{color:var(--ink-faint);font-size:10px;}
+  .repo .flag{font-size:10px;padding:1px 6px;border-radius:3px;background:var(--warn);color:#fff;font-weight:600;}
+  .repo .flag.bad{background:var(--bad);}
+  .repo .flag.ok{background:var(--ok);}
+  .repo .src{font-size:9px;color:var(--ink-faint);}
+
+  /* issues table */
+  .issues{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  }
+  .issue-row{
+    display:grid;grid-template-columns: 28px 120px 1fr 260px 80px;gap:14px;
+    padding:12px var(--pad);border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;align-items:flex-start;
+  }
+  .issue-row:first-child{border-top:0;}
+  .issue-row .sev{
+    font-weight:700;font-size:10px;letter-spacing:0.05em;padding:2px 6px;border-radius:3px;
+    text-align:center;align-self:flex-start;
+  }
+  .sev.high{background:color-mix(in oklch, var(--bad) 15%, transparent);color:var(--bad);}
+  .sev.med{background:color-mix(in oklch, var(--warn) 18%, transparent);color:var(--warn);}
+  .sev.low{background:var(--panel-2);color:var(--ink-dim);}
+  .issue-row .where{color:var(--ink);}
+  .issue-row .where small{color:var(--ink-faint);display:block;font-weight:400;margin-top:2px;}
+  .issue-row .what{color:var(--ink-dim);line-height:1.5;}
+  .issue-row .fix{color:var(--ink);line-height:1.5;}
+  .issue-row .fix b{color:var(--accent);font-weight:500;}
+
+  /* legend + tweaks */
+  .legend{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--ink-dim);flex-wrap:wrap;}
+  .legend .chip{display:inline-flex;align-items:center;gap:6px;}
+  .legend .sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  .tweaks{
+    display:none;position:fixed;right:16px;bottom:16px;z-index:80;
+    width:280px;background:var(--panel);border:1px solid var(--line-2);
+    border-radius:8px;padding:14px;box-shadow:0 10px 40px rgba(0,0,0,.15);
+    font-family:var(--mono);font-size:12px;
+  }
+  [data-tweaks="on"] .tweaks{display:block;}
+  .tweaks h5{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-dim);font-weight:500;}
+  .tweaks .row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;}
+  .tweaks .seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+  .tweaks .seg button{background:transparent;border:0;color:var(--ink-dim);padding:4px 8px;}
+  .tweaks .seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);}
+
+  /* detail drawer */
+  .detail{
+    position:fixed;top:50px;right:0;bottom:0;width:min(520px,94vw);
+    background:var(--panel);border-left:1px solid var(--line-2);
+    transform:translateX(100%);transition:transform .25s ease;z-index:70;
+    display:flex;flex-direction:column;
+    box-shadow:-10px 0 40px rgba(0,0,0,.08);
+  }
+  .detail[data-open="true"]{transform:translateX(0);}
+  .detail header{padding:var(--pad);border-bottom:1px solid var(--line);font-family:var(--mono);display:flex;gap:12px;align-items:center;}
+  .detail header b{font-size:13px;}
+  .detail header .close{margin-left:auto;background:transparent;border:0;color:var(--ink-dim);font-size:16px;}
+  .detail .body{padding:var(--pad);overflow-y:auto;flex:1;font-family:var(--mono);font-size:12px;line-height:1.6;}
+  .detail .body h4{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);margin:16px 0 6px;font-weight:500;}
+  .detail .body h4:first-child{margin-top:0;}
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;}
+  .kv dt{color:var(--ink-faint);}
+  .kv dd{margin:0;color:var(--ink);}
+  .tag{display:inline-block;padding:2px 6px;background:var(--panel-2);border:1px solid var(--line);border-radius:3px;font-size:10px;color:var(--ink-dim);margin-right:4px;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);}
+  @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:var(--pad);
+  }
+  .card h3{font-family:var(--mono);font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-dim);margin-bottom:10px;}
+  .card ul{margin:0;padding-left:18px;line-height:1.7;}
+  .card ul li{color:var(--ink);font-size:12px;}
+  .card ul li .m{color:var(--ink-dim);font-family:var(--mono);font-size:11px;}
+
+  /* placement matrix */
+  .matrix{
+    width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px;
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  }
+  .matrix th, .matrix td{padding:8px 12px;border-top:1px solid var(--line);text-align:left;}
+  .matrix th{background:var(--panel-2);color:var(--ink-dim);font-weight:500;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;}
+  .matrix td.c{text-align:center;}
+  .matrix .yes{color:var(--ok);font-weight:700;}
+  .matrix .no{color:var(--ink-faint);}
+  .matrix .mix{color:var(--warn);font-weight:700;}
+</style>
+</head>
+<body data-theme="light" data-density="roomy" data-tweaks="off">
+
+<div class="chrome">
+  <div class="brand"><div class="dot"></div>HOGSMADE<small>&nbsp;audit</small></div>
+  <div class="modes">
+    <button onclick="location.href='Hogsmade Cockpit.html'">← cockpit</button>
+    <button aria-pressed="true">repo audit</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="stat">repos <b>25</b></div>
+  <div class="stat">local trees <b>2</b></div>
+  <div class="stat">planes <b>4</b></div>
+  <div class="stat">issues <b id="s-issues">—</b></div>
+</div>
+
+<main>
+  <div class="page-title">Routing &amp; placement audit — is the central hub holding the nested scope?</div>
+  <div class="page-sub">review of 25 github repos + canopy/ + CascadeProjects tree against the 4-planes model</div>
+
+  <!-- ============ SUMMARY ============ -->
+  <div class="section"><h2>1 · summary</h2><small>short version, before the details</small></div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>what's working</h3>
+      <ul>
+        <li>Clear <b>hub</b> exists — <span class="m">hogsmade/CascadeProjects</span> acts as the umbrella workspace. 12 MCP servers are correctly namespaced under Tools/MCPServers/.</li>
+        <li>GRID is correctly a <b>submodule</b>, not a copy — single source of truth.</li>
+        <li>Shared packages (<span class="m">shared-types, shared-resilience, shared-pipeline</span>) sit in Components/ with a stated build order. Good.</li>
+        <li>Contracts + envelopes + audits have a shared schema (GATE, echoes, contract.hardened.json pattern across afloat &amp; aac).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>what's not</h3>
+      <ul>
+        <li><b>Three homes for "afloat"</b>: repo <span class="m">afloat</span>, local <span class="m">canopy/afloat</span>, and <span class="m">Tools/MCPServers/afloat-server</span> — a Next.js app, a duplicate, and an MCP server, all sharing a name. Routing is ambiguous.</li>
+        <li><b>Duplicate manifest</b> — <span class="m">canopy/assistive-agreement-contracts/manifest.json</span> still claims <code>"name":"afloat"</code>. Copy-paste bleed.</li>
+        <li><b>Bus is described, not implemented</b>. 12 MCP servers but no central event stream — the "central hub" is just a folder, not a runtime.</li>
+        <li><b>glimpse-*</b> is split into artifact/engine AND has an MCP server AND has code inside echoes. 3 owners of "Glimpse" terminology.</li>
+        <li><b>Orphans</b>: apiguard, python-craft, Atmosphere, storage, light_of_the_seven, magical_forest, concept have no declared seat in the 4-planes model.</li>
+        <li><b>Vision vs GRID overlap</b> — both host "learning_data", both LLM-aware, no contract boundary between them.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ ARCH DIAGRAM ============ -->
+  <div class="section"><h2>2 · the central hub, nested</h2><small>where each repo sits, and where the edges actually run</small></div>
+  <div class="arch">
+    <svg viewBox="0 0 1200 640" preserveAspectRatio="xMidYMid meet">
+      <!-- spine at top -->
+      <rect x="40" y="30" width="1120" height="40" rx="4" class="sk-accent"/>
+      <text x="56" y="55" class="sk-title">CENTRAL HUB · hogsmade / CascadeProjects  (workspace · contracts · audit schema · build order)</text>
+      <text x="1060" y="55" class="sk-label-dim">proposed: + bus</text>
+
+      <!-- proposed command bus -->
+      <rect x="40" y="88" width="1120" height="26" rx="4" class="sk-warn" stroke-dasharray="5 3"/>
+      <text x="56" y="105" class="sk-label">proposed COMMAND BUS  ·  currently missing · servers talk via files, not events</text>
+
+      <!-- 4 planes -->
+      <g transform="translate(40, 134)">
+        <!-- plane 1: services -->
+        <rect x="0" y="0" width="270" height="280" rx="6" class="sk-fill"/>
+        <text x="12" y="22" class="sk-title">1 · SERVICES  (capabilities)</text>
+        <text x="12" y="38" class="sk-label-dim">Tools/MCPServers/*  + apps-as-services</text>
+        <g font-family="JetBrains Mono" font-size="10" fill="var(--ink)">
+          <rect x="10" y="50" width="250" height="18" class="sk-ok"/><text x="16" y="63">afloat-server           mcp · 7 tools</text>
+          <rect x="10" y="70" width="250" height="18" class="sk-ok"/><text x="16" y="83">echoes-server           mcp · 4 tools</text>
+          <rect x="10" y="90" width="250" height="18" class="sk-ok"/><text x="16" y="103">grid-server             mcp · 11 tools</text>
+          <rect x="10" y="110" width="250" height="18" class="sk-ok"/><text x="16" y="123">lots-server             mcp · 5 tools</text>
+          <rect x="10" y="130" width="250" height="18" class="sk-ok"/><text x="16" y="143">maintain-server         mcp · 3 tools</text>
+          <rect x="10" y="150" width="250" height="18" class="sk-ok"/><text x="16" y="163">overview-server         mcp · 6 tools</text>
+          <rect x="10" y="170" width="250" height="18" class="sk-ok"/><text x="16" y="183">pulse · seeds · ori     mcp</text>
+          <rect x="10" y="190" width="250" height="18" class="sk-warn"/><text x="16" y="203">glimpse-server          dup with engine</text>
+          <rect x="10" y="210" width="250" height="18" class="sk-warn"/><text x="16" y="223">mangrove-server         dio bridge · perf</text>
+          <rect x="10" y="230" width="250" height="18" class="sk-bad"/><text x="16" y="243">eligibility-server      contract unclear</text>
+          <rect x="10" y="250" width="250" height="18" class="sk-warn"/><text x="16" y="263">craft-server            stub only</text>
+        </g>
+
+        <!-- plane 2: runs -->
+        <rect x="290" y="0" width="270" height="280" rx="6" class="sk-fill"/>
+        <text x="302" y="22" class="sk-title">2 · RUNS  (motion)</text>
+        <text x="302" y="38" class="sk-label-dim">what is happening right now</text>
+        <g font-family="JetBrains Mono" font-size="10" fill="var(--ink)">
+          <rect x="300" y="50" width="250" height="18" class="sk-ok"/><text x="306" y="63">GRID train / eval jobs   python</text>
+          <rect x="300" y="70" width="250" height="18" class="sk-ok"/><text x="306" y="83">lots experiments         catalog</text>
+          <rect x="300" y="90" width="250" height="18" class="sk-ok"/><text x="306" y="103">DIO episodes             control_room</text>
+          <rect x="300" y="110" width="250" height="18" class="sk-ok"/><text x="306" y="123">afloat sessions          2-min cog</text>
+          <rect x="300" y="130" width="250" height="18" class="sk-warn"/><text x="306" y="143">echoes demos (8 demo*.py)  ad-hoc</text>
+          <rect x="300" y="150" width="250" height="18" class="sk-warn"/><text x="306" y="163">ai-web-demo cascade       orphan</text>
+          <rect x="300" y="170" width="250" height="18" class="sk-bad"/><text x="306" y="183">Coinbase_from_zip         unplaced</text>
+          <rect x="300" y="190" width="250" height="18" class="sk-bad"/><text x="306" y="203">upwork-cli                unplaced</text>
+          <rect x="300" y="225" width="250" height="40" class="sk" stroke-dasharray="3 3"/>
+          <text x="306" y="243" fill="var(--ink-dim)">no run registry · no shared</text>
+          <text x="306" y="257" fill="var(--ink-dim)">run-id scheme across apps</text>
+        </g>
+
+        <!-- plane 3: artifacts -->
+        <rect x="580" y="0" width="270" height="280" rx="6" class="sk-fill"/>
+        <text x="592" y="22" class="sk-title">3 · ARTIFACTS  (memory)</text>
+        <text x="592" y="38" class="sk-label-dim">what runs produced · persisted</text>
+        <g font-family="JetBrains Mono" font-size="10" fill="var(--ink)">
+          <rect x="590" y="50" width="250" height="18" class="sk-ok"/><text x="596" y="63">GATE/  envelopes · nonces</text>
+          <rect x="590" y="70" width="250" height="18" class="sk-ok"/><text x="596" y="83">echoes audit.ndjson</text>
+          <rect x="590" y="90" width="250" height="18" class="sk-ok"/><text x="596" y="103">afloat contract.json v2.0</text>
+          <rect x="590" y="110" width="250" height="18" class="sk-warn"/><text x="596" y="123">contract.hardened.json   (2x)</text>
+          <rect x="590" y="130" width="250" height="18" class="sk-ok"/><text x="596" y="143">seeds snapshots</text>
+          <rect x="590" y="150" width="250" height="18" class="sk-ok"/><text x="596" y="163">glimpse codemap-schema</text>
+          <rect x="590" y="170" width="250" height="18" class="sk-warn"/><text x="596" y="183">render_session_*.json     ×6</text>
+          <rect x="590" y="190" width="250" height="18" class="sk-warn"/><text x="596" y="203">cascade_test_results.json</text>
+          <rect x="590" y="210" width="250" height="18" class="sk-bad"/><text x="596" y="223">manifest.json × everywhere</text>
+          <rect x="590" y="230" width="250" height="18" class="sk-bad"/><text x="596" y="243">  ^ owner/maturity duplicated</text>
+          <rect x="590" y="250" width="250" height="18" class="sk-ok"/><text x="596" y="263">shared audit schema · keep</text>
+        </g>
+
+        <!-- plane 4: surfaces -->
+        <rect x="870" y="0" width="250" height="280" rx="6" class="sk-fill"/>
+        <text x="882" y="22" class="sk-title">4 · SURFACES  (views)</text>
+        <text x="882" y="38" class="sk-label-dim">how you see the other 3</text>
+        <g font-family="JetBrains Mono" font-size="10" fill="var(--ink)">
+          <rect x="880" y="50" width="230" height="18" class="sk-ok"/><text x="886" y="63">Hogsmade Cockpit (this)</text>
+          <rect x="880" y="70" width="230" height="18" class="sk-ok"/><text x="886" y="83">Hogwarts board + nuke</text>
+          <rect x="880" y="90" width="230" height="18" class="sk-ok"/><text x="886" y="103">glimpse-artifact (React)</text>
+          <rect x="880" y="110" width="230" height="18" class="sk-warn"/><text x="886" y="123">glimpse-engine dashboard</text>
+          <rect x="880" y="130" width="230" height="18" class="sk-ok"/><text x="886" y="143">afloat (next.js)</text>
+          <rect x="880" y="150" width="230" height="18" class="sk-ok"/><text x="886" y="163">aac (next.js)</text>
+          <rect x="880" y="170" width="230" height="18" class="sk-ok"/><text x="886" y="183">Vision UI_UX</text>
+          <rect x="880" y="190" width="230" height="18" class="sk-warn"/><text x="886" y="203">bandwidth-equalizer html</text>
+          <rect x="880" y="210" width="230" height="18" class="sk-bad"/><text x="886" y="223">ai-web-demo (free-floating)</text>
+          <rect x="880" y="230" width="230" height="18" class="sk-warn"/><text x="886" y="243">walt-disney-st  concept</text>
+          <rect x="880" y="250" width="230" height="18" class="sk-warn"/><text x="886" y="263">Atmosphere · veridisquo</text>
+        </g>
+      </g>
+
+      <!-- shared substrate -->
+      <rect x="40" y="436" width="1120" height="32" rx="4" class="sk-accent"/>
+      <text x="56" y="457" class="sk-title">SHARED SUBSTRATE · shared-types · shared-resilience · shared-pipeline · apiguard  (contracts/patterns, not services)</text>
+
+      <!-- outside repos -->
+      <rect x="40" y="486" width="1120" height="130" rx="6" class="sk" stroke-dasharray="5 3"/>
+      <text x="56" y="506" class="sk-title" fill="var(--ink-dim)">UNPLACED · 9 repos with no declared seat</text>
+      <g font-family="JetBrains Mono" font-size="10" fill="var(--ink)">
+        <text x="56" y="528">python-craft       · LSP templates       → substrate? own surface?</text>
+        <text x="56" y="544">interface          · private            → surface? ← name collision with plane 4</text>
+        <text x="56" y="560">research-space     · private research    → runs? own tree?</text>
+        <text x="56" y="576">BEYOND             · private             → ?</text>
+        <text x="56" y="592">storage            · ?                   → artifacts substrate?</text>
+        <text x="400" y="528">Atmosphere         · "crossroading dim"  → concept / surface</text>
+        <text x="400" y="544">light_of_the_seven · ?                   → ?</text>
+        <text x="400" y="560">magical_forest     · perf/spectrum       → runs?</text>
+        <text x="400" y="576">concept · veridisquo · walt-disney-st   → writing/concept branch</text>
+        <text x="400" y="592">mangrove-hardening · OS hardening       → substrate (ops)</text>
+        <text x="800" y="528" fill="var(--ok)">suggested action:</text>
+        <text x="800" y="544">• add /concept/ branch for writing</text>
+        <text x="800" y="560">• fold python-craft into Components</text>
+        <text x="800" y="576">• mangrove-hardening → infra/</text>
+        <text x="800" y="592">• retire or inline orphans</text>
+      </g>
+    </svg>
+
+    <div class="legend" style="margin-top:14px;">
+      <span class="chip"><span class="sw" style="background:var(--ok);"></span>well-placed</span>
+      <span class="chip"><span class="sw" style="background:var(--warn);"></span>needs work</span>
+      <span class="chip"><span class="sw" style="background:var(--bad);"></span>misplaced / duplicated</span>
+      <span class="chip"><span class="sw" style="background:var(--accent);"></span>central spine</span>
+    </div>
+  </div>
+
+  <!-- ============ PLANE DRILL-DOWN ============ -->
+  <div class="section"><h2>3 · every repo, placed</h2><small>click a repo to see what it actually is and where it should live</small></div>
+  <div class="planes" id="planes"></div>
+
+  <!-- ============ ISSUE TABLE ============ -->
+  <div class="section"><h2>4 · placement issues &amp; fixes</h2><small>ordered by severity</small></div>
+  <div class="issues" id="issues"></div>
+
+  <!-- ============ ROUTING MATRIX ============ -->
+  <div class="section"><h2>5 · contract coverage matrix</h2><small>does each project speak the shared language?</small></div>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>project</th>
+        <th class="c">manifest.json</th>
+        <th class="c">contract.json</th>
+        <th class="c">audit stream</th>
+        <th class="c">shared-types</th>
+        <th class="c">CLAUDE.md</th>
+        <th class="c">declared plane</th>
+      </tr>
+    </thead>
+    <tbody id="matrix"></tbody>
+  </table>
+
+  <!-- ============ NEXT STEPS ============ -->
+  <div class="section"><h2>6 · recommended next moves</h2><small>ordered by leverage</small></div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>structural (do first)</h3>
+      <ul>
+        <li><b>Pick one "afloat"</b>. Rename the MCP server to <span class="m">afloat-orchestrator</span>; keep the Next.js app as <span class="m">afloat</span>. Delete <span class="m">canopy/afloat</span> duplicate. <span class="m">aac</span>'s manifest copy-paste must be fixed.</li>
+        <li><b>Implement the bus</b>. The diagram shows one but it's aspirational. Build it: echoes-server already persists audits; promote it to bus owner and make every other server publish to it via <span class="m">shared-types/AuditEvent</span>.</li>
+        <li><b>Collapse Glimpse</b> to one owner. Decide: engine inside echoes, standalone, OR MCP server. Currently all three. Retire the other two.</li>
+        <li><b>Move apiguard</b> into <span class="m">Components/</span>. It's a resilience pattern library, exact twin of shared-resilience. Merge or cross-link.</li>
+        <li><b>Adopt run-id scheme</b> (<span class="m">{service}.{kind}.{uuid}</span>). Every run emits to GATE envelopes under that id. Today runs are invisible across apps.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>narrative (do second)</h3>
+      <ul>
+        <li><b>Concept branch</b>: create <span class="m">/concept/</span> repo or folder for Atmosphere, veridisquo, walt-disney-st, concept, light_of_the_seven, magical_forest. Clearly tag as "writing / exploration, not services."</li>
+        <li><b>Infra branch</b>: <span class="m">mangrove-hardening</span> + Vision's ops scripts belong under <span class="m">infrastructure/</span>, adjacent to GRID's own <span class="m">infrastructure/</span> — not as peers of product apps.</li>
+        <li><b>Promote STRUCTURE.md</b> — the hub already has Documentation/docs/STRUCTURE.md. Treat it as source-of-truth; enforce via a CI check that every top-level dir maps to a declared plane.</li>
+        <li><b>Kill <span class="m">interface</span> (private)</b>'s name — collides with "surfaces." Rename to what it actually is.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="height:40px;"></div>
+</main>
+
+<!-- tweaks -->
+<div class="tweaks">
+  <h5>Tweaks</h5>
+  <div class="row"><label>theme</label>
+    <div class="seg" id="tw-theme"><button data-v="light" aria-pressed="true">light</button><button data-v="dark">dark</button></div>
+  </div>
+  <div class="row"><label>density</label>
+    <div class="seg" id="tw-density"><button data-v="compact">compact</button><button data-v="comfortable">comfy</button><button data-v="roomy" aria-pressed="true">roomy</button></div>
+  </div>
+  <div class="row"><label>show orphans</label>
+    <div class="seg" id="tw-orphans"><button data-v="on" aria-pressed="true">on</button><button data-v="off">off</button></div>
+  </div>
+</div>
+
+<!-- detail drawer -->
+<div class="detail" id="detail">
+  <header><b id="d-name">—</b><span id="d-kind" style="color:var(--ink-faint);"></span><button class="close" id="d-close">✕</button></header>
+  <div class="body" id="d-body"></div>
+</div>
+
+<script>
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "density": "roomy",
+  "orphans": "on"
+}/*EDITMODE-END*/;
+
+/* =========================================================
+   DATA — 25 github repos + canopy + CascadeProjects layout
+   ========================================================= */
+const REPOS = [
+  // ---- PLANE 1 · services (capabilities) ----
+  {id:"hogsmade",   name:"hogsmade",   plane:"services", kind:"hub · workspace", src:"github+local", status:"ok",   desc:"The central hub. Hosts all MCP servers, shared packages, apps. Acts as monorepo workspace (package.json).", issues:[]},
+  {id:"pi-mangrove",name:"pi-mangrove",plane:"services", kind:"workspace pkg",   src:"github+canopy+CP", status:"ok", desc:"Skills, tools, prompts for pi agent. Published tools include dio_episode_summary, dio:status, security:audit. Well-scoped.", issues:[]},
+  {id:"afloat-srv", name:"afloat-server (inside hogsmade)", plane:"services", kind:"MCP server", src:"CP/Tools", status:"warn", desc:"MCP server for workflow orchestration. Name collides with the Next.js app.", issues:["name collision with afloat app"]},
+  {id:"echoes-srv", name:"echoes-server (inside hogsmade)", plane:"services", kind:"MCP server", src:"CP/Tools", status:"ok", desc:"Audit and telemetry persistence. Good candidate for bus owner.", issues:[]},
+  {id:"grid-srv",   name:"grid-server (inside hogsmade)",   plane:"services", kind:"MCP server", src:"CP/Tools", status:"ok", desc:"Bridges GRID submodule + GATE.", issues:[]},
+  {id:"lots-srv",   name:"lots-server (inside hogsmade)",   plane:"services", kind:"MCP server", src:"CP/Tools", status:"ok", desc:"Experiment catalog + runner + suggestions.", issues:[]},
+  {id:"mang-srv",   name:"mangrove-server (inside hogsmade)", plane:"services", kind:"MCP server", src:"CP/Tools", status:"warn", desc:"DIO bridge + security audit + skill routing. Three jobs — likely too many.", issues:["mixed responsibilities"]},
+
+  // ---- PLANE 2 · runs (motion) ----
+  {id:"GRID",       name:"GRID",       plane:"runs",     kind:"python · FastAPI · submodule", src:"github", status:"ok", desc:"Local-first AI framework. Correctly a submodule under Projects/GRID-main. Owns training, eval, cognition, RAG.", issues:[]},
+  {id:"afloat",     name:"afloat",     plane:"runs",     kind:"next.js · 2-min cog sessions", src:"github+canopy", status:"warn", desc:"Short-session cognitive assistant. Runs LIVE user sessions. Well-documented contract.json (v2.0) with baselines, tiers, compliance.", issues:["duplicate copy in canopy/","name collision with afloat-server"]},
+  {id:"aac",        name:"assistive-agreement-contracts", plane:"runs", kind:"next.js · UI for contracts", src:"github+canopy", status:"warn", desc:"Contract UI + agreement validation. Adjacent to afloat but distinct product.", issues:["manifest.json says name:\"afloat\" — copy-paste bleed"]},
+  {id:"ai-web-demo",name:"ai-web-demo",plane:"runs",     kind:"react + python · adaptive logic", src:"github+canopy", status:"bad", desc:"Full-stack demo with cascade_* scripts. Lots of render_session_*.json artifacts. No declared relationship to the hub.", issues:["orphan · no seat","produces artifacts with no home"]},
+  {id:"DIO",        name:"DIO (inside hogsmade)", plane:"runs", kind:"python · control room", src:"CP/Projects", status:"ok", desc:"Episode tool + airflow + light control. combined_space.py is source-of-truth.", issues:[]},
+  {id:"Coinbase",   name:"Coinbase_from_zip", plane:"runs", kind:"?", src:"github", status:"bad", desc:"Unknown purpose.", issues:["no README referenced · unplaced"]},
+  {id:"upwork-cli", name:"upwork-cli (canopy only)", plane:"runs", kind:"python cli", src:"canopy", status:"warn", desc:"In canopy/ tree but not in github list. Orphan or local-only?", issues:["only in canopy/","no plane declared"]},
+
+  // ---- PLANE 3 · artifacts (memory) ----
+  {id:"GATE",       name:"GATE (inside hogsmade)", plane:"artifacts", kind:"envelopes · nonces", src:"CP/Projects", status:"ok", desc:"Envelopes, contracts, results, nonce registry. The canonical artifact store.", issues:[]},
+  {id:"storage",    name:"storage",    plane:"artifacts", kind:"?", src:"github", status:"warn", desc:"Name implies artifact substrate. Relationship to GATE unclear.", issues:["relationship to GATE unclear"]},
+
+  // ---- PLANE 4 · surfaces (views) ----
+  {id:"glimpse-eng",name:"glimpse-engine", plane:"surfaces", kind:"js · cognitive engine + viz", src:"github+CP", status:"warn", desc:"Decision support visualization. Has its own dashboard.html + glimpse-engine.html + rule-lab.", issues:["3-way split with glimpse-artifact + glimpse-server"]},
+  {id:"Vision",     name:"Vision",     plane:"surfaces", kind:"python · eyes · UI_UX", src:"github", status:"warn", desc:"'Everything to do with the eyes.' Has vision_ui/ and UI_UX/. Overlaps with GRID's perception layer.", issues:["overlaps GRID perception · no contract boundary"]},
+  {id:"Hogwarts",   name:"Hogwarts (inside hogsmade)", plane:"surfaces", kind:"react · governance sim", src:"CP", status:"ok", desc:"Board UI + houses + arena. Clean surface layer.", issues:[]},
+  {id:"interface",  name:"interface (private)", plane:"surfaces", kind:"?", src:"github", status:"bad", desc:"Private. Default branch 'latest-working-validated-secure'. Name collides with plane 4 concept.", issues:["name collision with 'surfaces' concept","branch name should be 'main'"]},
+
+  // ---- SUBSTRATE (shared) ----
+  {id:"apiguard",   name:"apiguard",   plane:"substrate", kind:"python lib · rate limit / retry / CB", src:"github+CP/Projects", status:"warn", desc:"Production-grade resilience library. Twin of Components/shared-resilience.", issues:["duplicates shared-resilience role"]},
+  {id:"APIGUARD-po",name:"APIGUARD (portfolio fork)", plane:"substrate", kind:"mirror", src:"github", status:"low", desc:"Portfolio mirror of apiguard. Fine as-is.", issues:[]},
+  {id:"python-craft",name:"python-craft (private)", plane:"substrate", kind:"python templates · LSP", src:"github", status:"warn", desc:"CPU-first Python templates for transformer architecture LSP activation.", issues:["no declared plane"]},
+  {id:"mangrove-hd",name:"mangrove-hardening (private)", plane:"substrate", kind:"ops · OS hardening", src:"github", status:"warn", desc:"OS hardening layer + monitoring.", issues:["belongs in infrastructure/"]},
+
+  // ---- ORPHANS ----
+  {id:"BEYOND",     name:"BEYOND (private)", plane:"orphan", kind:"?", src:"github", status:"warn", desc:"Private, no public description.", issues:["unplaced"]},
+  {id:"research",   name:"research-space (private)", plane:"orphan", kind:"research", src:"github", status:"low", desc:"Research repo, intentionally unplaced.", issues:["ok to stay orphan · tag as research"]},
+  {id:"Atmosphere", name:"Atmosphere", plane:"orphan", kind:"concept", src:"github", status:"low", desc:"'Crossroading dimensionality.' Concept/writing work.", issues:["move to /concept/ branch"]},
+  {id:"light7",     name:"light_of_the_seven", plane:"orphan", kind:"?", src:"github", status:"warn", desc:"No description.", issues:["unplaced · likely concept"]},
+  {id:"magical",    name:"magical_forest (perf/spectrum-sweep)", plane:"orphan", kind:"?", src:"github", status:"warn", desc:"Non-default branch suggests active experimentation.", issues:["branch should merge to main or tag as experiment"]},
+  {id:"veridisquo", name:"veridisquo", plane:"orphan", kind:"concept · artefact", src:"github", status:"low", desc:"'Manifestation of resilience as an artefact.'", issues:["move to /concept/ branch"]},
+  {id:"concept",    name:"concept", plane:"orphan", kind:"writing · discussion", src:"github", status:"low", desc:"Open discussion space.", issues:["anchor repo for /concept/ branch"]},
+  {id:"walt-disney",name:"walt-disney-st", plane:"orphan", kind:"concept · construction", src:"github", status:"low", desc:"Conceptual exploration re: construction site.", issues:["move to /concept/ branch"]},
+  {id:"Python",     name:"Python (irfankabir02)", plane:"orphan", kind:"?", src:"github", status:"low", desc:"Generic-named repo. Probably sandbox.", issues:["rename or archive"]},
+  {id:"canopy",     name:"canopy/ (local only)", plane:"orphan", kind:"local alt-workspace", src:"canopy", status:"warn", desc:"A parallel local tree holding afloat, aac, echoes, ai-web-demo, upwork-cli. Implies a second hub alongside CascadeProjects.", issues:["two hubs, unclear which is canonical"]},
+];
+
+const ISSUES = [
+  {sev:"high", where:"afloat", sub:"name used 3 ways", what:"'afloat' is (a) a Next.js app, (b) an MCP server, (c) a manifest name on aac. Routing, search, and mental model all collide.",
+   fix:"Keep app = <b>afloat</b>. Rename MCP server to <b>afloat-orchestrator</b>. Fix aac manifest.json. Delete canopy/afloat copy."},
+  {sev:"high", where:"bus", sub:"doesn't exist yet", what:"12 MCP servers are described as 'on the bus' but there is no runtime bus. They share files, not events. The central hub is a folder, not a process.",
+   fix:"Promote <b>echoes-server</b> to bus owner. Every other server publishes AuditEvents via shared-types. Run-ids propagate across services."},
+  {sev:"high", where:"canopy/", sub:"shadow workspace", what:"canopy/ mirrors 4 repos that also live in github + CascadeProjects. Which is canonical? No declaration.",
+   fix:"Pick one. If canopy is the working tree and CascadeProjects is the umbrella, <b>document it</b> in STRUCTURE.md. Otherwise delete canopy."},
+  {sev:"med",  where:"glimpse-*", sub:"3-way split", what:"glimpse-engine (js), glimpse-artifact (react), glimpse-server (MCP), plus glimpse/ inside echoes. Four owners of the same concept.",
+   fix:"Collapse to 2: <b>engine</b> (logic) + <b>server</b> (MCP façade). Artifact retires into engine. Echoes copy removed."},
+  {sev:"med",  where:"apiguard", sub:"dup of shared-resilience", what:"apiguard is a standalone lib with CB + retry + rate limit. Components/shared-resilience covers the same ground.",
+   fix:"Merge, or make one the implementation and the other a re-export. Cross-link in both READMEs."},
+  {sev:"med",  where:"aac manifest", sub:"copy-paste bug", what:"canopy/assistive-agreement-contracts/manifest.json has <code>\"name\":\"afloat\"</code>. Silently wrong.",
+   fix:"Fix the JSON. Add a CI check: <b>name in manifest must match repo dir</b>."},
+  {sev:"med",  where:"run ids", sub:"no shared scheme", what:"afloat uses session_id. GRID uses its own. DIO episodes. lots experiments. Artifacts don't cross-reference.",
+   fix:"Adopt <b>{service}.{kind}.{uuid}</b>. Put the scheme in shared-types. Echoes ties artifacts → runs via this id."},
+  {sev:"med",  where:"mangrove-server", sub:"3 jobs", what:"DIO bridge + security audit + skill routing in one server. Performance warnings showing up (p50 higher than peers in mock data).",
+   fix:"Split: <b>dio-bridge</b> stays under mangrove. <b>security-audit</b> becomes its own server (or moves to maintain). <b>skill routing</b> belongs in pi-mangrove."},
+  {sev:"med",  where:"Vision ↔ GRID", sub:"overlap", what:"Both host learning_data/. Vision has vision_llm_docs/. No contract boundary between perception (Vision) and cognition (GRID).",
+   fix:"Declare: Vision owns <b>ingest + perception</b>. GRID owns <b>cognition + decision</b>. Shared schema via shared-types."},
+  {sev:"med",  where:"ai-web-demo", sub:"free-floating", what:"Heavy Python + React app in canopy/. Produces render_session_*.json all over. No declared home.",
+   fix:"Decide: retire, fold into Vision, or promote to a named surface. In either case, move its artifacts into GATE envelopes."},
+  {sev:"low",  where:"interface (private)", sub:"naming + branch", what:"Default branch is 'latest-working-validated-secure'. Name collides with 'surfaces.'",
+   fix:"Rename default to <b>main</b>. Rename repo to what it is (probably a specific surface)."},
+  {sev:"low",  where:"concept/writing repos", sub:"6 tiny repos", what:"Atmosphere, veridisquo, walt-disney-st, concept, light_of_the_seven, magical_forest. All small, conceptual.",
+   fix:"Consolidate into one <b>/concept/</b> org or a single repo with branches. Keeps github list clean."},
+  {sev:"low",  where:"mangrove-hardening", sub:"placed as peer", what:"OS hardening is infrastructure, not a peer of apps.",
+   fix:"Move under an <b>infrastructure/</b> umbrella alongside GRID's own infra."},
+  {sev:"low",  where:"Coinbase_from_zip · Python · storage", sub:"generic names", what:"Names don't describe function. Hurts searchability.",
+   fix:"Rename or archive. 'storage' in particular competes with GATE."},
+];
+
+const MATRIX = [
+  // [name, manifest, contract, audit, types, claude, plane]
+  ["hogsmade",       "mix","no","no","yes","yes","hub"],
+  ["afloat",         "yes","yes","mix","no","yes","runs"],
+  ["aac",            "mix","yes","no","no","yes","runs"],
+  ["echoes",         "yes","no","yes","no","yes","services"],
+  ["GRID",           "no","no","yes","no","yes","runs"],
+  ["glimpse-engine", "no","no","no","no","no","surfaces"],
+  ["ai-web-demo",    "no","no","no","no","no","orphan"],
+  ["pi-mangrove",    "no","no","no","no","no","services"],
+  ["apiguard",       "no","no","no","no","no","substrate"],
+  ["Vision",         "no","no","no","no","yes","surfaces"],
+  ["upwork-cli",     "no","no","no","no","no","orphan"],
+  ["canopy/",        "no","no","no","no","no","orphan"],
+];
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const state = {
+  theme: TWEAK_DEFAULTS.theme,
+  density: TWEAK_DEFAULTS.density,
+  orphans: TWEAK_DEFAULTS.orphans,
+  tweaks: false,
+};
+function applyHost(){
+  document.body.dataset.theme = state.theme;
+  document.body.dataset.density = state.density;
+  document.body.dataset.tweaks = state.tweaks ? "on" : "off";
+}
+
+const PLANES = [
+  {id:"services",  n:"1", title:"services", lede:"capabilities — what CAN be invoked"},
+  {id:"runs",      n:"2", title:"runs",     lede:"motion — what IS happening"},
+  {id:"artifacts", n:"3", title:"artifacts",lede:"memory — what runs PRODUCED"},
+  {id:"surfaces",  n:"4", title:"surfaces", lede:"views — how you SEE planes 1-3"},
+  {id:"substrate", n:"S", title:"substrate",lede:"shared contracts · patterns · infra"},
+  {id:"orphan",    n:"?", title:"unplaced", lede:"no declared seat in the model"},
+];
+
+function renderPlanes(){
+  const container = $("#planes");
+  container.innerHTML = PLANES.map(p => {
+    if(p.id === "orphan" && state.orphans === "off") return "";
+    const items = REPOS.filter(r => r.plane === p.id);
+    return `
+      <div class="plane">
+        <h3><span class="n">${p.n}</span> ${p.title} <span class="c">${items.length}</span></h3>
+        <div class="lede">${p.lede}</div>
+        ${items.map(r => `
+          <div class="repo" data-id="${r.id}" data-issue="${r.issues.length > 0}">
+            <span class="name">${r.name}</span>
+            <span class="kind">${r.kind}</span>
+            ${r.status === "bad" ? '<span class="flag bad">fix</span>' : r.status === "warn" ? '<span class="flag">!</span>' : ''}
+          </div>
+        `).join("")}
+        ${items.length === 0 ? '<div style="color:var(--ink-faint);font-family:var(--mono);font-size:11px;padding:10px;">empty</div>' : ''}
+      </div>
+    `;
+  }).join("");
+  // Services plane was ordered first; also inject substrate between artifacts and surfaces? Current order is fine.
+}
+
+function renderIssues(){
+  const el = $("#issues");
+  el.innerHTML = ISSUES.map(i => `
+    <div class="issue-row">
+      <span class="sev ${i.sev}">${i.sev}</span>
+      <div class="where"><b>${i.where}</b><small>${i.sub}</small></div>
+      <div class="what">${i.what}</div>
+      <div class="fix">${i.fix}</div>
+      <div style="color:var(--ink-faint);text-align:right;">${i.sev === "high" ? "↑" : i.sev === "med" ? "→" : "·"}</div>
+    </div>
+  `).join("");
+  $("#s-issues").textContent = ISSUES.length;
+}
+
+function renderMatrix(){
+  const el = $("#matrix");
+  const cls = v => v === "yes" ? "yes" : v === "no" ? "no" : "mix";
+  const glyph = v => v === "yes" ? "✓" : v === "no" ? "—" : "~";
+  el.innerHTML = MATRIX.map(row => `
+    <tr>
+      <td><b>${row[0]}</b></td>
+      <td class="c ${cls(row[1])}">${glyph(row[1])}</td>
+      <td class="c ${cls(row[2])}">${glyph(row[2])}</td>
+      <td class="c ${cls(row[3])}">${glyph(row[3])}</td>
+      <td class="c ${cls(row[4])}">${glyph(row[4])}</td>
+      <td class="c ${cls(row[5])}">${glyph(row[5])}</td>
+      <td><span class="tag">${row[6]}</span></td>
+    </tr>
+  `).join("");
+}
+
+function openDetail(id){
+  const r = REPOS.find(x => x.id === id);
+  if(!r) return;
+  $("#d-name").textContent = r.name;
+  $("#d-kind").textContent = " · " + r.kind;
+  $("#d-body").innerHTML = `
+    <h4>plane</h4>
+    <div><span class="tag">${r.plane}</span> <span class="tag">${r.src}</span> <span class="tag">${r.status}</span></div>
+    <h4>what it is</h4>
+    <div>${r.desc}</div>
+    <h4>issues</h4>
+    ${r.issues.length ? `<ul style="margin:0;padding-left:18px;">${r.issues.map(i=>`<li>${i}</li>`).join("")}</ul>` : '<div style="color:var(--ink-faint);">none flagged</div>'}
+    <h4>relationships (inferred)</h4>
+    <div style="color:var(--ink-dim);">
+      ${inferRelationships(r)}
+    </div>
+  `;
+  $("#detail").dataset.open = "true";
+}
+
+function inferRelationships(r){
+  const rels = [];
+  if(r.id === "hogsmade") rels.push("hosts: all MCP servers, DIO, GATE, Hogwarts, shared-types, Components");
+  if(r.id === "afloat") rels.push("inherits from: shared-types (proposed)", "publishes to: echoes audit (proposed)", "reads: Ollama catalog");
+  if(r.id === "aac") rels.push("sibling of: afloat", "shares: contract.json shape");
+  if(r.id === "GRID") rels.push("bridged by: grid-server (MCP)", "consumed by: Vision, pulse-server");
+  if(r.id === "DIO") rels.push("bridged by: mangrove-server", "emits: episodes → echoes audit");
+  if(r.id === "GATE") rels.push("written by: any service producing envelopes", "read by: surfaces");
+  if(r.id === "glimpse-eng") rels.push("overlaps: glimpse-artifact, glimpse-server, echoes/glimpse/");
+  if(r.id === "apiguard") rels.push("overlaps: Components/shared-resilience");
+  if(r.id === "canopy") rels.push("shadows: hogsmade workspace", "contains: afloat, aac, echoes, ai-web-demo, upwork-cli");
+  if(rels.length === 0) rels.push("(none declared — consider linking into the hub)");
+  return rels.map(x => `<div>→ ${x}</div>`).join("");
+}
+
+/* ---- wire ---- */
+document.addEventListener("click", (e) => {
+  const r = e.target.closest(".repo");
+  if(r){ openDetail(r.dataset.id); return; }
+});
+$("#d-close").onclick = () => $("#detail").dataset.open = "false";
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape") $("#detail").dataset.open = "false";
+  if(e.key === "." && !e.target.matches("input")){ state.tweaks = !state.tweaks; applyHost(); }
+});
+
+/* tweaks */
+function persist(k,v){
+  state[k] = v; applyHost();
+  if(k === "orphans") renderPlanes();
+  try{ window.parent.postMessage({type:"__edit_mode_set_keys", edits:{[k]:v}}, "*"); }catch(e){}
+}
+function seg(id,key){
+  const btns = document.querySelectorAll("#"+id+" button");
+  btns.forEach(b => {
+    b.setAttribute("aria-pressed", b.dataset.v === state[key]);
+    b.onclick = () => { btns.forEach(x => x.setAttribute("aria-pressed", x===b)); persist(key, b.dataset.v); };
+  });
+}
+window.addEventListener("message", (e) => {
+  const d = e.data || {};
+  if(d.type === "__activate_edit_mode"){ state.tweaks = true; applyHost(); }
+  if(d.type === "__deactivate_edit_mode"){ state.tweaks = false; applyHost(); }
+});
+setTimeout(()=>{ try{ window.parent.postMessage({type:"__edit_mode_available"}, "*"); }catch(e){} }, 50);
+
+/* boot */
+applyHost();
+renderPlanes();
+renderIssues();
+renderMatrix();
+seg("tw-theme","theme");
+seg("tw-density","density");
+seg("tw-orphans","orphans");
+</script>
+</body>
+</html>

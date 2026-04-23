@@ -1,0 +1,20 @@
+name: gruff-bridge
+intent: |
+  Manual rehearsal of the GRUFF proportion JSON contract: wall board canvas output,
+  local Echoes stub POST, and future real Echoes route. Not merged into audit NDJSON
+  until explicitly mapped (see CLAUDE.md Data Contracts).
+trigger: manual
+timeout: 10m
+retry_policy:
+  max_attempts: 1
+  backoff: fixed
+  initial_delay_ms: 500
+owner: prince
+lock_key: routine:gruff-bridge
+dispatches: []
+produces: []
+status: draft
+references:
+  - ../../../schemas/gruff-proportion-v1.schema.json
+  - ../../../bridges/gruff-echoes/receiver.py
+  - ../../../docs/GRUFF_WALLBOARD_BRIDGE.md

@@ -1,9 +1,3 @@
-# Nested git repo — tracked separately
-workspace/
-
-# Symlinks into the workspace tree
-school/
-
 # Build / cache / runtime artifacts
 node_modules/
 __pycache__/
@@ -11,10 +5,15 @@ __pycache__/
 .venv/
 *.log
 
-# Editor / OS
+# Editor / OS / local tooling
 .DS_Store
 .vscode/
 .idea/
+.cursor/
+**/.cursor/
+
+# Downloaded installers (never commit)
+*.deb
 
 # Backup files
 *.save

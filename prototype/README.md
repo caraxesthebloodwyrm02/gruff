@@ -2,6 +2,8 @@
 
 A Go web server that serves a browser canvas with a dot grid, ruled lines, amber margin line, and drag-to-draw block gestures. Blocks are persisted in-memory and exposed via a REST API. Undo (Ctrl+Z) and right-click delete are supported.
 
+This runtime is now a secondary prototype. The canonical LO7 implementation lives in [`python-prototype`](/home/irfankabir/gruff/workspace/python-prototype) and adds manifest persistence, revisions/events, craft-backed compass rendering, and Gruff bridge payloads.
+
 ## Run
 
 ```bash

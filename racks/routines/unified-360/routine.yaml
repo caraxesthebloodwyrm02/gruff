@@ -1,0 +1,19 @@
+name: unified-360
+intent: |
+  the unified interface routine — collapse ~30 surfaces into 4 planes
+  behind one command-bus spine and one palette. see Hogsmade Cockpit
+  AFTER sketch for the canonical frame.
+trigger: manual
+timeout: 10m
+retry_policy:
+  max_attempts: 2
+  backoff: exponential
+  initial_delay_ms: 1000
+owner: prince
+lock_key: routine:unified-360
+dispatches: []
+produces: []
+status: draft
+references:
+  - ../../../design-system/assets/routine_unified_360.png
+  - ../../../hogsmade-design/Hogsmade Cockpit.html

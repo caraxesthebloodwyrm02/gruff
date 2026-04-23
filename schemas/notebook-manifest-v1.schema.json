@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gruff.local/schemas/notebook-manifest-v1.schema.json",
+  "title": "LO7 Notebook Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "notebook_id", "board_title", "created_at", "updated_at", "grid", "blocks", "revisions", "events", "integration"],
+  "properties": {
+    "schema_version": { "const": "notebook-manifest-v1" },
+    "notebook_id": { "type": "string", "minLength": 1 },
+    "board_title": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "current_revision_id": { "type": ["string", "null"] },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cell_px", "margin_cols", "cols", "rows"],
+      "properties": {
+        "cell_px": { "type": "integer", "minimum": 1 },
+        "margin_cols": { "type": "integer", "minimum": 0 },
+        "cols": { "type": ["integer", "null"], "minimum": 1 },
+        "rows": { "type": ["integer", "null"], "minimum": 1 }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "min_col", "max_col", "min_row", "max_row", "label", "tone", "created_at", "updated_at"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "min_col": { "type": "integer", "minimum": 0 },
+          "max_col": { "type": "integer", "minimum": 0 },
+          "min_row": { "type": "integer", "minimum": 0 },
+          "max_row": { "type": "integer", "minimum": 0 },
+          "label": { "type": "string" },
+          "tone": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "revisions": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "events": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+    "integration": { "type": "object", "additionalProperties": true }
+  }
+}

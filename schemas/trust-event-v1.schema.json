@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gruff.local/schemas/trust-event-v1.schema.json",
+  "title": "Trust Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "revision_id", "timestamp", "actor", "kind", "summary", "data"],
+  "properties": {
+    "event_id": { "type": "string", "minLength": 1 },
+    "revision_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "actor": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "data": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

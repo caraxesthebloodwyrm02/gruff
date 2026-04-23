@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GRID — Workspace</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0id2hlZWxHcmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNGQkJGMjQ7c3RvcC1vcGFjaXR5OjEiPjwvc3RvcD4KICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNGNTlFMEI7c3RvcC1vcGFjaXR5OjEiPjwvc3RvcD4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojRDk3NzA2O3N0b3Atb3BhY2l0eToxIj48L3N0b3A+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGZpbHRlciBpZD0iZ2xvdyI+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjIiIHJlc3VsdD0iY29sb3JlZEJsdXIiPjwvZmVHYXVzc2lhbkJsdXI+CiAgICAgIDxmZU1lcmdlPgogICAgICAgIDxmZU1lcmdlTm9kZSBpbj0iY29sb3JlZEJsdXIiPjwvZmVNZXJnZU5vZGU+CiAgICAgICAgPGZlTWVyZ2VOb2RlIGluPSJTb3VyY2VHcmFwaGljIj48L2ZlTWVyZ2VOb2RlPgogICAgICA8L2ZlTWVyZ2U+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNDUiIGZpbGw9InVybCgjd2hlZWxHcmFkaWVudCkiIGZpbHRlcj0idXJsKCNnbG93KSIgb3BhY2l0eT0iMC45Ij48L2NpcmNsZT4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSIxNSIgZmlsbD0iI0Q5NzcwNiIgb3BhY2l0eT0iMC44Ij48L2NpcmNsZT4KICA8ZyBzdHJva2U9IiNGQkJGMjQiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxsaW5lIHgxPSI1MCIgeTE9IjUwIiB4Mj0iNTAiIHkyPSIyMCIgb3BhY2l0eT0iMC45Ij48L2xpbmU+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjcwLjciIHkyPSIyOS4zIiBvcGFjaXR5PSIwLjkiPjwvbGluZT4KICAgIDxsaW5lIHgxPSI1MCIgeTE9IjUwIiB4Mj0iODAiIHkyPSI1MCIgb3BhY2l0eT0iMC45Ij48L2xpbmU+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjcwLjciIHkyPSI3MC43IiBvcGFjaXR5PSIwLjkiPjwvbGluZT4KICAgIDxsaW5lIHgxPSI1MCIgeTE9IjUwIiB4Mj0iNTAiIHkyPSI4MCIgb3BhY2l0eT0iMC45Ij48L2xpbmU+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjI5LjMiIHkyPSI3MC43IiBvcGFjaXR5PSIwLjkiPjwvbGluZT4KICAgIDxsaW5lIHgxPSI1MCIgeTE9IjUwIiB4Mj0iMjAiIHkyPSI1MCIgb3BhY2l0eT0iMC45Ij48L2xpbmU+CiAgICA8bGluZSB4MT0iNTAiIHkxPSI1MCIgeDI9IjI5LjMiIHkyPSIyOS4zIiBvcGFjaXR5PSIwLjkiPjwvbGluZT4KICA8L2c+CiAgPGNpcmNsZSBjeD0iNTAiIGN5PSI1MCIgcj0iNSIgZmlsbD0iI0ZGRkZGRiIgb3BhY2l0eT0iMC45NSI+PC9jaXJjbGU+Cjwvc3ZnPg==">
+<style>
+/* ════════════════════════════════════════════════════════════════
+ * GRID — Colors & Type
+ * Warm-orange reread of the source system (landing/branding.json
+ * + frontend/src/tokens). Single source of truth for the design
+ * system. Dark is primary; light exists. Amber/orange is primary.
+ * ══════════════════════════════════════════════════════════════── */
+
+/* Fonts — loaded via CDN to match GRID's Google Fonts spec.
+ * Display: Space Grotesk (landing), UI: Manrope (landing body),
+ * Mono: JetBrains Mono. Geist is the app runtime font — not
+ * available on GFonts as reliably, so we carry it on the app side
+ * via @font-face in index.css if needed. Here we standardize on
+ * Space Grotesk + Manrope + JetBrains Mono for portability. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── GRAPHITE (neutrals) ────────────────────────────────────── */
+  --graphite-50:  #FAFAFC;
+  --graphite-100: #F5F5F8;
+  --graphite-200: #E0E0E8;
+  --graphite-300: #BABAC8;
+  --graphite-400: #8A8A9E;
+  --graphite-500: #5A5A6E;
+  --graphite-600: #3A3A4A;
+  --graphite-700: #2A2A36;
+  --graphite-800: #1F1F28;
+  --graphite-900: #14141A;
+  --graphite-950: #0A0A0F;
+
+  /* ── AMBER / ORANGE (primary, warm) ─────────────────────────── */
+  --amber-300: #FCD34D;
+  --amber-400: #FBBF24;
+  --amber-500: #F59E0B;   /* primary */
+  --amber-600: #D97706;   /* hover/press */
+  --amber-700: #EA580C;   /* deep edge, outdoor rust */
+
+  /* ── EMBER (deep saturated orange-red, used sparingly) ──────── */
+  --ember-600: #C2410C;
+  --ember-700: #9A3412;
+
+  /* ── CYAN (kept as secondary accent — landing's "electric" pop) */
+  --cyan-300:  #66E8FF;
+  --cyan-500:  #00D9FF;
+  --cyan-700:  #0099B3;
+
+  /* ── SEMANTIC ───────────────────────────────────────────────── */
+  --success: #059669;
+  --warning: #D97706;   /* warning IS amber — warn tone is the brand */
+  --error:   #DC2626;
+  --info:    #0891B2;
+
+  /* ── CORE SURFACES (dark-first) ─────────────────────────────── */
+  --bg-0: var(--graphite-950);
+  --bg-1: var(--graphite-900);
+  --bg-2: var(--graphite-800);
+  --bg-3: var(--graphite-700);
+  --surface-card: #17171F;
+  --surface-raised: #1E1E28;
+  --surface-glass: rgba(30, 30, 40, 0.55);
+
+  /* ── FG (foreground / text) ─────────────────────────────────── */
+  --fg-1: #F5F5F8;      /* primary text */
+  --fg-2: #BABAC8;      /* secondary text */
+  --fg-3: #8A8A9E;      /* tertiary text / muted */
+  --fg-4: #5A5A6E;      /* placeholder / disabled */
+  --fg-inverse: #14141A;
+
+  /* ── BORDERS ────────────────────────────────────────────────── */
+  --border-1: rgba(255, 255, 255, 0.08);  /* hairline */
+  --border-2: rgba(255, 255, 255, 0.12);  /* default card */
+  --border-3: rgba(255, 255, 255, 0.18);  /* emphasized */
+  --border-amber: rgba(245, 158, 11, 0.35);
+
+  /* ── PRIMARY / ACCENT TOKENS ────────────────────────────────── */
+  --primary:        var(--amber-500);
+  --primary-hover:  var(--amber-400);
+  --primary-press:  var(--amber-600);
+  --primary-soft:   rgba(245, 158, 11, 0.14);
+  --primary-border: rgba(245, 158, 11, 0.35);
+  --primary-fg:     #1A0F00;  /* near-black on amber — WCAG safe */
+
+  --accent:         var(--cyan-500);
+  --accent-soft:    rgba(0, 217, 255, 0.12);
+
+  /* ── TYPOGRAPHY FAMILIES ────────────────────────────────────── */
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body:    'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* ── TYPE SCALE (rem-based, 16px root) ──────────────────────── */
+  --fs-xs:   0.75rem;   /* 12 — tag, caption */
+  --fs-sm:   0.8125rem; /* 13 — meta, small UI */
+  --fs-base: 0.9375rem; /* 15 — body default */
+  --fs-md:   1rem;      /* 16 — body emphasized */
+  --fs-lg:   1.125rem;  /* 18 — lede, card title */
+  --fs-xl:   1.375rem;  /* 22 — section title */
+  --fs-2xl:  1.75rem;   /* 28 — page title */
+  --fs-3xl:  2.25rem;   /* 36 — display sm */
+  --fs-4xl:  3rem;      /* 48 — display md */
+  --fs-5xl:  4rem;      /* 64 — hero */
+
+  --lh-tight:   1.1;
+  --lh-snug:    1.25;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.7;
+
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+
+  --tracking-tight:   -0.02em;
+  --tracking-snug:    -0.01em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.06em;
+  --tracking-widest:  0.15em;  /* GRID wordmark */
+
+  /* ── SPACING (4px base) ─────────────────────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ── RADIUS ─────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-2xl:  28px;
+  --radius-full: 9999px;
+
+  /* ── SHADOWS / GLOW ─────────────────────────────────────────── */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:  0 4px 12px rgba(0, 0, 0, 0.30);
+  --shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.40);
+  --shadow-xl:  0 24px 60px rgba(0, 0, 0, 0.50);
+  --glow-amber:        0 0 32px rgba(245, 158, 11, 0.28);
+  --glow-amber-strong: 0 0 60px rgba(245, 158, 11, 0.45);
+  --glow-cyan:         0 0 32px rgba(0, 217, 255, 0.25);
+
+  /* ── MOTION ─────────────────────────────────────────────────── */
+  --dur-fast:    120ms;
+  --dur-normal:  200ms;
+  --dur-slow:    350ms;
+  --dur-organic: 600ms;
+  --ease-std:       cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decel:     cubic-bezier(0, 0, 0.2, 1);
+  --ease-accel:     cubic-bezier(0.4, 0, 1, 1);
+  --ease-organic:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z ──────────────────────────────────────────────────────── */
+  --z-base: 1;
+  --z-nav: 10;
+  --z-sticky: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 600;
+
+  /* ── SEMANTIC TYPE (ready-to-use element recipes) ───────────── */
+  --h1-font: var(--font-display); --h1-size: var(--fs-3xl);  --h1-lh: var(--lh-tight); --h1-weight: 700; --h1-tracking: var(--tracking-tight);
+  --h2-font: var(--font-display); --h2-size: var(--fs-2xl);  --h2-lh: var(--lh-tight); --h2-weight: 700; --h2-tracking: var(--tracking-tight);
+  --h3-font: var(--font-display); --h3-size: var(--fs-xl);   --h3-lh: var(--lh-snug);  --h3-weight: 600; --h3-tracking: var(--tracking-snug);
+  --h4-font: var(--font-display); --h4-size: var(--fs-lg);   --h4-lh: var(--lh-snug);  --h4-weight: 600; --h4-tracking: 0;
+  --p-font:  var(--font-body);    --p-size:  var(--fs-base); --p-lh:  var(--lh-relaxed); --p-weight: 400;
+  --lede-font: var(--font-body);  --lede-size: var(--fs-lg); --lede-lh: var(--lh-normal); --lede-weight: 400;
+  --meta-font: var(--font-body);  --meta-size: var(--fs-xs); --meta-lh: var(--lh-normal); --meta-weight: 500; --meta-tracking: var(--tracking-wide);
+  --code-font: var(--font-mono);  --code-size: 0.875rem;     --code-weight: 400;
+  --wordmark-font: var(--font-display); --wordmark-tracking: var(--tracking-widest); --wordmark-weight: 700;
+}
+
+/* ── Light theme override (opt-in on ancestor) ─────────────── */
+[data-theme="light"] {
+  --bg-0: #FAFAFC;
+  --bg-1: #FFFFFF;
+  --bg-2: #F5F5F8;
+  --bg-3: #E0E0E8;
+  --surface-card: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --fg-1: #14141A;
+  --fg-2: #3A3A4A;
+  --fg-3: #5A5A6E;
+  --fg-4: #8A8A9E;
+  --fg-inverse: #FFFFFF;
+  --border-1: rgba(10, 10, 15, 0.06);
+  --border-2: rgba(10, 10, 15, 0.10);
+  --border-3: rgba(10, 10, 15, 0.16);
+  --shadow-sm: 0 1px 2px rgba(10, 10, 15, 0.06);
+  --shadow-md: 0 4px 12px rgba(10, 10, 15, 0.08);
+  --shadow-lg: 0 12px 32px rgba(10, 10, 15, 0.10);
+}
+
+/* ── Ready-to-use element recipes ─────────────────────────── */
+.ds-h1 { font-family: var(--h1-font); font-size: var(--h1-size); line-height: var(--h1-lh); font-weight: var(--h1-weight); letter-spacing: var(--h1-tracking); color: var(--fg-1); margin: 0; }
+.ds-h2 { font-family: var(--h2-font); font-size: var(--h2-size); line-height: var(--h2-lh); font-weight: var(--h2-weight); letter-spacing: var(--h2-tracking); color: var(--fg-1); margin: 0; }
+.ds-h3 { font-family: var(--h3-font); font-size: var(--h3-size); line-height: var(--h3-lh); font-weight: var(--h3-weight); letter-spacing: var(--h3-tracking); color: var(--fg-1); margin: 0; }
+.ds-h4 { font-family: var(--h4-font); font-size: var(--h4-size); line-height: var(--h4-lh); font-weight: var(--h4-weight); color: var(--fg-1); margin: 0; }
+.ds-p  { font-family: var(--p-font);  font-size: var(--p-size);  line-height: var(--p-lh);  font-weight: var(--p-weight);  color: var(--fg-2); margin: 0; }
+.ds-lede { font-family: var(--lede-font); font-size: var(--lede-size); line-height: var(--lede-lh); color: var(--fg-2); margin: 0; }
+.ds-meta { font-family: var(--meta-font); font-size: var(--meta-size); line-height: var(--meta-lh); font-weight: var(--meta-weight); letter-spacing: var(--meta-tracking); color: var(--fg-3); text-transform: uppercase; margin: 0; }
+.ds-code { font-family: var(--code-font); font-size: var(--code-size); font-weight: var(--code-weight); color: var(--amber-400); background: rgba(245, 158, 11, 0.08); padding: 2px 6px; border-radius: 4px; }
+.ds-wordmark { font-family: var(--wordmark-font); letter-spacing: var(--wordmark-tracking); font-weight: var(--wordmark-weight); text-transform: uppercase; color: var(--fg-1); }
+
+/* ── Base page reset (use on preview cards, UI kits, slides) ── */
+.ds-surface { background: var(--bg-1); color: var(--fg-1); font-family: var(--font-body); font-size: var(--p-size); line-height: var(--p-lh); }
+
+</style>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background: var(--bg-0); color: var(--fg-1); font-family: var(--font-body); font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+  .app { display: grid; grid-template-rows: 40px 1fr; height: 100vh; }
+
+  /* TitleBar */
+  .titlebar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; background: rgba(15,15,22,.72); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-1);
+    -webkit-app-region: drag; user-select: none;
+  }
+  .tb-left { display: flex; align-items: center; gap: 10px; }
+  .tb-left img { width: 20px; height: 20px; animation: pulseOrganic 2s var(--ease-std) infinite; }
+  @keyframes pulseOrganic { 0%,100%{opacity:1} 50%{opacity:.65} }
+  .tb-mark { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: .15em; color: var(--fg-1); }
+  .tb-center { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .tb-center .sep { color: var(--fg-4); margin: 0 8px; }
+  .tb-status { display: inline-flex; align-items: center; gap: 6px; color: var(--amber-400); }
+  .tb-status .dot { width: 6px; height: 6px; border-radius: 9999px; background: #34D399; box-shadow: 0 0 8px #34D399; }
+  .tb-right { display: flex; gap: 4px; -webkit-app-region: no-drag; }
+  .tb-btn { width: 28px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: var(--fg-3); cursor: pointer; }
+  .tb-btn:hover { background: rgba(255,255,255,.06); color: var(--fg-1); }
+  .tb-btn svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+
+  /* Body */
+  .body { display: grid; grid-template-columns: 224px 1fr; min-height: 0; }
+
+  /* Sidebar */
+  aside { background: var(--bg-1); border-right: 1px solid var(--border-1); display: flex; flex-direction: column; padding: 14px 0; overflow-y: auto; }
+  .nav-section { padding: 12px 18px 6px; font-size: 10px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--fg-4); }
+  .nav-item { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 14px; margin: 1px 8px; border-radius: 8px; color: var(--fg-2); font-size: 13px; cursor: pointer; transition: all 200ms var(--ease-std); }
+  .nav-item:hover { background: rgba(245,158,11,.08); color: var(--fg-1); transform: translateX(.5px); }
+  .nav-item.active { background: rgba(245,158,11,.12); color: var(--amber-400); }
+  .nav-item.active::before { content:""; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); width: 2px; height: 20px; background: var(--amber-500); border-radius: 2px; }
+  .nav-item svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item .count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fg-4); }
+  .nav-item.active .count { color: var(--amber-400); }
+  .sidebar-footer { margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--border-1); display: flex; align-items: center; gap: 10px; }
+  .sidebar-footer .avatar { width: 28px; height: 28px; border-radius: 9999px; background: linear-gradient(135deg, var(--amber-400), var(--amber-600)); color: var(--primary-fg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: var(--font-display); }
+  .sidebar-footer .meta-stack { display: flex; flex-direction: column; }
+  .sidebar-footer .name { font-size: 12px; color: var(--fg-1); font-weight: 500; }
+  .sidebar-footer .sub { font-size: 10px; color: var(--fg-4); font-family: var(--font-mono); }
+
+  /* Main */
+  main { overflow-y: auto; padding: 24px 28px 40px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; gap: 16px; }
+  .page-title { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .page-sub { font-size: 13px; color: var(--fg-3); margin: 4px 0 0; }
+  .page-actions { display: flex; gap: 8px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:32px; padding:0 12px; border-radius:8px; border:1px solid transparent; font-size:12px; font-weight:600; cursor:pointer; transition: all 200ms var(--ease-std); font-family: var(--font-body); }
+  .btn-primary { background: var(--amber-500); color: var(--primary-fg); }
+  .btn-primary:hover { background: var(--amber-400); box-shadow: var(--glow-amber); }
+  .btn-ghost { background: transparent; color: var(--fg-2); border-color: var(--border-2); }
+  .btn-ghost:hover { color: var(--fg-1); border-color: var(--border-3); }
+  .btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.75; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Tabs (visible at top of main) */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border-1); }
+  .tab { padding: 10px 14px; font-size: 13px; color: var(--fg-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 200ms var(--ease-std); font-weight: 500; }
+  .tab:hover { color: var(--fg-1); }
+  .tab.active { color: var(--amber-400); border-bottom-color: var(--amber-500); }
+
+  /* ── Dashboard view ───────────────────────── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface-card); border: 1px solid var(--border-2); border-radius: 14px; padding: 18px 20px;
+    transition: all 200ms var(--ease-std);
+  }
+  .stat:hover { border-color: var(--primary-border); }
+  .stat .l { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--fg-3); }
+  .stat .v { font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg-1); line-height: 1.1; margin-top: 6px; }
+  .stat.primary .v { color: var(--amber-400); }
+  .stat .d { font-size: 11px; color: var(--fg-3); margin-top: 4px; font-family: var(--font-mono); }
+  .stat .d.ok { color: #34D399; }
+
+  .grid-12 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 20px; }
+  .panel { background: var(--surface-card); border: 1px solid var(--border-2); border-radius: 14px; padding: 18px 20px; }
+  .panel-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; margin: 0 0 2px; color: var(--fg-1); }
+  .panel-sub { font-size: 11px; color: var(--fg-4); font-family: var(--font-mono); margin-bottom: 14px; }
+
+  /* pattern list */
+  .patterns { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-1); border: 1px solid var(--border-1); border-radius: 10px; overflow: hidden; }
+  .p-row { display: flex; gap: 10px; padding: 12px 14px; background: var(--bg-1); align-items: center; }
+  .p-n { font-family: var(--font-mono); font-size: 11px; color: var(--amber-500); min-width: 20px; }
+  .p-name { font-size: 13px; color: var(--fg-1); font-weight: 500; }
+  .p-state { margin-left: auto; font-size: 10px; padding: 2px 8px; border-radius: 9999px; font-family: var(--font-mono); font-weight: 600; letter-spacing: .04em; }
+  .p-state.on { background: rgba(5,150,105,.18); color: #34D399; }
+  .p-state.mist { background: rgba(245,158,11,.18); color: var(--amber-400); }
+  .p-state.idle { background: rgba(255,255,255,.06); color: var(--fg-3); }
+
+  /* activity log */
+  .log { font-family: var(--font-mono); font-size: 12px; line-height: 1.7; color: var(--fg-3); }
+  .log .row { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 3px 0; }
+  .log .t { color: var(--fg-4); }
+  .log .msg .ok { color: #34D399; }
+  .log .msg .w { color: var(--amber-400); }
+  .log .msg .e { color: #F87171; }
+
+  /* signal panel — mini chart */
+  .chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; margin-top: 8px; }
+  .chart .bar { flex: 1; background: linear-gradient(180deg, var(--amber-400), var(--amber-600)); border-radius: 3px 3px 0 0; opacity: .85; }
+  .chart .bar.muted { background: linear-gradient(180deg, var(--graphite-600), var(--graphite-700)); }
+
+  /* ── Chat view (hidden by default) ────────── */
+  .view { display: none; }
+  .view.active { display: block; }
+  .chat-shell { display: flex; flex-direction: column; height: calc(100vh - 40px - 24px - 24px - 40px - 48px); background: var(--surface-card); border: 1px solid var(--border-2); border-radius: 14px; overflow: hidden; }
+  .chat-list { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 24px; }
+  .msg { display: flex; gap: 14px; }
+  .msg .av { width: 28px; height: 28px; border-radius: 9999px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 11px; font-weight: 700; }
+  .msg.user .av { background: var(--graphite-700); color: var(--fg-2); }
+  .msg.bot .av { background: linear-gradient(135deg, var(--amber-400), var(--amber-600)); color: var(--primary-fg); }
+  .msg .body { flex: 1; padding-top: 2px; }
+  .msg .name { font-size: 11px; color: var(--fg-3); font-weight: 600; margin-bottom: 4px; }
+  .msg .body p { font-size: 14px; line-height: 1.65; color: var(--fg-1); margin: 0 0 8px; }
+  .msg code { font-family: var(--font-mono); font-size: 12px; background: rgba(245,158,11,.10); color: var(--amber-400); padding: 1px 6px; border-radius: 4px; }
+  .msg pre { background: var(--bg-0); border: 1px solid var(--border-1); border-radius: 8px; padding: 12px 14px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--fg-2); overflow-x: auto; margin: 8px 0 0; }
+  .cite { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 9999px; background: rgba(255,255,255,.04); border: 1px solid var(--border-2); font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); margin: 4px 4px 0 0; }
+  .cite svg { width: 10px; height: 10px; stroke: var(--amber-500); stroke-width: 2; fill: none; }
+  .mist-note { margin-top: 8px; padding: 8px 12px; background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.28); border-radius: 8px; font-size: 12px; color: var(--amber-400); display: flex; gap: 8px; align-items: center; }
+
+  .composer { border-top: 1px solid var(--border-1); padding: 14px 16px; display: flex; gap: 10px; align-items: flex-end; background: var(--bg-1); }
+  .composer textarea { flex: 1; resize: none; min-height: 40px; max-height: 120px; padding: 10px 14px; background: var(--bg-0); border: 1px solid var(--border-2); border-radius: 10px; color: var(--fg-1); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+  .composer textarea:focus { outline: none; border-color: var(--amber-500); box-shadow: 0 0 0 3px rgba(245,158,11,.18); }
+  .composer .send { width: 40px; height: 40px; border-radius: 10px; background: var(--amber-500); color: var(--primary-fg); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 200ms var(--ease-std); border: 0; }
+  .composer .send:hover { background: var(--amber-400); box-shadow: var(--glow-amber); }
+  .composer .send svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .composer .hint { position: absolute; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── TitleBar ────────────────────────────────── -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <img src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgZmlsbD0ibm9uZSI+CiAgPGxpbmUgeDE9IjYiIHkxPSI2IiB4Mj0iMTgiIHkyPSI2IiBzdHJva2U9IiNEOTc3MDYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuNSI+PC9saW5lPgogIDxsaW5lIHgxPSI2IiB5MT0iNiIgeDI9IjYiIHkyPSIxOCIgc3Ryb2tlPSIjRDk3NzA2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiPjwvbGluZT4KICA8bGluZSB4MT0iMTgiIHkxPSI2IiB4Mj0iMTgiIHkyPSIxOCIgc3Ryb2tlPSIjRDk3NzA2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiPjwvbGluZT4KICA8bGluZSB4MT0iNiIgeTE9IjE4IiB4Mj0iMTgiIHkyPSIxOCIgc3Ryb2tlPSIjRDk3NzA2IiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBvcGFjaXR5PSIwLjUiPjwvbGluZT4KICA8bGluZSB4MT0iNiIgeTE9IjYiIHgyPSIxOCIgeTI9IjE4IiBzdHJva2U9IiNEOTc3MDYiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIG9wYWNpdHk9IjAuMyI+PC9saW5lPgogIDxjaXJjbGUgY3g9IjYiIGN5PSI2IiByPSIyLjUiIGZpbGw9IiNEOTc3MDYiPjwvY2lyY2xlPgogIDxjaXJjbGUgY3g9IjE4IiBjeT0iNiIgcj0iMi41IiBmaWxsPSIjRDk3NzA2Ij48L2NpcmNsZT4KICA8Y2lyY2xlIGN4PSI2IiBjeT0iMTgiIHI9IjIuNSIgZmlsbD0iI0Q5NzcwNiI+PC9jaXJjbGU+CiAgPGNpcmNsZSBjeD0iMTgiIGN5PSIxOCIgcj0iMi41IiBmaWxsPSIjRDk3NzA2Ij48L2NpcmNsZT4KPC9zdmc+" alt="">
+      <span class="tb-mark">GRID</span>
+    </div>
+    <div class="tb-center">
+      <span>signal-chain-repo</span><span class="sep">/</span><span>main</span><span class="sep">·</span>
+      <span class="tb-status"><span class="dot"></span>ollama · llama3.2:3b</span>
+    </div>
+    <div class="tb-right">
+      <div class="tb-btn"><svg viewBox="0 0 12 12"><line x1="2" y1="6" x2="10" y2="6"/></svg></div>
+      <div class="tb-btn"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7"/></svg></div>
+      <div class="tb-btn" style="color: var(--fg-3);"><svg viewBox="0 0 12 12"><line x1="3" y1="3" x2="9" y2="9"/><line x1="9" y1="3" x2="3" y2="9"/></svg></div>
+    </div>
+  </header>
+
+  <!-- ── Body ─────────────────────────────────────── -->
+  <div class="body">
+
+    <!-- Sidebar -->
+    <aside>
+      <div class="nav-section">Workspace</div>
+      <div class="nav-item active" data-view="dashboard">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-view="chat">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat
+        <span class="count">3</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Patterns
+        <span class="count">9</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Search
+      </div>
+
+      <div class="nav-section">Fabric</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Index
+        <span class="count">1,490</span>
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+        Resonance
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><polyline points="7 14 12 9 16 13 21 8"/></svg>
+        Telemetry
+      </div>
+
+      <div class="nav-section">System</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1"/></svg>
+        Settings
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="avatar">C</div>
+        <div class="meta-stack">
+          <div class="name">caraxes</div>
+          <div class="sub">local · v0.4.2</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main>
+
+      <!-- Dashboard -->
+      <div class="view active" id="view-dashboard">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Workspace</h1>
+            <p class="page-sub">signal-chain-repo · indexed 4 minutes ago</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-ghost">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Re-index
+            </button>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New session
+            </button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active">Overview</div>
+          <div class="tab">Patterns</div>
+          <div class="tab">Signal</div>
+          <div class="tab">Fabric</div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat primary">
+            <div class="l">Files indexed</div>
+            <div class="v">1,490</div>
+            <div class="d">+127 since last run</div>
+          </div>
+          <div class="stat">
+            <div class="l">Tests green</div>
+            <div class="v">4,490</div>
+            <div class="d ok">● coverage ≥ 75%</div>
+          </div>
+          <div class="stat">
+            <div class="l">RAG precision</div>
+            <div class="v">+37%</div>
+            <div class="d">vs. naive embedding</div>
+          </div>
+          <div class="stat">
+            <div class="l">Index size</div>
+            <div class="v">128<span style="font-size:16px; color:var(--fg-3);">MB</span></div>
+            <div class="d">~0.09KB / LoC</div>
+          </div>
+        </div>
+
+        <div class="grid-12">
+          <!-- Patterns -->
+          <div class="panel">
+            <div class="panel-title">Cognition patterns</div>
+            <div class="panel-sub">9 active · 1 in MIST</div>
+            <div class="patterns">
+              <div class="p-row"><span class="p-n">01</span><span class="p-name">Admission</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">02</span><span class="p-name">Resonance</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">03</span><span class="p-name">Constraint</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">04</span><span class="p-name">Pivot</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">05</span><span class="p-name">Gate</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">06</span><span class="p-name">Compress</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">07</span><span class="p-name">Signal</span><span class="p-state on">on</span></div>
+              <div class="p-row"><span class="p-n">08</span><span class="p-name">MIST</span><span class="p-state mist">flagged</span></div>
+            </div>
+          </div>
+
+          <!-- Activity -->
+          <div class="panel">
+            <div class="panel-title">Activity</div>
+            <div class="panel-sub">last 12 events</div>
+            <div class="log">
+              <div class="row"><span class="t">14:22</span><span class="msg">index refreshed <span class="ok">ok</span> · 1.9s</span></div>
+              <div class="row"><span class="t">14:21</span><span class="msg">ollama reconnect · llama3.2:3b</span></div>
+              <div class="row"><span class="t">14:20</span><span class="msg"><span class="w">ollama offline</span> — degraded mode</span></div>
+              <div class="row"><span class="t">14:17</span><span class="msg">ask "admission entry point" → admission.py:42</span></div>
+              <div class="row"><span class="t">14:15</span><span class="msg">MIST on "fabric rebuild schedule"</span></div>
+              <div class="row"><span class="t">14:12</span><span class="msg">resonance index · +127 embeddings</span></div>
+              <div class="row"><span class="t">14:09</span><span class="msg">analyze ./src <span class="ok">ok</span> · 4.2s</span></div>
+              <div class="row"><span class="t">14:02</span><span class="msg">session started</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signal chart -->
+        <div class="panel">
+          <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 4px;">
+            <div>
+              <div class="panel-title">Signal · last 24h</div>
+              <div class="panel-sub">queries · cache hits · MIST flags</div>
+            </div>
+            <div style="display:flex; gap:16px; font-family:var(--font-mono); font-size:11px;">
+              <span style="color:var(--amber-400);">● signal</span>
+              <span style="color:var(--graphite-400);">● noise</span>
+            </div>
+          </div>
+          <div class="chart">
+            <div class="bar" style="height: 22%"></div>
+            <div class="bar muted" style="height: 18%"></div>
+            <div class="bar" style="height: 38%"></div>
+            <div class="bar" style="height: 54%"></div>
+            <div class="bar muted" style="height: 31%"></div>
+            <div class="bar" style="height: 60%"></div>
+            <div class="bar" style="height: 72%"></div>
+            <div class="bar muted" style="height: 25%"></div>
+            <div class="bar" style="height: 48%"></div>
+            <div class="bar" style="height: 82%"></div>
+            <div class="bar" style="height: 90%"></div>
+            <div class="bar muted" style="height: 34%"></div>
+            <div class="bar" style="height: 66%"></div>
+            <div class="bar" style="height: 55%"></div>
+            <div class="bar muted" style="height: 19%"></div>
+            <div class="bar" style="height: 44%"></div>
+            <div class="bar" style="height: 71%"></div>
+            <div class="bar" style="height: 88%"></div>
+            <div class="bar muted" style="height: 22%"></div>
+            <div class="bar" style="height: 61%"></div>
+            <div class="bar" style="height: 77%"></div>
+            <div class="bar" style="height: 95%"></div>
+            <div class="bar muted" style="height: 29%"></div>
+            <div class="bar" style="height: 68%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat view -->
+      <div class="view" id="view-chat">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Chat</h1>
+            <p class="page-sub">Session · admission-flow · 3 messages</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-ghost">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              Clear
+            </button>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              New session
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-shell">
+          <div class="chat-list">
+            <div class="msg user">
+              <div class="av">C</div>
+              <div class="body">
+                <div class="name">caraxes · 14:17</div>
+                <p>Where does admission happen? Walk me through the entry point and where it's called from.</p>
+              </div>
+            </div>
+
+            <div class="msg bot">
+              <div class="av">G</div>
+              <div class="body">
+                <div class="name">GRID · llama3.2:3b · 14:17</div>
+                <p>Admission is a single gate on incoming context. The entry point is <code>admit()</code> in <code>patterns/admission.py</code>; it returns a typed <code>AdmissionResult</code> with either the admitted payload or a rejection reason.</p>
+                <pre>def admit(ctx: Context) -&gt; AdmissionResult:
+    if not ctx.passes(schema):
+        return AdmissionResult.reject("schema")
+    return AdmissionResult.accept(ctx.compressed())</pre>
+                <p>It's called from two places:</p>
+                <div>
+                  <span class="cite"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>orchestrator.py:118</span>
+                  <span class="cite"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>fabric.py:77</span>
+                  <span class="cite"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>patterns/admission.py:42</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="msg user">
+              <div class="av">C</div>
+              <div class="body">
+                <div class="name">caraxes · 14:19</div>
+                <p>Does admission also run on scheduled fabric rebuilds? Or only on live queries?</p>
+              </div>
+            </div>
+
+            <div class="msg bot">
+              <div class="av">G</div>
+              <div class="body">
+                <div class="name">GRID · llama3.2:3b · 14:19</div>
+                <p>Live queries, yes — I can trace that path in <code>orchestrator.py</code>. Scheduled rebuilds, I'm not sure.</p>
+                <div class="mist-note">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  MIST · high confidence we don't know. The scheduler module isn't in the current index. Re-index to include <code>cron/</code> and ask again.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="composer">
+            <textarea placeholder="Ask about this codebase. ⌘+Enter to send."></textarea>
+            <button class="send">
+              <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      el.classList.add('active');
+      const v = el.dataset.view;
+      document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+      document.getElementById('view-' + v).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

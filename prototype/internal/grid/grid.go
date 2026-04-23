@@ -40,32 +40,18 @@ func (g GridConfig) Quantize(x, y float32) (col, row uint32, ok bool) {
 		return 0, 0, false
 	}
 
-	cellF := float32(g.CellPx)
-
-	// Column: clamp in float-space before converting (see spec note above).
-	cx := x / cellF
-	if cx < 0 {
-		cx = 0
+	col = quantizeAxis(x, g.CellPx, 0)
+	if g.Cols > 0 && col > g.Cols-1 {
+		col = g.Cols - 1
 	}
-	maxCol := float32(g.Cols - 1)
-	if g.Cols > 0 && cx > maxCol {
-		cx = maxCol
-	}
-	col = uint32(cx)
 	if col < g.MarginCols {
 		col = g.MarginCols
 	}
 
-	// Row: clamp in float-space, then convert.
-	ry := y / cellF
-	if ry < 0 {
-		ry = 0
+	row = quantizeAxis(y, g.CellPx, 0)
+	if g.Rows > 0 && row > g.Rows-1 {
+		row = g.Rows - 1
 	}
-	maxRow := float32(g.Rows - 1)
-	if g.Rows > 0 && ry > maxRow {
-		ry = maxRow
-	}
-	row = uint32(ry)
 
 	return col, row, true
 }

@@ -76,22 +76,29 @@ func TestQuantizeOutOfRange(t *testing.T) {
 		x, y    float32
 		wantCol uint32
 		wantRow uint32
+		wantOK  bool
 	}{
-		{"negative x small", -1, 0, 2, 0},
-		{"negative x large", -1_000_000, 0, 2, 0},
-		{"negative y", 0, -1, 2, 0},
-		{"both negative", -5, -5, 2, 0},
-		{"NaN x", nan, 0, 2, 0},
-		{"NaN y", 0, nan, 2, 0},
-		{"NaN both", nan, nan, 2, 0},
-		{"minus infinity", negInf, negInf, 2, 0},
-		{"plus infinity", posInf, posInf, math.MaxInt32, math.MaxInt32},
-		{"far overflow", 1e30, 1e30, math.MaxInt32, math.MaxInt32},
-		{"zero stays clamped", 0, 0, 2, 0},
+		{"negative x small", -1, 0, 2, 0, true},
+		{"negative x large", -1_000_000, 0, 2, 0, true},
+		{"negative y", 0, -1, 2, 0, true},
+		{"both negative", -5, -5, 2, 0, true},
+		{"NaN x", nan, 0, 0, 0, false},
+		{"NaN y", 0, nan, 0, 0, false},
+		{"NaN both", nan, nan, 0, 0, false},
+		{"minus infinity", negInf, negInf, 0, 0, false},
+		{"plus infinity", posInf, posInf, 0, 0, false},
+		{"far overflow", 1e30, 1e30, g.Cols - 1, g.Rows - 1, true},
+		{"zero stays clamped", 0, 0, 2, 0, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			col, row := g.Quantize(tc.x, tc.y)
+			col, row, ok := g.Quantize(tc.x, tc.y)
+			if ok != tc.wantOK {
+				t.Fatalf("Quantize(%v,%v) ok=%v, want %v", tc.x, tc.y, ok, tc.wantOK)
+			}
+			if !tc.wantOK {
+				return
+			}
 			if col != tc.wantCol || row != tc.wantRow {
 				t.Errorf("Quantize(%v,%v) = (%d,%d), want (%d,%d)",
 					tc.x, tc.y, col, row, tc.wantCol, tc.wantRow)
@@ -105,9 +112,9 @@ func TestQuantizeOutOfRange(t *testing.T) {
 // cell rather than a panic or Inf/NaN leaking through the cast.
 func TestQuantizeZeroCellPx(t *testing.T) {
 	g := grid.GridConfig{CellPx: 0, MarginCols: 2}
-	col, row := g.Quantize(100, 100)
-	if col != 2 || row != 0 {
-		t.Errorf("Quantize with CellPx=0 = (%d,%d), want (2,0)", col, row)
+	col, row, ok := g.Quantize(100, 100)
+	if !ok || col != 2 || row != 0 {
+		t.Errorf("Quantize with CellPx=0 = (%d,%d,ok=%v), want (2,0,true)", col, row, ok)
 	}
 }
 

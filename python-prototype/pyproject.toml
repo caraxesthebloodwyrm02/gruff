@@ -17,6 +17,9 @@ dev = [
 
 [project.scripts]
 notebook-engine = "notebook_engine.main:main"
+lo7-manifest = "notebook_engine.cli:run_lo7_manifest"
+lo7-heatmap = "notebook_engine.cli:run_lo7_heatmap"
+lo7-compass = "notebook_engine.cli:run_lo7_compass"
 
 [build-system]
 requires = ["hatchling"]

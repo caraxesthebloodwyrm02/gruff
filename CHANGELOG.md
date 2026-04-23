@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- **Docs (F3):** `docs/index.md` — architecture snapshot covering main entrypoints (`src/cli.tsx`,
+  trust DB, `gruff proportion`), `bridges/gruff-echoes/`, and how `planes/` and `racks/` relate;
+  includes Mermaid audit-stream → ingester → SQLite → TUI data-flow diagram.
+- **Docs (F3):** `docs/index.md` — Maintainer notes section documenting non-interactive TUI exit
+  behaviour (Ink exits cleanly when stdout is closed; expected in CI/pipe runs) and the
+  `npm rebuild better-sqlite3` requirement after Node.js major upgrades.
+- **Planes (E3):** `planes/surfaces/tui-panels.md` — corrected four-quadrant surface artifact;
+  maps NW/NE/SW/SE quadrant labels, component paths, data sources, and env vars to match
+  `src/menu/Menu.tsx` (previous table had wrong panel names: Mcp/Trust/Route/Horizon →
+  now MCP signal / inference narrow-band / agency accumulated / horizon forward).
+- **Racks (E3):** `racks/learning/NOTES.md` expanded to a full one-screen spec: what belongs
+  in `racks/learning/`, hard PII/opt-in rules, naming convention, and relationship to
+  `trust.sqlite`. File exists operator-local only — `racks/` is gitignored by design
+  (no PII in version history); see `.gitignore` line 9.
+- **Scripts:** `scripts/orchestrate.sh` — terminal gate runner (`wave0` / `wave1` / `wave2` /
+  `all` / `smoke`); `wave2` checks `docs/index.md`, SVG assets, `prepublishOnly`, and TUI smoke.
+
+### Fixed
+- **Native binding (C4):** `better-sqlite3` native add-on recompiled against Node 24
+  (`npm rebuild better-sqlite3`); all 10 unit tests pass; `orchestrate wave2` gate passes.
+
 ## [0.1.2] - 2026-04-21
 
 ### Added

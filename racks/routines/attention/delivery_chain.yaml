@@ -11,7 +11,7 @@ infrastructure:
     id: "FC-LIBRARY"
     location: "CascadeProjects/Documentation"
     role: "Inventory of all context. Packaging focus into discrete 'Attention Units' (AUs)."
-  
+
   sortation_hub:
     id: "HUB-STAIRCASE"
     location: "CascadeProjects/Hogwarts/staircase"
@@ -23,7 +23,7 @@ delivery_modes:
     type: "Autonomous Task-Focus"
     capability: "Last-mile delivery of a single 'Borrowed' context item."
     advantage: "High speed, low overhead, perfect for narrow implementation tasks."
-  
+
   heavy_freight:
     id: "FREIGHT-UNIT"
     type: "Cross-District Migration"

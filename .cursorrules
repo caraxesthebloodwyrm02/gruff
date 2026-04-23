@@ -1,0 +1,31 @@
+# Cursor Rules - gruff workspace
+
+**Scope**: All-sessions | This is a thin top-level pointer to the canonical `AGENTS.md` in the repository root.
+
+All Cursor behavior is derived from `AGENTS.md`. This file exists as a Cursor-specific adapter to ensure compatibility with Cursor's behavior surface requirements.
+
+**Canonical source**: `AGENTS.md` in workspace root.
+
+**Adapter chain**: Cursor rules → AGENTS.md
+
+For detailed rules and conventions, see the root `AGENTS.md` file which defines:
+- Agent registry (prince/hermes/caraxes chain)
+- Primary agent operating model
+- Project structure and module organization
+- Build, test, and development commands
+- Coding style and naming conventions
+- Testing guidelines
+- Commit and pull request guidelines
+- Security and configuration tips
+- Git hygiene and source protection
+
+## Cursor-Specific Deltas
+
+The following files extend AGENTS.md with Cursor-specific behavior:
+
+| File | Scope | Purpose |
+|------|-------|---------|
+| `.cursor/rules/review-prioritization.mdc` | Cursor-specific review filter | Prioritize reviews to 14-day window |
+| `.cursor/agents/recent-ship-curator.md` | Multi-root git forensics | Aggregate shipping evidence |
+| `.cursor/skills/shipping-prioritization/SKILL.md` | Prioritization skill | Sort by relevancy + ratings |
+| `.cursor/hooks/recent-ship-session-context.py` | Session hook | Auto-inject recent shipping |

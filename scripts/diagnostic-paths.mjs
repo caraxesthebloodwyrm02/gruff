@@ -3,7 +3,7 @@
  * Path Diagnostic Tool
  * Detects stale, broken, or diverged paths in the workspace
  * Includes regex-based bug/mismatch detection
- * 
+ *
  * HOOKS SYSTEM:
  * - Stage 1 (0-30%): Path diagnostics
  * - Stage 2 (30-65%): Bug pattern scan
@@ -179,18 +179,18 @@ function checkImportOrder(content, filePath) {
   const results = [];
   const importLines = [];
   const importRegex = /^(?:import\s+(?:[\w*{}\s,]+\s+from\s+)?['"]([^'"]+)['"]|export\s+(?:\{[^}]*\}|\*\s+as\s+\w+|default)\s+from\s+['"]([^'"]+)['"])/gm;
-  
+
   let match;
   while ((match = importRegex.exec(content)) !== null) {
     const module = match[1] || match[2];
     importLines.push({ line: match.index, module });
   }
-  
+
   let prevGroup = '';
   for (let i = 0; i < importLines.length; i++) {
     const curr = importLines[i];
     const currGroup = curr.module.startsWith('.') ? 'relative' : curr.module.startsWith('@') ? 'Scoped' : 'external';
-    
+
     if (prevGroup && prevGroup !== currGroup) {
       if (prevGroup === 'external' && currGroup === 'relative') {
         results.push({
@@ -204,16 +204,16 @@ function checkImportOrder(content, filePath) {
     }
     prevGroup = currGroup;
   }
-  
+
   return results;
 }
 
 function extractFunctionMetrics(content, filePath) {
   const results = [];
-  
+
   const simpleFnRegex = /function\s+(\w+)\s*\(([^)]*)\)/g;
   const arrowFnRegex = /(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\(([^)]*)\)\s*=>/g;
-  
+
   for (const regex of [simpleFnRegex, arrowFnRegex]) {
     let match;
     while ((match = regex.exec(content)) !== null) {
@@ -221,7 +221,7 @@ function extractFunctionMetrics(content, filePath) {
       const params = match[2] || '';
       const paramCount = params ? params.split(',').filter(p => p.trim()).length : 0;
       const hasAsync = match[0].includes('async');
-      
+
       if (paramCount > 7) {
         results.push({
           file: filePath,
@@ -231,7 +231,7 @@ function extractFunctionMetrics(content, filePath) {
           columns: paramCount
         });
       }
-      
+
       if (hasAsync && paramCount > 4) {
         results.push({
           file: filePath,
@@ -243,20 +243,20 @@ function extractFunctionMetrics(content, filePath) {
       }
     }
   }
-  
+
   return results;
 }
 
 function checkAttributesAndLabels(content, filePath) {
   const results = [];
-  
+
   const attrRegex = /(?:interface|type|class|enum)\s+(\w+)[^{]*\{/g;
   let match;
   while ((match = attrRegex.exec(content)) !== null) {
     const name = match[1];
     const block = content.substring(match.index, match.index + 500);
     const propMatches = block.match(/(\w+)(?:\??\s*:\s*[^;]+)?;/g) || [];
-    
+
     if (propMatches.length > 15) {
       results.push({
         file: filePath,
@@ -266,7 +266,7 @@ function checkAttributesAndLabels(content, filePath) {
         rows: propMatches.length
       });
     }
-    
+
     for (const prop of propMatches.slice(0, 5)) {
       const propName = prop.match(/^(\w+)/)?.[1];
       if (propName && !propName.startsWith('_') && !prop.match(/^\w+:\s*\w+/)) {
@@ -280,7 +280,7 @@ function checkAttributesAndLabels(content, filePath) {
       }
     }
   }
-  
+
   const labelRegex = /(?:\/\/\/?\s*)(@\w+)\s+(.*)/g;
   while ((match = labelRegex.exec(content)) !== null) {
     results.push({
@@ -291,22 +291,22 @@ function checkAttributesAndLabels(content, filePath) {
       rows: 1
     });
   }
-  
+
   return results;
 }
 
 function checkProperties(content, filePath) {
   const results = [];
-  
+
   const propChainRegex = /\.(\w+)\s*\.\s*(\w+)/g;
   let match;
   const chains = new Map();
-  
+
   while ((match = propChainRegex.exec(content)) !== null) {
     const chain = `${match[1]}.${match[2]}`;
     chains.set(chain, (chains.get(chain) || 0) + 1);
   }
-  
+
   for (const [chain, count] of chains) {
     if (count > 3) {
       results.push({
@@ -318,13 +318,13 @@ function checkProperties(content, filePath) {
       });
     }
   }
-  
+
   return results;
 }
 
 function checkVerboseProperties(content, filePath) {
   const results = [];
-  
+
   const getterSet = /\.(\w+)\s*=\s*[^=]/g;
   const setters = new Map();
   let match;
@@ -332,7 +332,7 @@ function checkVerboseProperties(content, filePath) {
     const prop = match[1];
     setters.set(prop, (setters.get(prop) || 0) + 1);
   }
-  
+
   for (const [prop, count] of setters) {
     if (count > 5) {
       results.push({
@@ -344,7 +344,7 @@ function checkVerboseProperties(content, filePath) {
       });
     }
   }
-  
+
   const objLiteralRegex = /\{([^}]+)\}/g;
   while ((match = objLiteralRegex.exec(content)) !== null) {
     const props = match[1].split(',').filter(p => p.includes(':'));
@@ -358,13 +358,13 @@ function checkVerboseProperties(content, filePath) {
       });
     }
   }
-  
+
   return results;
 }
 
 function checkAnnotations(content, filePath) {
   const results = [];
-  
+
   const jsdocRegex = /\/\*\*([\s\S]*?)\*\//g;
   let match;
   let docCount = 0;
@@ -381,7 +381,7 @@ function checkAnnotations(content, filePath) {
       });
     }
   }
-  
+
   if (docCount > 0) {
     results.push({
       file: filePath,
@@ -391,7 +391,7 @@ function checkAnnotations(content, filePath) {
       rows: docCount
     });
   }
-  
+
   const tscIgnore = /\/\/\s*@ts-ignore/g;
   while ((match = tscIgnore.exec(content)) !== null) {
     results.push({
@@ -402,24 +402,24 @@ function checkAnnotations(content, filePath) {
       rows: 1
     });
   }
-  
+
   return results;
 }
 
 function checkExports(content, filePath) {
   const results = [];
-  
+
   const exportDefault = /export\s+default\s+(\w+)/g;
   const namedExports = /export\s+(?:const|let|var|function|class|interface|type)\s+(\w+)/g;
   const reExports = /export\s+\*\s+from/g;
-  
+
   let match;
   const exports = { default: 0, named: 0, re: 0 };
-  
+
   while ((match = exportDefault.exec(content)) !== null) exports.default++;
   while ((match = namedExports.exec(content)) !== null) exports.named++;
   while ((match = reExports.exec(content)) !== null) exports.re++;
-  
+
   if (exports.default > 1) {
     results.push({
       file: filePath,
@@ -429,7 +429,7 @@ function checkExports(content, filePath) {
       rows: exports.default
     });
   }
-  
+
   if (exports.named === 0 && exports.default === 0 && exports.re === 0) {
     results.push({
       file: filePath,
@@ -439,22 +439,22 @@ function checkExports(content, filePath) {
       rows: 0
     });
   }
-  
+
   return results;
 }
 
 function checkErrorHandling(content, filePath) {
   const results = [];
-  
+
   const tryCatch = /try\s*\{[\s\S]*?\}\s*catch/g;
   const throwStmt = /throw\s+new\s+(\w+Error)/g;
   const promises = /new\s+Promise/g;
-  
+
   let match;
   const tryCount = (content.match(tryCatch) || []).length;
   const throwCount = (content.match(throwStmt) || []).length;
   const promiseCount = (content.match(promises) || []).length;
-  
+
   if (promiseCount > 0 && tryCount === 0) {
     results.push({
       file: filePath,
@@ -464,7 +464,7 @@ function checkErrorHandling(content, filePath) {
       rows: promiseCount
     });
   }
-  
+
   if (throwCount > 5) {
     results.push({
       file: filePath,
@@ -474,7 +474,7 @@ function checkErrorHandling(content, filePath) {
       rows: throwCount
     });
   }
-  
+
   const emptyCatch = /catch\s*\(\w*\)\s*\{\s*\}/g;
   if ((content.match(emptyCatch) || []).length > 0) {
     results.push({
@@ -485,24 +485,24 @@ function checkErrorHandling(content, filePath) {
       rows: 1
     });
   }
-  
+
   return results;
 }
 
 function checkAsyncPatterns(content, filePath) {
   const results = [];
-  
+
   const thenChain = /\.then\s*\(/g;
   const catchChain = /\.catch\s*\(/g;
   const finallyChain = /\.finally\s*\(/g;
-  
+
   let match;
   const chains = { then: 0, catch: 0, finally: 0 };
-  
+
   while ((match = thenChain.exec(content)) !== null) chains.then++;
   while ((match = catchChain.exec(content)) !== null) chains.catch++;
   while ((match = finallyChain.exec(content)) !== null) chains.finally++;
-  
+
   if (chains.then > 3) {
     results.push({
       file: filePath,
@@ -512,7 +512,7 @@ function checkAsyncPatterns(content, filePath) {
       rows: chains.then
     });
   }
-  
+
   if (chains.then > 0 && chains.catch === 0) {
     results.push({
       file: filePath,
@@ -522,12 +522,12 @@ function checkAsyncPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
   const awaitRegex = /await\s+/g;
   const asyncRegex = /async\s+/g;
   const awaitCount = (content.match(awaitRegex) || []).length;
   const asyncCount = (content.match(asyncRegex) || []).length;
-  
+
   if (asyncCount > 0 && awaitCount === 0) {
     results.push({
       file: filePath,
@@ -537,22 +537,22 @@ function checkAsyncPatterns(content, filePath) {
       rows: asyncCount
     });
   }
-  
+
   return results;
 }
 
 function checkConstants(content, filePath) {
   const results = [];
-  
+
   const magicNumber = /\b\d{2,}\b/g;
   const hardcodedStrings = /['"][^'"]{30,}['"]/g;
   const urlPattern = /https?:\/\/[^\s'"]+/g;
-  
+
   let match;
   const magicNumbers = new Set();
   const strings = [];
   const urls = [];
-  
+
   while ((match = magicNumber.exec(content)) !== null) {
     if (parseInt(match[0]) > 31 && parseInt(match[0]) !== 8000) {
       magicNumbers.add(match[0]);
@@ -560,7 +560,7 @@ function checkConstants(content, filePath) {
   }
   while ((match = hardcodedStrings.exec(content)) !== null) strings.push(match[0]);
   while ((match = urlPattern.exec(content)) !== null) urls.push(match[0]);
-  
+
   if (magicNumbers.size > 3) {
     results.push({
       file: filePath,
@@ -570,7 +570,7 @@ function checkConstants(content, filePath) {
       columns: magicNumbers.size
     });
   }
-  
+
   if (strings.length > 2) {
     results.push({
       file: filePath,
@@ -580,7 +580,7 @@ function checkConstants(content, filePath) {
       rows: strings.length
     });
   }
-  
+
   if (urls.length > 0) {
     results.push({
       file: filePath,
@@ -590,20 +590,20 @@ function checkConstants(content, filePath) {
       rows: urls.length
     });
   }
-  
+
   return results;
 }
 
 function checkSecurityPatterns(content, filePath) {
   const results = [];
-  
+
   const sqlInjection = /(?:SELECT|INSERT|UPDATE|DELETE)\s+.*\+/gi;
   const commandInjection = /exec\s*\(|spawn\s*\(/g;
   const evalUsage = /\beval\s*\(/g;
   const newFunction = /new\s+Function\s*\(/g;
-  
+
   let match;
-  
+
   if ((match = sqlInjection.exec(content))) {
     results.push({
       file: filePath,
@@ -613,7 +613,7 @@ function checkSecurityPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
   if ((match = commandInjection.exec(content))) {
     results.push({
       file: filePath,
@@ -623,7 +623,7 @@ function checkSecurityPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
   if ((match = evalUsage.exec(content))) {
     results.push({
       file: filePath,
@@ -633,7 +633,7 @@ function checkSecurityPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
   if ((match = newFunction.exec(content))) {
     results.push({
       file: filePath,
@@ -643,18 +643,18 @@ function checkSecurityPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
   return results;
 }
 
 function checkPerformance(content, filePath) {
   const results = [];
-  
+
   const loopNested = /for\s*\([^)]*\)\s*\{[\s\S]*for\s*\(/g;
   const arrayMap = /\.map\s*\([\s\S]*?\{[\s\S]{200,}\}\s*\)/g;
-  
+
   let match;
-  
+
   if ((content.match(loopNested) || []).length > 1) {
     results.push({
       file: filePath,
@@ -664,7 +664,7 @@ function checkPerformance(content, filePath) {
       rows: 1
     });
   }
-  
+
   if ((content.match(arrayMap) || []).length > 3) {
     results.push({
       file: filePath,
@@ -674,26 +674,26 @@ function checkPerformance(content, filePath) {
       rows: (content.match(arrayMap) || []).length
     });
   }
-  
+
   return results;
 }
 
 function checkTestingPatterns(content, filePath) {
   const results = [];
-  
+
   const describeBlock = /describe\s*\(/g;
   const itBlock = /it\s*\(/g;
   const testBlock = /test\s*\(/g;
   const expectBlock = /expect\s*\(/g;
   const mockFn = /mock(?:Fn|Implementation)?\(/g;
-  
+
   let match;
   const hasDescribe = (content.match(describeBlock) || []).length;
   const hasIt = (content.match(itBlock) || []).length;
   const hasTest = (content.match(testBlock) || []).length;
   const hasExpect = (content.match(expectBlock) || []).length;
   const hasMock = (content.match(mockFn) || []).length;
-  
+
   if (hasDescribe > 0) {
     results.push({
       file: filePath,
@@ -703,7 +703,7 @@ function checkTestingPatterns(content, filePath) {
       rows: hasDescribe
     });
   }
-  
+
   if (hasIt > 0 || hasTest > 0) {
     results.push({
       file: filePath,
@@ -713,7 +713,7 @@ function checkTestingPatterns(content, filePath) {
       rows: hasIt + hasTest
     });
   }
-  
+
   if (hasDescribe > 0 && hasExpect === 0) {
     results.push({
       file: filePath,
@@ -723,28 +723,28 @@ function checkTestingPatterns(content, filePath) {
       rows: 1
     });
   }
-  
+
 return results;
 }
 
 function runFormatChecks() {
   const results = [];
   const allDirs = [...Object.keys(DIRECTORIES), ...SCRIPTS_DIRS];
-  
+
   for (const dir of allDirs) {
     const fullPath = join(WORKSPACE_ROOT, dir);
     if (!existsSync(fullPath) || !lstatSync(fullPath).isDirectory()) continue;
-    
+
     try {
       const files = readdirSync(fullPath, { withFileTypes: true });
       for (const file of files) {
         if (SCAN_SELF.includes(file.name)) continue;
         if (!file.name.endsWith('.mjs') && !file.name.endsWith('.js') && !file.name.endsWith('.ts')) continue;
-        
+
         const filePath = join(fullPath, file.name);
         try {
           const content = readFileSync(filePath, 'utf-8');
-          
+
           results.push(...checkImportOrder(content, file.name));
           results.push(...extractFunctionMetrics(content, file.name));
           results.push(...checkAttributesAndLabels(content, file.name));
@@ -766,16 +766,16 @@ function runFormatChecks() {
       // Skip
     }
   }
-  
+
   return results.sort((a, b) => FORMAT_SEVERITY[a.severity] - FORMAT_SEVERITY[b.severity]);
 }
 
 function scanForBugs(dir, extension = '.mjs') {
   const results = [];
   const fullPath = join(WORKSPACE_ROOT, dir);
-  
+
   if (!existsSync(fullPath) || !lstatSync(fullPath).isDirectory()) return results;
-  
+
   try {
     const files = readdirSync(fullPath, { withFileTypes: true });
     for (const file of files) {
@@ -805,7 +805,7 @@ function scanForBugs(dir, extension = '.mjs') {
   } catch (e) {
     // Skip inaccessible directories
   }
-  
+
   return results.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }
 
@@ -845,7 +845,7 @@ function checkPathStaleness(dir) {
       target: symlink.target,
       resolved: symlink.resolved
     });
-    
+
     if (symlink.valid && symlink.target.startsWith(CANONICAL_BASE)) {
       results.checks.push({
         status: 'ok',
@@ -881,7 +881,7 @@ for (const [dir, desc] of Object.entries(DIRECTORIES)) {
   const check = checkPathStaleness(dir);
   const status = check.checks[0]?.status || 'unknown';
   const icon = status === 'ok' ? '✅' : status === 'broken' ? '❌' : status === 'diverged' ? '⚠️' : status === 'warning' ? '⚡' : '❓';
-  
+
   console.log(`${icon} ${dir} (${desc})`);
   for (const c of check.checks) {
     console.log(`   └── ${c.type}: ${c.message || c.target}`);
@@ -898,19 +898,19 @@ const scanBugs = args.includes('--bugs') || args.includes('-b');
 if (scanBugs) {
   console.log(`\n🐛 Bug Pattern Scan`);
   console.log(`---\n`);
-  
+
   const allBugs = [];
-  
+
   for (const dir of Object.keys(DIRECTORIES)) {
     const bugs = scanForBugs(dir);
     allBugs.push(...bugs);
   }
-  
+
   for (const dir of SCRIPTS_DIRS) {
     const bugs = scanForBugs(dir);
     allBugs.push(...bugs);
   }
-  
+
   if (allBugs.length === 0) {
     console.log(`✅ No bug patterns detected`);
   } else {
@@ -919,7 +919,7 @@ if (scanBugs) {
       bySeverity[bug.severity] = bySeverity[bug.severity] || [];
       bySeverity[bug.severity].push(bug);
     }
-    
+
     const severityIcon = { critical: '🔴', warning: '⚠️', info: 'ℹ️' };
     for (const severity of ['critical', 'warning', 'info']) {
       if (bySeverity[severity]?.length) {
@@ -941,9 +941,9 @@ if (runFormat) {
   console.log(`\n📝 Format Checks & Structure`);
   console.log(`Stage 3: Import order, function metrics, attributes, properties`);
   console.log(`---\n`);
-  
+
   const formatResults = runFormatChecks();
-  
+
   if (formatResults.length === 0) {
     console.log(`✅ All format checks passed`);
   } else {
@@ -952,10 +952,10 @@ if (runFormat) {
       bySeverity[r.severity] = bySeverity[r.severity] || [];
       bySeverity[r.severity].push(r);
     }
-    
+
     const severityIcon = { error: '🔴', warning: '⚠️', info: 'ℹ️' };
     const metrics = { columns: 0, rows: 0 };
-    
+
     for (const severity of ['error', 'warning', 'info']) {
       if (bySeverity[severity]?.length) {
         console.log(`${severityIcon[severity]} ${severity.toUpperCase()} (${bySeverity[severity].length})`);
@@ -970,7 +970,7 @@ if (runFormat) {
         }
       }
     }
-    
+
     console.log(`\n📊 Metrics:`);
     console.log(`   Columns (params/chains): ${metrics.columns}`);
     console.log(`   Rows (properties/labels): ${metrics.rows}`);

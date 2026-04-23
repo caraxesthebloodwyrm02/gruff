@@ -18,14 +18,14 @@ async function getStatus() {
 
   const content = fs.readFileSync(auditPath, "utf8");
   const lines = content.split("\n").filter(line => line.trim() !== "");
-  
+
   // Search backwards for the latest event related to this routine
   let latestEvent = null;
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
       const event = JSON.parse(lines[i]);
       if (event.source === "dispatcher" && event.metadata?.routine === routineName) {
-        // We found an event for this routine. 
+        // We found an event for this routine.
         // If it's a "started" event, and there's no subsequent "completed" or "failed", it might still be running.
         // But for this basic system, we just report the very latest entry.
         latestEvent = event;

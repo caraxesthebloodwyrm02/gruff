@@ -58,7 +58,7 @@
 ### **Quick Navigation Keys**
 ```
 Ctrl+Shift+1 → Full ecosystem
-Ctrl+Shift+2 → Foundation layer  
+Ctrl+Shift+2 → Foundation layer
 Ctrl+Shift+3 → Product layer
 Ctrl+Shift+C → Central Plaza
 Ctrl+Shift+T → Status check
@@ -75,7 +75,7 @@ Ctrl+Shift+H → Health scan
 ### **Environment Variables**
 ```bash
 export GRID_API_URL=http://localhost:8080
-export OLLAMA_BASE_URL=http://localhost:11434  
+export OLLAMA_BASE_URL=http://localhost:11434
 export ECHOES_AUDIT_PATH=~/.echoes/audit.ndjson
 ```
 
@@ -91,7 +91,7 @@ export ECHOES_AUDIT_PATH=~/.echoes/audit.ndjson
 # District health scan
 cd .. && find . -name 'README.md' -exec dirname {} \;
 
-# Platform validation  
+# Platform validation
 echo "afloat: $(test -f canopy/afloat/package.json && echo 'npm' || echo 'none')"
 ```
 
@@ -105,7 +105,7 @@ echo "afloat: $(test -f canopy/afloat/package.json && echo 'npm' || echo 'none')
 
 ### **Color Coding**
 - 🟢 **Green**: Active/Healthy (≥85%)
-- 🟡 **Yellow**: Maintenance needed (70-84%)  
+- 🟡 **Yellow**: Maintenance needed (70-84%)
 - 🔴 **Red**: Attention required (<70%)
 
 ### **Icons by Compartment**
@@ -124,7 +124,7 @@ echo "afloat: $(test -f canopy/afloat/package.json && echo 'npm' || echo 'none')
 
 ### **Always Validate**
 - Health score before entry
-- Tests passing before exit  
+- Tests passing before exit
 - Audit trail completeness
 - Dependency consistency
 

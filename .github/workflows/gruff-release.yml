@@ -34,7 +34,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -45,19 +45,18 @@ jobs:
       - name: Run diagnostic scan
         run: node scripts/diagnostic-paths.mjs --bugs --format --ci
 
-  # TODO: Enable when tests are added
-  # test:
-  #   runs-on: ubuntu-latest
-  #   needs: lint
-  #   steps:
-  #     - uses: actions/checkout@v6
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: ${{ env.NODE_VERSION }}
-  #         cache: 'npm'
-  #     - run: npm ci
-  #     - run: npm test
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - run: npm test
 
   build:
     runs-on: ubuntu-latest
@@ -69,7 +68,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -100,7 +99,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -110,7 +109,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    needs: [lint, build, security]
+    needs: [lint, test, build, security]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v6
@@ -119,7 +118,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
@@ -132,7 +131,7 @@ jobs:
           path: dist/
 
       - name: Publish to NPM
-        run: npm publish --access public --tag next --provenance --ignore-scripts
+        run: npm publish --access public --tag latest --provenance --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

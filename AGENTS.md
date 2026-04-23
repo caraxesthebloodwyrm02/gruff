@@ -44,7 +44,7 @@
 
 **Default agent:** `prince-runtime-intel` is the workspace default for all development tasks in this repo unless explicitly overridden. To activate: prefix with `@prince` or run `echo "prince" > ~/.claude/.active_persona`.
 
-**Behavioral rules:** Agent operational protocols in `~/.claude/rules/prince-agent.md` (problem-type routing, skill dispatch, output templates) and `~/.claude/rules/dev-rules.md` (TUV-001 governance contract). Rules are not duplicated here.
+**Behavioral rules:** Agent operational protocols in `~/.claude/rules/prince-agent.md` (problem-type routing, skill dispatch, output templates) and `~/.claude/rules/dev-rules.md` (governance pointers to TUV-001 and this repo’s baselines). Full trust contract text: `~/seed/templates/development-contract.md`. Rules are not duplicated here.
 
 **Documentation neighborhood:** [`docs/FOURFOLD_NEIGHBORHOOD.md`](docs/FOURFOLD_NEIGHBORHOOD.md) maps **LICENSE**, **DESIGN.md**, **Makefile**, **INSTRUCTION.md**, and **REFERENCE.md** — use it to pick the right doc before a long chat. [`docs/SIXTEENFOLD_NEIGHBORHOOD.md`](docs/SIXTEENFOLD_NEIGHBORHOOD.md) expands that to **16 folds** (four strata × four archetypes) across git boundaries. **prince** = default build path; **hermes** = submodule / cross-repo alignment; **caraxes** = marketplace and plugins. Nested **GRID-main** and **`.pi`** carry their own `AGENTS.md` for four debugging windows and Pi isolation, respectively.
 

@@ -4,8 +4,10 @@ use tracing::info;
 
 mod grid;
 mod handlers;
+mod blocks;
 
 use grid::GridConfig;
+use blocks::BlockStore;
 
 #[derive(Parser)]
 #[command(name = "notebook-engine")]
@@ -38,6 +40,8 @@ async fn main() -> std::io::Result<()> {
         margin_cols: cli.margin_cols,
     };
 
+    let block_store = web::Data::new(BlockStore::new());
+
     info!(
         cell_px = config.cell_px,
         margin_cols = config.margin_cols,
@@ -50,10 +54,15 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(config.clone()))
+            .app_data(block_store.clone())
             .wrap(middleware::Logger::default())
             .wrap(actix_cors::Cors::permissive())
             .route("/", web::get().to(handlers::index))
             .route("/api/grid", web::get().to(handlers::api_grid))
+            .route("/api/blocks", web::get().to(handlers::api_blocks_list))
+            .route("/api/blocks", web::post().to(handlers::api_blocks_create))
+            .route("/api/blocks/{id}", web::delete().to(handlers::api_blocks_delete))
+            .route("/api/blocks/clear", web::post().to(handlers::api_blocks_clear))
             .route("/static/{file}", web::get().to(handlers::static_file))
     })
     .bind(&bind_addr)?

@@ -6,14 +6,24 @@ let blocks = [];
 let dragState = null;
 
 async function init() {
-    // Fetch grid config from backend
     try {
-        const resp = await fetch('/api/grid');
-        gridConfig = await resp.json();
+        const gridResp = await fetch('/api/grid');
+        if (!gridResp.ok) {
+            throw new Error(`GET /api/grid failed: ${gridResp.status}`);
+        }
+        gridConfig = await gridResp.json();
+
+        const blocksResp = await fetch('/api/blocks');
+        if (!blocksResp.ok) {
+            throw new Error(`GET /api/blocks failed: ${blocksResp.status}`);
+        }
+        blocks = await blocksResp.json();
         console.log('Grid config:', gridConfig);
-    } catch (e) {
-        console.error('Failed to fetch grid config:', e);
+        console.log('Initial blocks:', blocks.length);
+    } catch (err) {
+        console.error('Failed to initialize notebook state:', err);
         gridConfig = { cell_px: 24, margin_cols: 2 };
+        blocks = [];
     }
 
     resizeCanvas();
@@ -22,6 +32,27 @@ async function init() {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
+    canvas.addEventListener('contextmenu', onContextMenu);
+
+    window.addEventListener('keydown', async (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            if (blocks.length === 0) return;
+            const last = blocks[blocks.length - 1];
+            try {
+                const deleted = await deleteBlock(last.id);
+                if (deleted) {
+                    blocks.pop();
+                } else {
+                    await reloadBlocks();
+                }
+            } catch (err) {
+                console.error('Undo failed:', err);
+                await reloadBlocks();
+            }
+            draw();
+        }
+    });
 
     draw();
 }
@@ -64,26 +95,31 @@ function onPointerMove(e) {
     draw();
 }
 
-function onPointerUp(e) {
+async function onPointerUp() {
     if (!dragState) return;
-    // Commit block
-    const minCol = Math.min(dragState.startCol, dragState.endCol);
-    const maxCol = Math.max(dragState.startCol, dragState.endCol);
-    const minRow = Math.min(dragState.startRow, dragState.endRow);
-    const maxRow = Math.max(dragState.startRow, dragState.endRow);
-
-    blocks.push({
-        minCol,
-        maxCol,
-        minRow,
-        maxRow,
-    });
-
+    const startCol = dragState.startCol;
+    const startRow = dragState.startRow;
+    const endCol = dragState.endCol;
+    const endRow = dragState.endRow;
     dragState = null;
+
+    try {
+        const created = await createBlock({
+            start_col: startCol,
+            start_row: startRow,
+            end_col: endCol,
+            end_row: endRow,
+        });
+        blocks.push(created);
+    } catch (err) {
+        console.error('Failed to create block:', err);
+        await reloadBlocks();
+    }
+
     draw();
 }
 
-function onPointerCancel(e) {
+function onPointerCancel() {
     dragState = null;
     draw();
 }
@@ -92,18 +128,46 @@ function updateCellDisplay(col, row) {
     document.getElementById('cell-display').textContent = `${col},${row}`;
 }
 
+async function reloadBlocks() {
+    const resp = await fetch('/api/blocks');
+    if (!resp.ok) {
+        throw new Error(`GET /api/blocks failed: ${resp.status}`);
+    }
+    blocks = await resp.json();
+}
+
+async function createBlock(payload) {
+    const resp = await fetch('/api/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`POST /api/blocks failed: ${resp.status} ${errorText}`);
+    }
+    return await resp.json();
+}
+
+async function deleteBlock(blockId) {
+    const resp = await fetch(`/api/blocks/${encodeURIComponent(blockId)}`, {
+        method: 'DELETE',
+    });
+    if (resp.status === 404) return false;
+    if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`DELETE /api/blocks/${blockId} failed: ${resp.status} ${errorText}`);
+    }
+    return true;
+}
+
 function draw() {
-    // Clear
     ctx.fillStyle = '#0A0A0F';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw grid
     drawGrid();
 
-    // Draw committed blocks
-    blocks.forEach(block => drawBlock(block));
+    blocks.forEach((block) => drawBlock(block));
 
-    // Draw drag preview
     if (dragState) {
         const minCol = Math.min(dragState.startCol, dragState.endCol);
         const maxCol = Math.max(dragState.startCol, dragState.endCol);
@@ -115,10 +179,11 @@ function draw() {
         const w = x2 - x1;
         const h = y2 - y1;
 
-        ctx.strokeStyle = 'rgba(245, 158, 11, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(x1, y1, w, h);
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        roundRect(ctx, x1, y1, w, h, 3);
+        ctx.stroke();
         ctx.setLineDash([]);
     }
 }
@@ -129,8 +194,17 @@ function drawGrid() {
     const cols = Math.ceil(canvas.width / cellPx) + 1;
     const rows = Math.ceil(canvas.height / cellPx) + 1;
 
-    // Dots at intersections
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.10)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 0.5;
+    for (let row = 1; row < rows; row++) {
+        const y = row * cellPx;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     for (let col = 0; col < cols; col++) {
         for (let row = 0; row < rows; row++) {
             const x = col * cellPx;
@@ -141,18 +215,6 @@ function drawGrid() {
         }
     }
 
-    // Ruled horizontal lines
-    ctx.strokeStyle = 'rgba(10, 10, 15, 0.06)';
-    ctx.lineWidth = 0.5;
-    for (let row = 1; row < rows; row++) {
-        const y = row * cellPx;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
-
-    // Margin line
     ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -161,20 +223,68 @@ function drawGrid() {
     ctx.stroke();
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
 function drawBlock(block) {
-    const [x1, y1] = cellOrigin(block.minCol, block.minRow);
-    const [x2, y2] = cellOrigin(block.maxCol + 1, block.maxRow + 1);
+    const [x1, y1] = cellOrigin(block.min_col, block.min_row);
+    const [x2, y2] = cellOrigin(block.max_col + 1, block.max_row + 1);
     const w = x2 - x1;
     const h = y2 - y1;
+    const r = 3;
 
-    // Fill
+    ctx.save();
+    ctx.shadowColor = 'rgba(245, 158, 11, 0.28)';
+    ctx.shadowBlur = 16;
     ctx.fillStyle = 'rgba(245, 158, 11, 0.14)';
-    ctx.fillRect(x1, y1, w, h);
+    roundRect(ctx, x1, y1, w, h, r);
+    ctx.fill();
+    ctx.restore();
 
-    // Border
     ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x1, y1, w, h);
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, x1, y1, w, h, r);
+    ctx.stroke();
+}
+
+function blockAt(col, row) {
+    return blocks.findIndex((block) =>
+        col >= block.min_col && col <= block.max_col &&
+        row >= block.min_row && row <= block.max_row
+    );
+}
+
+async function onContextMenu(e) {
+    e.preventDefault();
+    const [col, row] = quantize(e.offsetX, e.offsetY);
+    const idx = blockAt(col, row);
+    if (idx === -1) return;
+
+    const target = blocks[idx];
+    try {
+        const deleted = await deleteBlock(target.id);
+        if (deleted) {
+            blocks.splice(idx, 1);
+        } else {
+            await reloadBlocks();
+        }
+        draw();
+    } catch (err) {
+        console.error('Failed to delete block:', err);
+        await reloadBlocks();
+        draw();
+    }
 }
 
 init();

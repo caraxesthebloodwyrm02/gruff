@@ -4,6 +4,8 @@ const ctx = canvas.getContext('2d');
 let gridConfig = null;
 let blocks = [];
 let dragState = null;
+let viewW = 0;
+let viewH = 0;
 
 async function init() {
     try {
@@ -32,6 +34,7 @@ async function init() {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
+    canvas.addEventListener('pointerleave', onPointerLeave);
     canvas.addEventListener('contextmenu', onContextMenu);
 
     window.addEventListener('keydown', async (e) => {
@@ -58,8 +61,16 @@ async function init() {
 }
 
 function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // Match the canvas backing store to the display DPR so lines stay crisp
+    // on HiDPI screens. Drawing code keeps using CSS pixels via setTransform.
+    const dpr = window.devicePixelRatio || 1;
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+    canvas.width = Math.floor(viewW * dpr);
+    canvas.height = Math.floor(viewH * dpr);
+    canvas.style.width = viewW + 'px';
+    canvas.style.height = viewH + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     draw();
 }
 
@@ -80,28 +91,43 @@ function cellOrigin(col, row) {
 }
 
 function onPointerDown(e) {
+    // Capture the pointer so drag continues to deliver events even when the
+    // cursor leaves the canvas or the browser window; guarantees pointerup.
+    if (typeof canvas.setPointerCapture === 'function') {
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* no-op */ }
+    }
     const [col, row] = quantize(e.offsetX, e.offsetY);
-    dragState = { startCol: col, startRow: row, endCol: col, endRow: row };
+    dragState = { pointerId: e.pointerId, startCol: col, startRow: row, endCol: col, endRow: row };
     updateCellDisplay(col, row);
     draw();
 }
 
 function onPointerMove(e) {
-    if (!dragState) return;
+    if (dragState) {
+        const [col, row] = quantize(e.offsetX, e.offsetY);
+        dragState.endCol = col;
+        dragState.endRow = row;
+        updateCellDisplay(col, row);
+        draw();
+        return;
+    }
+    // Idle hover: surface the right-click-to-delete affordance.
     const [col, row] = quantize(e.offsetX, e.offsetY);
-    dragState.endCol = col;
-    dragState.endRow = row;
     updateCellDisplay(col, row);
-    draw();
+    canvas.style.cursor = blockAt(col, row) !== -1 ? 'pointer' : 'crosshair';
 }
 
-async function onPointerUp() {
+async function onPointerUp(e) {
     if (!dragState) return;
     const startCol = dragState.startCol;
     const startRow = dragState.startRow;
     const endCol = dragState.endCol;
     const endRow = dragState.endRow;
+    const pointerId = dragState.pointerId;
     dragState = null;
+    if (e && pointerId !== undefined && typeof canvas.releasePointerCapture === 'function') {
+        try { canvas.releasePointerCapture(pointerId); } catch (_) { /* no-op */ }
+    }
 
     try {
         const created = await createBlock({
@@ -119,13 +145,30 @@ async function onPointerUp() {
     draw();
 }
 
-function onPointerCancel() {
+function onPointerCancel(e) {
+    if (dragState && e && typeof canvas.releasePointerCapture === 'function') {
+        try { canvas.releasePointerCapture(dragState.pointerId); } catch (_) { /* no-op */ }
+    }
     dragState = null;
     draw();
 }
 
+// pointerleave is a no-op during an active drag (pointer capture keeps events
+// flowing), but when no drag is in progress we clear the hover cursor/display
+// so stale state never lingers after the mouse exits the canvas.
+function onPointerLeave() {
+    if (dragState) return;
+    canvas.style.cursor = 'crosshair';
+    updateCellDisplay('-', '-');
+}
+
 function updateCellDisplay(col, row) {
-    document.getElementById('cell-display').textContent = `${col},${row}`;
+    const display = document.getElementById('cell-display');
+    if (col === '-' || row === '-') {
+        display.textContent = '-';
+        return;
+    }
+    display.textContent = `${col},${row}`;
 }
 
 async function reloadBlocks() {
@@ -163,7 +206,7 @@ async function deleteBlock(blockId) {
 
 function draw() {
     ctx.fillStyle = '#0A0A0F';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, viewW, viewH);
     drawGrid();
 
     blocks.forEach((block) => drawBlock(block));
@@ -191,8 +234,8 @@ function draw() {
 function drawGrid() {
     const cellPx = gridConfig.cell_px;
     const marginPx = gridConfig.margin_cols * cellPx;
-    const cols = Math.ceil(canvas.width / cellPx) + 1;
-    const rows = Math.ceil(canvas.height / cellPx) + 1;
+    const cols = Math.ceil(viewW / cellPx) + 1;
+    const rows = Math.ceil(viewH / cellPx) + 1;
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 0.5;
@@ -200,7 +243,7 @@ function drawGrid() {
         const y = row * cellPx;
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.lineTo(viewW, y);
         ctx.stroke();
     }
 
@@ -219,7 +262,7 @@ function drawGrid() {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(marginPx, 0);
-    ctx.lineTo(marginPx, canvas.height);
+    ctx.lineTo(marginPx, viewH);
     ctx.stroke();
 }
 
@@ -258,11 +301,17 @@ function drawBlock(block) {
     ctx.stroke();
 }
 
+// blockAt returns the index of the top-most block containing (col, row), or
+// -1 if none match. Iterates in reverse so overlapping blocks delete the one
+// the user actually sees on top (matching draw order: later blocks paint last).
 function blockAt(col, row) {
-    return blocks.findIndex((block) =>
-        col >= block.min_col && col <= block.max_col &&
-        row >= block.min_row && row <= block.max_row
-    );
+    for (let i = blocks.length - 1; i >= 0; i--) {
+        const b = blocks[i];
+        if (col >= b.min_col && col <= b.max_col && row >= b.min_row && row <= b.max_row) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 async function onContextMenu(e) {

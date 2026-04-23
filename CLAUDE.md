@@ -174,9 +174,9 @@ Cross-server contracts that must not be broken:
 
 ## Environment Constraints
 
-- **OS**: Arch Linux — use `pacman -S` for packages (not apt, brew, dnf)
+- **OS**: Ubuntu 25.10 (hostname: prince) — use `apt` for packages (not pacman, brew, dnf). Arch Linux references elsewhere are historical.
 - **No sudo**: Never run `sudo` commands directly. Collect all privileged commands and present as a single copyable block at the end of the session.
-- **Tool availability**: Check with `command -v` before assuming a binary exists — fresh Arch installs may be missing common tools (e.g., `hostname`)
+- **Tool availability**: Check with `command -v` before assuming a binary exists.
 - **Exit codes**: Verify actual output content, not just return codes. Some tools (e.g., `ssh-keygen -l`) return non-zero for non-error conditions.
 - **Python runtime**: Always `uv run` — never bare `python` or `pip`
 - **`prompt.md` files**: These are often notes or scratch files, not authoritative configuration. Do not treat them as instruction files.

@@ -1,0 +1,59 @@
+# ============================================================================
+# gruff Pre-Commit Configuration
+# ============================================================================
+# Install: pre-commit install   (already installed)
+# Run manually: pre-commit run --all-files
+# ============================================================================
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-json
+        name: Check JSON syntax
+      - id: check-added-large-files
+        name: Check for large files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: detect-private-key
+        name: Detect private keys
+      - id: mixed-line-ending
+        name: Fix mixed line endings
+        args: [--fix=lf]
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        name: Detect hardcoded secrets
+        args:
+          - "--base64-limit"
+          - "4.5"
+          - "--hex-limit"
+          - "3.0"
+        exclude: |
+          (?x)^(
+            .*\.lock|
+            package-lock\.json|
+            dist/.*|
+            .*\.min\.js
+          )$
+
+  - repo: local
+    hooks:
+      - id: verify-planes
+        name: Verify planes symlink integrity
+        entry: make verify-planes
+        language: system
+        pass_filenames: false
+        files: ^planes/
+
+fail_fast: false
+minimum_pre_commit_version: "3.0.0"

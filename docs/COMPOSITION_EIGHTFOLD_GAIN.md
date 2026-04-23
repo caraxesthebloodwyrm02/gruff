@@ -54,10 +54,10 @@ This document **closes the arc**: it compresses the conversation **in order**, *
 
 ## 4. Triplet and dotted patterns
 
-**Triplet (per decision):** `(octant, DRY anchor, wet note)`  
+**Triplet (per decision):** `(octant, DRY anchor, wet note)`
 Example: `(O7, Makefile + scripts/verify-planes.sh, "today only: geometry-box drift noted")`.
 
-**Dotted rhythm (three beats):** `anchor … gesture … metric`  
+**Dotted rhythm (three beats):** `anchor … gesture … metric`
 Example: [`REFERENCE.md`](../REFERENCE.md) **…** choose **hermes** for submodule bump **…** count **hops** from hub to edited file ≤ 3.
 
 Use **triplets** when opening a PR; use **dotted** rhythm when **logging** a reconcile lap (elevator doc).
@@ -83,7 +83,7 @@ Use **triplets** when opening a PR; use **dotted** rhythm when **logging** a rec
 
 ## 6. Links
 
-- [`FOURFOLD_NEIGHBORHOOD.md`](FOURFOLD_NEIGHBORHOOD.md) — four folds + neighborhood graph  
-- [`SIXTEENFOLD_NEIGHBORHOOD.md`](SIXTEENFOLD_NEIGHBORHOOD.md) — sixteen folds + strata  
-- [`ONBOARDING.md`](ONBOARDING.md) — tracks, modes, ambiance  
-- [`the-elevator-ride.md`](the-elevator-ride.md) — laps / curvature  
+- [`FOURFOLD_NEIGHBORHOOD.md`](FOURFOLD_NEIGHBORHOOD.md) — four folds + neighborhood graph
+- [`SIXTEENFOLD_NEIGHBORHOOD.md`](SIXTEENFOLD_NEIGHBORHOOD.md) — sixteen folds + strata
+- [`ONBOARDING.md`](ONBOARDING.md) — tracks, modes, ambiance
+- [`the-elevator-ride.md`](the-elevator-ride.md) — laps / curvature

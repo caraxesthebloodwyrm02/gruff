@@ -1,30 +1,56 @@
 const canvas = document.getElementById('nb');
 const ctx = canvas.getContext('2d');
+const cellDisplay = document.getElementById('cell-display');
+const clearBtn = document.getElementById('clear-btn');
+const liveDot = document.getElementById('live-dot');
+const liveText = document.getElementById('live-text');
+const labelInput = document.getElementById('label-input');
+const toneSelect = document.getElementById('tone-select');
 
 let gridConfig = null;
 let blocks = [];
 let dragState = null;
+let liveSocket = null;
+let reconnectTimer = null;
+let reconnectDelayMs = 800;
+
+const MAX_RECONNECT_DELAY_MS = 8000;
+const TONES = {
+    amber: {
+        border: '#F59E0B',
+        fill: 'rgba(245, 158, 11, 0.14)',
+        glow: 'rgba(245, 158, 11, 0.28)',
+        text: '#FDE68A',
+    },
+    mint: {
+        border: '#34D399',
+        fill: 'rgba(52, 211, 153, 0.14)',
+        glow: 'rgba(52, 211, 153, 0.26)',
+        text: '#A7F3D0',
+    },
+    azure: {
+        border: '#60A5FA',
+        fill: 'rgba(96, 165, 250, 0.14)',
+        glow: 'rgba(96, 165, 250, 0.24)',
+        text: '#BFDBFE',
+    },
+    rose: {
+        border: '#F472B6',
+        fill: 'rgba(244, 114, 182, 0.14)',
+        glow: 'rgba(244, 114, 182, 0.24)',
+        text: '#FBCFE8',
+    },
+    slate: {
+        border: '#94A3B8',
+        fill: 'rgba(148, 163, 184, 0.14)',
+        glow: 'rgba(148, 163, 184, 0.24)',
+        text: '#E2E8F0',
+    },
+};
 
 async function init() {
-    try {
-        const gridResp = await fetch('/api/grid');
-        if (!gridResp.ok) {
-            throw new Error(`GET /api/grid failed: ${gridResp.status}`);
-        }
-        gridConfig = await gridResp.json();
-
-        const blocksResp = await fetch('/api/blocks');
-        if (!blocksResp.ok) {
-            throw new Error(`GET /api/blocks failed: ${blocksResp.status}`);
-        }
-        blocks = await blocksResp.json();
-        console.log('Grid config:', gridConfig);
-        console.log('Initial blocks:', blocks.length);
-    } catch (err) {
-        console.error('Failed to initialize notebook state:', err);
-        gridConfig = { cell_px: 24, margin_cols: 2 };
-        blocks = [];
-    }
+    await loadInitialState();
+    connectLiveChannel();
 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
@@ -33,6 +59,7 @@ async function init() {
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
     canvas.addEventListener('contextmenu', onContextMenu);
+    clearBtn.addEventListener('click', onClearBoard);
 
     window.addEventListener('keydown', async (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -55,6 +82,91 @@ async function init() {
     });
 
     draw();
+}
+
+async function loadInitialState() {
+    try {
+        const gridResp = await fetch('/api/grid');
+        if (!gridResp.ok) {
+            throw new Error(`GET /api/grid failed: ${gridResp.status}`);
+        }
+        gridConfig = await gridResp.json();
+
+        const blocksResp = await fetch('/api/blocks');
+        if (!blocksResp.ok) {
+            throw new Error(`GET /api/blocks failed: ${blocksResp.status}`);
+        }
+        blocks = await blocksResp.json();
+    } catch (err) {
+        console.error('Failed to initialize notebook state:', err);
+        gridConfig = { cell_px: 24, margin_cols: 2 };
+        blocks = [];
+    }
+}
+
+function connectLiveChannel() {
+    if (liveSocket && liveSocket.readyState <= WebSocket.OPEN) {
+        return;
+    }
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    liveSocket = new WebSocket(`${protocol}://${window.location.host}/ws`);
+
+    liveSocket.addEventListener('open', () => {
+        setLiveStatus('online');
+        reconnectDelayMs = 800;
+    });
+
+    liveSocket.addEventListener('message', (event) => {
+        let payload = null;
+        try {
+            payload = JSON.parse(event.data);
+        } catch (err) {
+            console.warn('Ignoring non-JSON websocket message');
+            return;
+        }
+        if (!payload || !Array.isArray(payload.blocks)) {
+            return;
+        }
+        blocks = payload.blocks;
+        if (payload.type === 'hello' && payload.grid) {
+            gridConfig = payload.grid;
+        }
+        draw();
+    });
+
+    liveSocket.addEventListener('close', () => {
+        setLiveStatus('reconnecting');
+        scheduleReconnect();
+    });
+
+    liveSocket.addEventListener('error', () => {
+        setLiveStatus('offline');
+        liveSocket.close();
+    });
+}
+
+function scheduleReconnect() {
+    if (reconnectTimer) {
+        return;
+    }
+    reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connectLiveChannel();
+    }, reconnectDelayMs);
+    reconnectDelayMs = Math.min(reconnectDelayMs * 2, MAX_RECONNECT_DELAY_MS);
+}
+
+function setLiveStatus(state) {
+    liveDot.classList.toggle('online', state === 'online');
+    if (state === 'online') {
+        liveText.textContent = 'live';
+        return;
+    }
+    if (state === 'reconnecting') {
+        liveText.textContent = 'reconnecting';
+        return;
+    }
+    liveText.textContent = 'offline';
 }
 
 function resizeCanvas() {
@@ -91,11 +203,11 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
-    if (!dragState) return;
     const [col, row] = quantize(e.offsetX, e.offsetY);
+    updateCellDisplay(col, row);
+    if (!dragState) return;
     dragState.endCol = col;
     dragState.endRow = row;
-    updateCellDisplay(col, row);
     draw();
 }
 
@@ -113,6 +225,8 @@ async function onPointerUp() {
             start_row: startRow,
             end_col: endCol,
             end_row: endRow,
+            label: labelInput.value,
+            tone: toneSelect.value,
         });
         blocks.push(created);
     } catch (err) {
@@ -129,7 +243,7 @@ function onPointerCancel() {
 }
 
 function updateCellDisplay(col, row) {
-    document.getElementById('cell-display').textContent = `${col},${row}`;
+    cellDisplay.textContent = `${col},${row}`;
 }
 
 async function reloadBlocks() {
@@ -163,6 +277,31 @@ async function deleteBlock(blockId) {
         throw new Error(`DELETE /api/blocks/${blockId} failed: ${resp.status} ${errorText}`);
     }
     return true;
+}
+
+async function clearBlocks() {
+    const resp = await fetch('/api/blocks/clear', {
+        method: 'POST',
+    });
+    if (!resp.ok) {
+        const errorText = await resp.text();
+        throw new Error(`POST /api/blocks/clear failed: ${resp.status} ${errorText}`);
+    }
+}
+
+async function onClearBoard() {
+    clearBtn.disabled = true;
+    try {
+        await clearBlocks();
+        blocks = [];
+        draw();
+    } catch (err) {
+        console.error('Failed to clear blocks:', err);
+        await reloadBlocks();
+        draw();
+    } finally {
+        clearBtn.disabled = false;
+    }
 }
 
 function draw() {
@@ -248,18 +387,34 @@ function drawBlock(block) {
     const h = y2 - y1;
     const r = 3;
 
+    const tone = TONES[block.tone] || TONES.amber;
+
     ctx.save();
-    ctx.shadowColor = 'rgba(245, 158, 11, 0.28)';
+    ctx.shadowColor = tone.glow;
     ctx.shadowBlur = 16;
-    ctx.fillStyle = 'rgba(245, 158, 11, 0.14)';
+    ctx.fillStyle = tone.fill;
     roundRect(ctx, x1, y1, w, h, r);
     ctx.fill();
     ctx.restore();
 
-    ctx.strokeStyle = '#F59E0B';
+    ctx.strokeStyle = tone.border;
     ctx.lineWidth = 1.5;
     roundRect(ctx, x1, y1, w, h, r);
     ctx.stroke();
+
+    const label = (block.label || '').trim();
+    if (!label) {
+        return;
+    }
+
+    ctx.save();
+    roundRect(ctx, x1, y1, w, h, r);
+    ctx.clip();
+    ctx.fillStyle = tone.text;
+    ctx.font = '600 13px Manrope, sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, x1 + 8, y1 + 6, Math.max(0, w - 16));
+    ctx.restore();
 }
 
 function blockAt(col, row) {

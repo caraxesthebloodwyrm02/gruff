@@ -9,10 +9,10 @@
 8. Synthesize the information gathered from the academic articles to create a comprehensive overview of the Egypt-Rome trade route and supply chain events, including any interesting patterns and trends in commerce and trade routes.
 # A Comprehensive Historical Analysis of Egypt-Rome Trade Routes and Supply Chain Dynamics from the Early Newspaper Era to the Present Day
 
-> - The Egypt-Rome trade network evolved from ancient riverine and overland routes to complex maritime and desert corridors, with Alexandria emerging as the Mediterranean’s premier commercial hub.  
-> - The Red Sea corridor, though longer in distance, was preferred over the Persian Gulf route due to shorter overland travel and Roman control, facilitating luxury goods trade from India and Arabia.  
-> - Grain shipments from Egypt’s Nile Delta to Rome were a politically critical supply chain, ensuring imperial food security and economic stability.  
-> - Trade infrastructure, including ports like Berenike and Myos Hormos, and Roman naval supremacy, suppressed piracy and enabled efficient movement of goods across vast distances.  
+> - The Egypt-Rome trade network evolved from ancient riverine and overland routes to complex maritime and desert corridors, with Alexandria emerging as the Mediterranean’s premier commercial hub.
+> - The Red Sea corridor, though longer in distance, was preferred over the Persian Gulf route due to shorter overland travel and Roman control, facilitating luxury goods trade from India and Arabia.
+> - Grain shipments from Egypt’s Nile Delta to Rome were a politically critical supply chain, ensuring imperial food security and economic stability.
+> - Trade infrastructure, including ports like Berenike and Myos Hormos, and Roman naval supremacy, suppressed piracy and enabled efficient movement of goods across vast distances.
 > - Cultural and technological exchanges accompanied commerce, with intermediaries such as Greek, Jewish, and Phoenician merchants playing pivotal roles in facilitating trade and integrating economic networks.
 
 ---

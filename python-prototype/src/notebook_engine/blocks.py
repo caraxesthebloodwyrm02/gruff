@@ -5,6 +5,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+ALLOWED_TONES = {'amber', 'mint', 'azure', 'rose', 'slate'}
+
 
 class BlockBounds(BaseModel):
     model_config = ConfigDict(frozen=True, extra='forbid')
@@ -35,6 +37,8 @@ class BlockCreate(BaseModel):
     start_row: int | None = Field(default=None, ge=0)
     end_col: int | None = Field(default=None, ge=0)
     end_row: int | None = Field(default=None, ge=0)
+    label: str = Field(default='', max_length=80)
+    tone: str = Field(default='amber', min_length=1, max_length=24)
 
     @model_validator(mode='after')
     def validate_shape(self) -> BlockCreate:
@@ -92,10 +96,19 @@ class Block(BaseModel):
     max_col: int = Field(ge=0)
     min_row: int = Field(ge=0)
     max_row: int = Field(ge=0)
+    label: str = Field(default='', max_length=80)
+    tone: str = Field(default='amber', min_length=1, max_length=24)
 
     @classmethod
-    def from_bounds(cls, block_id: str, bounds: BlockBounds) -> Block:
-        return cls(id=block_id, **bounds.model_dump())
+    def from_bounds(
+        cls,
+        block_id: str,
+        bounds: BlockBounds,
+        *,
+        label: str,
+        tone: str,
+    ) -> Block:
+        return cls(id=block_id, label=label, tone=tone, **bounds.model_dump())
 
 
 class BlockValidationError(ValueError):
@@ -139,7 +152,7 @@ class BlockStore(Protocol):
     def list(self) -> list[Block]:
         ...
 
-    def create(self, bounds: BlockBounds) -> Block:
+    def create(self, bounds: BlockBounds, *, label: str, tone: str) -> Block:
         ...
 
     def delete(self, block_id: str) -> bool:
@@ -156,9 +169,9 @@ class InMemoryBlockStore:
     def list(self) -> list[Block]:
         return list(self._blocks.values())
 
-    def create(self, bounds: BlockBounds) -> Block:
+    def create(self, bounds: BlockBounds, *, label: str, tone: str) -> Block:
         block_id = str(uuid4())
-        block = Block.from_bounds(block_id, bounds)
+        block = Block.from_bounds(block_id, bounds, label=label, tone=tone)
         self._blocks[block_id] = block
         return block
 
@@ -196,4 +209,12 @@ def create_block_for_grid(
             field='min_col',
             input_value=bounds.min_col,
         )
-    return store.create(bounds)
+    label = payload.label.strip()
+    tone = payload.tone.strip().lower()
+    if tone not in ALLOWED_TONES:
+        raise BlockValidationError(
+            f'tone must be one of: {", ".join(sorted(ALLOWED_TONES))}',
+            field='tone',
+            input_value=payload.tone,
+        )
+    return store.create(bounds, label=label, tone=tone)

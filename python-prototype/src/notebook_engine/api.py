@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from contextlib import ExitStack, asynccontextmanager
+from importlib.resources import as_file, files
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -10,12 +13,17 @@ from notebook_engine.blocks import (
     Block,
     BlockCreate,
     BlockStore,
+    BlockValidationError,
     InMemoryBlockStore,
     create_block_for_grid,
 )
 from notebook_engine.grid import GridConfig
 
-_STATIC_DIR = Path(__file__).resolve().parents[2] / 'static'
+
+def _load_static_dir() -> tuple[ExitStack, Path]:
+    resource_stack = ExitStack()
+    static_dir = Path(resource_stack.enter_context(as_file(files('notebook_engine').joinpath('static'))))
+    return resource_stack, static_dir
 
 
 def build_app(
@@ -23,9 +31,18 @@ def build_app(
     *,
     store: BlockStore | None = None,
 ) -> FastAPI:
-    app = FastAPI(title='notebook-engine', version='0.1.0')
+    static_stack, static_dir = _load_static_dir()
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        try:
+            yield
+        finally:
+            static_stack.close()
+
+    app = FastAPI(title='notebook-engine', version='0.1.0', lifespan=lifespan)
     block_store = store or InMemoryBlockStore()
-    index_html = (_STATIC_DIR / 'index.html').read_text(encoding='utf-8')
+    index_html = (static_dir / 'index.html').read_text(encoding='utf-8')
 
     @app.get('/', response_class=HTMLResponse, include_in_schema=False)
     async def index() -> str:
@@ -51,8 +68,8 @@ def build_app(
                 payload=payload,
                 margin_cols=config.margin_cols,
             )
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except BlockValidationError as exc:
+            raise RequestValidationError([exc.to_request_error()]) from exc
 
     @app.delete('/api/blocks/{block_id}', status_code=status.HTTP_204_NO_CONTENT)
     async def api_blocks_delete(block_id: str) -> Response:
@@ -65,7 +82,6 @@ def build_app(
         block_store.clear()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    if _STATIC_DIR.exists():
-        app.mount('/static', StaticFiles(directory=str(_STATIC_DIR)), name='static')
+    app.mount('/static', StaticFiles(directory=str(static_dir)), name='static')
 
     return app

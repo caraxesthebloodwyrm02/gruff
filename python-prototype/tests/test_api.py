@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from importlib.resources import files
 
 from notebook_engine.api import build_app
 from notebook_engine.blocks import InMemoryBlockStore
@@ -93,12 +94,19 @@ def test_invalid_payloads_return_422() -> None:
         json={"min_col": 4, "max_col": 2, "min_row": 1, "max_row": 3},
     )
     assert invalid_range.status_code == 422
+    invalid_range_body = invalid_range.json()
+    assert isinstance(invalid_range_body["detail"], list)
+    assert invalid_range_body["detail"][0]["loc"] == ["body", "max_col"]
 
     margin_violation = client.post(
         "/api/blocks",
         json={"min_col": 1, "max_col": 2, "min_row": 0, "max_row": 1},
     )
     assert margin_violation.status_code == 422
+    margin_violation_body = margin_violation.json()
+    assert isinstance(margin_violation_body["detail"], list)
+    assert margin_violation_body["detail"][0]["loc"] == ["body", "min_col"]
+    assert "margin_cols" in margin_violation_body["detail"][0]["msg"]
 
 
 def test_delete_missing_block_returns_404() -> None:
@@ -118,4 +126,10 @@ def test_html_and_static_assets_smoke() -> None:
     assert js.status_code == 200
     assert "fetch('/api/grid')" in js.text
     assert "fetch('/api/blocks')" in js.text
+    assert "if (e.button !== 0)" in js.text
 
+
+def test_package_static_assets_exist() -> None:
+    static_dir = files("notebook_engine").joinpath("static")
+    assert static_dir.joinpath("index.html").is_file()
+    assert static_dir.joinpath("notebook.js").is_file()

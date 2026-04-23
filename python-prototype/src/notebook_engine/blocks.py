@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 
 class BlockBounds(BaseModel):
@@ -98,6 +98,43 @@ class Block(BaseModel):
         return cls(id=block_id, **bounds.model_dump())
 
 
+class BlockValidationError(ValueError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        field: str | None = None,
+        input_value: object = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.field = field
+        self.input_value = input_value
+
+    def to_request_error(self) -> dict[str, object]:
+        loc: tuple[str, ...]
+        if self.field is None:
+            loc = ('body',)
+        else:
+            loc = ('body', self.field)
+
+        return {
+            'type': 'value_error',
+            'loc': loc,
+            'msg': f'Value error, {self.message}',
+            'input': self.input_value,
+            'ctx': {'error': self.message},
+        }
+
+
+def _field_for_bounds_error(message: str) -> str | None:
+    if 'min_col must be <=' in message:
+        return 'max_col'
+    if 'min_row must be <=' in message:
+        return 'max_row'
+    return None
+
+
 class BlockStore(Protocol):
     def list(self) -> list[Block]:
         ...
@@ -137,7 +174,26 @@ def create_block_for_grid(
     payload: BlockCreate,
     margin_cols: int,
 ) -> Block:
-    bounds = payload.to_bounds()
+    try:
+        bounds = payload.to_bounds()
+    except ValidationError as exc:
+        first_error = exc.errors(include_url=False)[0]
+        message = first_error['msg']
+        if message.startswith('Value error, '):
+            message = message.removeprefix('Value error, ')
+
+        loc = first_error.get('loc', ())
+        field = loc[0] if loc and isinstance(loc[0], str) else _field_for_bounds_error(message)
+        raise BlockValidationError(
+            message,
+            field=field,
+            input_value=first_error.get('input'),
+        ) from exc
+
     if bounds.min_col < margin_cols:
-        raise ValueError(f"min_col must be >= margin_cols ({margin_cols})")
+        raise BlockValidationError(
+            f'min_col must be >= margin_cols ({margin_cols})',
+            field='min_col',
+            input_value=bounds.min_col,
+        )
     return store.create(bounds)

@@ -57,7 +57,7 @@ switch (cmd) {
   case "-v": {
     const pkg = JSON.parse(
       (await import("node:fs")).readFileSync(
-        new URL("../../package.json", import.meta.url),
+        new URL("../package.json", import.meta.url),
         "utf8",
       ),
     );

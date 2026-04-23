@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 const MCP_CONFIG =
   process.env.CASCADE_WORKSPACE_ROOT
     ? join(process.env.CASCADE_WORKSPACE_ROOT, "mcp_config.json")
-    : join(homedir(), "workspace", "CascadeProjects", "mcp_config.json");
+    : join(homedir(), "gruff", "workspace", "CascadeProjects", "mcp_config.json");
 
 const AUDIT_PATH = join(homedir(), ".echoes", "audit.ndjson");
 

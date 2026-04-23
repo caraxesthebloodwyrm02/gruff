@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Gruff mark">
+  <rect width="64" height="64" rx="12" fill="#1a1a2e"/>
+  <path d="M16 40 L32 20 L48 40 Z" fill="#e8e8ef" stroke="#7c7c9a" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="26" y="40" width="12" height="6" rx="1" fill="#4a4a6a"/>
+</svg>

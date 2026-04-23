@@ -6,20 +6,20 @@ const SCHOOL_THRESHOLD = 75;
 const PRACTICE_THRESHOLD = 40;
 const SCHOOL_STICKY_MS = 24 * 60 * 60 * 1000; // 24h
 
-interface RawCounts {
+export interface RawCounts {
   event_count: number;
   ok_count: number;
   failure_count: number;
   recent_failure_count: number;
 }
 
-function computeScore(counts: RawCounts): number {
+export function computeScore(counts: RawCounts): number {
   const base = 100 * (counts.ok_count / Math.max(1, counts.ok_count + counts.failure_count));
   const penalty = 10 * counts.recent_failure_count;
   return Math.max(0, Math.min(100, base - penalty));
 }
 
-function scoreToTier(score: number): Tier {
+export function scoreToTier(score: number): Tier {
   if (score >= SCHOOL_THRESHOLD) return "school";
   if (score >= PRACTICE_THRESHOLD) return "practice";
   return "hold";
@@ -32,6 +32,10 @@ export function recomputeActor(
 ): void {
   // System actor is always school, no profile needed
   if (actor === "mcp:system") return;
+
+  const profileBefore = db
+    .prepare("SELECT tier, tier_changed_at FROM actor_profile WHERE actor = ?")
+    .get(actor) as { tier: Tier; tier_changed_at: string } | undefined;
 
   const now = new Date().toISOString();
   const recentCutoff = new Date(Date.now() - RECENT_WINDOW_MS).toISOString();
@@ -58,22 +62,17 @@ export function recomputeActor(
     tier = "hold";
     notes.override = "grid.admission_bannered";
   } else if (overrides?.promoted) {
-    const existing = db
-      .prepare("SELECT tier, tier_changed_at FROM actor_profile WHERE actor = ?")
-      .get(actor) as { tier: Tier; tier_changed_at: string } | undefined;
-    const stickyExpiry = existing
-      ? new Date(existing.tier_changed_at).getTime() + SCHOOL_STICKY_MS
+    const stickyExpiry = profileBefore
+      ? new Date(profileBefore.tier_changed_at).getTime() + SCHOOL_STICKY_MS
       : 0;
-    if (Date.now() < stickyExpiry && existing?.tier === "school") {
+    if (Date.now() < stickyExpiry && profileBefore?.tier === "school") {
       tier = "school";
       notes.override = "eligibility.promote_gate_sticky";
     }
   }
 
-  const existing = db
-    .prepare("SELECT tier FROM actor_profile WHERE actor = ?")
-    .get(actor) as { tier: Tier } | undefined;
-  const tierChanged = !existing || existing.tier !== tier;
+  const tierChanged = !profileBefore || profileBefore.tier !== tier;
+  const nextTierChangedAt = tierChanged ? now : (profileBefore?.tier_changed_at ?? now);
 
   db.prepare(
     `INSERT INTO actor_profile
@@ -99,7 +98,7 @@ export function recomputeActor(
     counts.recent_failure_count,
     score,
     tier,
-    tierChanged ? now : (existing ? now : now),
+    nextTierChangedAt,
     JSON.stringify(notes),
   );
 }

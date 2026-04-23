@@ -44,14 +44,24 @@ function deriveActor(event: Record<string, unknown>): string {
     return "mcp:system";
   }
 
-  return (
+  const serverId = m?.server_id != null ? String(m.server_id) : undefined;
+  const client = m?.client != null ? String(m.client) : undefined;
+  const fromMeta =
     (m?.entity_id as string) ??
+    serverId ??
+    client ??
     (m?.actor as string) ??
     (m?.subject as string) ??
     (m?.entity as string) ??
     (event.source as string) ??
-    "unknown"
-  );
+    "unknown";
+  if (fromMeta === "unknown") {
+    const keys = m && typeof m === "object" ? Object.keys(m as object).join(",") : "";
+    process.stderr.write(
+      `[gruff-ingester] warn: unresolved actor; use entity_id, server_id, client, actor, subject, or entity in metadata (keys: ${keys || "none"})\n`,
+    );
+  }
+  return fromMeta;
 }
 
 async function ingestFromOffset(offset: number): Promise<number> {

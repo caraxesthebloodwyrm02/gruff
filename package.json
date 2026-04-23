@@ -55,7 +55,9 @@
     "build": "tsup && node scripts/extract-tokens.mjs",
     "dev": "tsx --watch src/cli.tsx",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm run lint"
+    "test": "node --import tsx --test src/trust/scorer.test.ts src/trust/db.test.ts src/commands/proportion.test.ts",
+    "prepublishOnly": "npm run build && npm run lint && npm test",
+    "orchestrate": "bash ./scripts/orchestrate.sh"
   },
   "dependencies": {
     "ajv": "^8.17.1",

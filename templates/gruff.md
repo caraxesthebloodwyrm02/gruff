@@ -1,50 +1,19 @@
-# gruff — workspace tokens and voice
+# Gruff in this directory
 
-You ran `gruff init`. These files were dropped here:
+[Gruff](https://github.com/caraxesthebloodwyrm02/gruff) is a workspace cockpit: design-system tokens, a four-quadrant TUI, and a trust-routing / actor-scoring layer over your MCP audit stream (`~/.echoes/audit.ndjson` → `~/.gruff/trust.sqlite`).
 
-| File | Purpose |
-|---|---|
-| `tokens.css` | CSS custom properties — import this in any web project for the full design system |
-| `tokens.json` | Same tokens as JSON — for React Native, Figma plugins, or non-CSS tooling |
-| `voice.md` | Brand voice guide — language rules, vocabulary, and tone for all written copy |
-| `gruff-proportion-v1.schema.json` | JSON Schema for GRUFF proportion payloads (wallboard contract) |
-| `gruff.md` | This file |
+## Common commands
 
-## Using tokens.css
+| Command | What it does |
+|--------|----------------|
+| `gruff` | Open the 4-quadrant TUI (MCP, trust, routes, horizon). |
+| `gruff actors` | List or inspect actor trust profiles from the local trust DB. |
+| `gruff route` | Show or exercise routing decisions tied to the trust tier system. |
+| `gruff proportion` | Validate a `gruff-proportion-v1` JSON document (schema) and POST it to the configured proportion endpoint. |
+| `gruff init-automation` | Register systemd user timer for `gruff-ingester`. |
 
-```css
-@import './tokens.css';
+## Docs
 
-.my-button {
-  background: var(--amber-500);
-  color: var(--primary-fg);
-  font-family: var(--font-body);
-  border-radius: var(--radius-md);
-}
-```
+- Package README and schemas ship with the npm package; see `schemas/gruff-proportion-v1.schema.json` for the proportion payload.
 
-## Using tokens.json
-
-```js
-import tokens from './tokens.json' assert { type: 'json' };
-const primary = tokens['--amber-500']; // '#F59E0B'
-```
-
-## Key token reference
-
-```
---amber-500      #F59E0B   primary brand
---cyan-500       #00D9FF   secondary accent
---graphite-950   #0A0A0F   darkest bg
---graphite-900   #14141A   page bg (dark)
---fg-1           #F5F5F8   primary text (dark)
---font-display   Space Grotesk
---font-body      Manrope
---font-mono      JetBrains Mono
-```
-
-## Voice in brief
-
-Write to `you`, speak as `we`. Sentence case. GRID all-caps. Measured — not hyped. No emoji. Em dash for interruption. Vocabulary: local-first, understand, gate/pivot/resonance, signal/noise.
-
-See `voice.md` for the full guide.
+Use `gruff init` in a project folder to drop this file and optional automation.

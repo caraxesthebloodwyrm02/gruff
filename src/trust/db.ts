@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mkdirSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -40,10 +40,25 @@ const GRUFF_DIR = join(homedir(), ".gruff");
 
 let _db: Database.Database | null = null;
 
+function trustDbPath(): string {
+  if (process.env.GRUFF_TRUST_SQLITE) {
+    return process.env.GRUFF_TRUST_SQLITE;
+  }
+  return join(GRUFF_DIR, "trust.sqlite");
+}
+
+/** @internal test harness only */
+export function __resetTrustDbForTests(): void {
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
+}
+
 export function getDb(): Database.Database {
   if (_db) return _db;
-  mkdirSync(GRUFF_DIR, { recursive: true });
-  const dbPath = join(GRUFF_DIR, "trust.sqlite");
+  const dbPath = trustDbPath();
+  mkdirSync(dirname(dbPath), { recursive: true });
   _db = new Database(dbPath);
   _db.pragma("journal_mode = WAL");
   _db.pragma("foreign_keys = ON");
@@ -53,8 +68,8 @@ export function getDb(): Database.Database {
 }
 
 export function getReadonlyDb(): Database.Database {
-  mkdirSync(GRUFF_DIR, { recursive: true });
-  const dbPath = join(GRUFF_DIR, "trust.sqlite");
+  const dbPath = trustDbPath();
+  mkdirSync(dirname(dbPath), { recursive: true });
   if (!existsSync(dbPath)) {
     // If it doesn't exist, we can't open it read-only.
     // Open it read-write once to create it, or just return the main db.

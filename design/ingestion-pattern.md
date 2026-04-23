@@ -8,7 +8,7 @@ Companion to the operational plan at `~/.claude/plans/understood-the-copy-quiet-
 4. **register** — write a row into `INVENTORY.md`
 5. **verify** — `scripts/verify-planes.sh` reconciles filesystem vs inventory
 
-This document stress-tests the loop against seven known-awkward cases. For each, the rule is one-sentence imperative. Rationale cites `CLAUDE.md` or `SPEC.md` where applicable.
+This document stress-tests the loop against seven known-awkward cases. For each, the rule is one-sentence imperative. Rationale cites `CLAUDE.md` or `docs/SPEC.md` where applicable.
 
 ---
 
@@ -38,7 +38,7 @@ This document stress-tests the loop against seven known-awkward cases. For each,
 
 **Decision rule.** Each plugin is `kind:plugin`, `plane:services` — not `rack`, not `contracts`.
 
-**Rationale.** SPEC.md §2 assigns `services` to "what you CAN do." Plugins *are* code that extends that axis. `contracts` is reserved for shared type/resilience/pipeline packages. Racks are cognitive overlays *about* code; plugins are code.
+**Rationale.** `docs/SPEC.md` §2 assigns `services` to "what you CAN do." Plugins *are* code that extends that axis. `contracts` is reserved for shared type/resilience/pipeline packages. Racks are cognitive overlays *about* code; plugins are code.
 
 ---
 

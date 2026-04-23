@@ -5,3 +5,17 @@ dist
 .gruff
 *.log
 *.sqlite
+docs
+racks
+planes
+bridges
+design
+design-system
+hogsmade-design
+review-package
+.github
+.cursor
+.claude
+.pipeline-monitoring
+*.md
+!README.md

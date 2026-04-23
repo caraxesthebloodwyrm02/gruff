@@ -25,6 +25,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
@@ -124,6 +126,37 @@ class Handler(BaseHTTPRequestHandler):
             return
         ad = float(data["audioDrive"])
         print(f"[gruff-echoes] accepted theta={data.get('theta')} audioDrive={ad:.4f}", flush=True)
+
+        echoes = os.environ.get("ECHOES_URL", "").strip()
+        if echoes:
+            try:
+                headers = {"Content-Type": "application/json"}
+                token = os.environ.get("ECHOES_TOKEN", "").strip()
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                req = urllib.request.Request(  # noqa: S310 — URL from operator env
+                    echoes,
+                    data=raw,
+                    method="POST",
+                    headers=headers,
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    status = int(resp.getcode() or 0)
+                    up = resp.read()[:2000]
+                print(
+                    f"[gruff-echoes] upstream {echoes!r} -> HTTP {status} body {up!r}",
+                    flush=True,
+                )
+            except urllib.error.HTTPError as e:
+                err_body = e.read()[:2000] if e.fp else b""
+                print(
+                    f"[gruff-echoes] upstream HTTPError {e.code} {e.reason!r} {err_body!r}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            except OSError as e:
+                print(f"[gruff-echoes] upstream forward failed: {e}", file=sys.stderr, flush=True)
+
         body = {
             "ok": True,
             "accepted": True,

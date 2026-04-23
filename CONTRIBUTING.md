@@ -1,6 +1,6 @@
 # Contributing
 
-The root **`LICENSE`** (**Apache License 2.0**) applies to this umbrella repository. The **`CascadeProjects/`** submodule publishes its **own** terms (currently **MIT** in `CascadeProjects/LICENSE` — unchanged here). For how these files connect, see **`docs/FOURFOLD_NEIGHBORHOOD.md`** and **`REFERENCE.md`**.
+The root **`LICENSE`** (**Apache License 2.0**) applies to this umbrella repository. The **`CascadeProjects/`** submodule publishes its **own** terms (currently **MIT** in `CascadeProjects/LICENSE` — unchanged here). For how these files connect, see **`docs/FOURFOLD_NEIGHBORHOOD.md`** and **`docs/REFERENCE.md`**.
 
 ## Repositories
 
@@ -28,7 +28,7 @@ The root **`LICENSE`** (**Apache License 2.0**) applies to this umbrella reposit
 
 ## Code review
 
-- For workspace PRs: confirm `SPEC.md` alignment when changing planes or gates.
+- For workspace PRs: confirm `docs/SPEC.md` alignment when changing planes or gates.
 - For hogsmade PRs: run package `test` / `typecheck` as indicated in each `package.json`.
 
 ## Conduct
@@ -38,6 +38,6 @@ The root **`LICENSE`** (**Apache License 2.0**) applies to this umbrella reposit
 
 ## Questions
 
-- Architecture: [`SPEC.md`](SPEC.md)
-- Plaza language vs plane roles: [`CENTRAL_PLAZA.md`](CENTRAL_PLAZA.md) + SPEC §5
+- Architecture: [`docs/SPEC.md`](docs/SPEC.md)
+- Plaza language vs plane roles: [`docs/CENTRAL_PLAZA.md`](docs/CENTRAL_PLAZA.md) + SPEC §5
 - Onboarding paths: [`docs/ONBOARDING.md`](docs/ONBOARDING.md)

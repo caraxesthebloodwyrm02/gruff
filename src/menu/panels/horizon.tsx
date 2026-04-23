@@ -4,9 +4,25 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const GATE_DIR =
-  process.env.GATE_DIR ??
-  join(homedir(), "workspace", "CascadeProjects", "Projects", "GATE");
+const GRUFF_CASCADE = join(homedir(), "gruff", "workspace", "CascadeProjects");
+
+// GATE incoming envelopes: default to the gruff worktree. Override with GATE_DIR.
+const GATE_DIR = process.env.GATE_DIR ?? join(GRUFF_CASCADE, "Projects", "GATE");
+
+// Ori and eligibility: legacy defaults were ~/.ori-server and ~/.eligibility-server; those
+// paths are often empty on a fresh host. Set ORI_ANTICIPATION_PATH / ELIGIBILITY_CYCLES_PATH
+// to where the services actually write, or add symlinks. Optional fallbacks under CascadeProjects.
+const ORI_CANDIDATES = [
+  process.env.ORI_ANTICIPATION_PATH,
+  join(homedir(), ".ori-server", "anticipation.json"),
+  join(GRUFF_CASCADE, ".state", "ori", "anticipation.json"),
+].filter(Boolean) as string[];
+
+const ELIGIBILITY_CANDIDATES = [
+  process.env.ELIGIBILITY_CYCLES_PATH,
+  join(homedir(), ".eligibility-server", "cycles.json"),
+  join(GRUFF_CASCADE, ".state", "eligibility", "cycles.json"),
+].filter(Boolean) as string[];
 
 function getPendingEnvelopes(): string[] {
   const incoming = join(GATE_DIR, "incoming");
@@ -20,11 +36,18 @@ function getPendingEnvelopes(): string[] {
   }
 }
 
+function readFirstExisting(paths: string[]): string | null {
+  for (const p of paths) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 function getAnticipationSignals(): Array<{ category: string; confidence: number }> {
-  const ori = join(homedir(), ".ori-server", "anticipation.json");
-  if (!existsSync(ori)) return [];
+  const path = readFirstExisting(ORI_CANDIDATES);
+  if (!path) return [];
   try {
-    const raw = JSON.parse(readFileSync(ori, "utf8"));
+    const raw = JSON.parse(readFileSync(path, "utf8"));
     return Array.isArray(raw) ? raw.slice(0, 4) : [];
   } catch {
     return [];
@@ -32,10 +55,10 @@ function getAnticipationSignals(): Array<{ category: string; confidence: number 
 }
 
 function getPromotionCandidates(): string[] {
-  const eligibilityLog = join(homedir(), ".eligibility-server", "cycles.json");
-  if (!existsSync(eligibilityLog)) return [];
+  const path = readFirstExisting(ELIGIBILITY_CANDIDATES);
+  if (!path) return [];
   try {
-    const raw = JSON.parse(readFileSync(eligibilityLog, "utf8"));
+    const raw = JSON.parse(readFileSync(path, "utf8"));
     const candidates = Array.isArray(raw) ? raw : [];
     return candidates
       .filter((c: any) => c.status === "pending_promotion")

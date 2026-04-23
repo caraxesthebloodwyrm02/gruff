@@ -75,11 +75,15 @@ function resizeCanvas() {
 }
 
 function quantize(x, y) {
+    // Clamp both axes to the valid uint32 domain the server accepts.
+    // Pointer capture lets drags receive offsetX/offsetY values outside the
+    // canvas (negative, or very large); unclamped those would serialize as
+    // negative integers and trip a 422 from BlockCreate's *uint32 fields.
     const col = Math.max(
         gridConfig.margin_cols,
         Math.floor(x / gridConfig.cell_px)
     );
-    const row = Math.floor(y / gridConfig.cell_px);
+    const row = Math.max(0, Math.floor(y / gridConfig.cell_px));
     return [col, row];
 }
 

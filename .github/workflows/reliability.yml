@@ -39,3 +39,20 @@ jobs:
       - name: Router config smoke validation
         run: |
           node ./scripts/route_config_smoke.mjs
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: gruff:latest
+          load: true

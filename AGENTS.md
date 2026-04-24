@@ -89,3 +89,19 @@ Python GRID servers (mcp-setup):
 - `portfolio-safety-lens` — safety analysis
 
 Run any: `npx -y tsx /path/to/server/src/server.ts`
+
+## Ori Registry (ori-server)
+
+Project registry from `registry-data.ts` — 28 projects tracked:
+
+| Category | Projects |
+|----------|----------|
+| Core | GRID-main, echoes, afloat, DIO |
+| Shared | shared-types, shared-resilience, shared-pipeline |
+| Apps | glimpse-artifact, glimpse-engine |
+| MCP Servers | 13 servers (afloat, echoes, grid, eligibility, glimpse, lots, maintain, mangrove, overview, pulse, seeds, ori) |
+| Root | apiguard, Vision |
+
+Seed: `~/.ori/registry/registry.json` (auto-created on first run)
+
+Run discovery: `listProjects()`, `discoverTestSuites(id)`

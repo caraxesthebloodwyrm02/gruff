@@ -1,0 +1,20 @@
+services:
+  gruff:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: gruff:latest
+    container_name: gruff
+    volumes:
+      - gruff-data:/data/.gruff
+      - echoes-data:/data/.echoes
+    environment:
+      - NODE_ENV=production
+      - GRUFF_TRUST_SQLITE=/data/.gruff/trust.sqlite
+      - ECHOES_AUDIT_PATH=/data/.echoes/audit.ndjson
+    command: ["--help"]
+
+volumes:
+  gruff-data:
+  echoes-data:

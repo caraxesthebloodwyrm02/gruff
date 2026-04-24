@@ -81,6 +81,7 @@ Inventory from `CascadeProjects/mcp_inventory.manifest.json`:
 | **seeds-server** | 5 | ok | Ecosystem snapshots |
 | **echoes-server** | 4 | ok | Audit + telemetry |
 | **eligibility-server** | 4 | ok | Promotion + hierarchy |
+| **ori-server** | 5 | idle | Console log + risk probe |
 
 Python GRID servers (mcp-setup):
 - `grid-intelligence` — intelligence queries

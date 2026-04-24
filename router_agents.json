@@ -1,1 +1,48 @@
-"{\"artifact_type\": \"pattern_report\", \"content\": {\"title\": \"Comprehensive Historical Analysis of Egypt-Rome Trade Routes and Supply Chain Dynamics\", \"sections\": [{\"section_title\": \"Introduction\", \"content\": \"The trade routes linking Egypt and Rome represent one of the most enduring and strategically significant supply chains in ancient history. This report synthesizes academic research to reconstruct the evolving trade networks, logistical infrastructure, and economic exchanges between Egypt and Rome across distinct historical periods.\"}, {\"section_title\": \"Ancient Foundations: Trade Routes and Logistical Networks\", \"sub_sections\": [{\"sub_section_title\": \"Nile River and Internal Trade\", \"content\": \"The Nile River was the lifeblood of Egyptian commerce, enabling efficient transport of agricultural surplus like grain, papyrus, and linen to Mediterranean ports. Key ports included Alexandria, Memphis, and Thebes.\"}, {\"sub_section_title\": \"Western Desert Oasis Routes\", \"content\": \"Connected the Nile Valley to oases such as Siwa and Kharga, facilitating trans-Saharan trade in dates, wine, alum, and manufactured goods.\"}, {\"sub_section_title\": \"Red Sea Maritime Corridor\", \"content\": \"Connected Egypt to the Arabian Peninsula, East Africa, and India via monsoon sailing. Ports like Berenike and Myos Hormos handled spices, incense, myrrh, gold, ivory, and exotic animals.\"}, {\"sub_section_title\": \"Punt Expedition Route\", \"content\": \"Revived under the Ptolemies for luxury goods procurement from the 'Land of Punt,' including myrrh and exotic animals.\"}, {\"sub_section_title\": \"Mediterranean and Aegean Trade Networks\", \"content\": \"Alexandria emerged as the Mediterranean’s commercial hub, handling grain shipments to Rome and facilitating cultural exchanges.\"}, {\"sub_section_title\": \"Levantine and Mesopotamian Trade Routes\", \"content\": \"Linked Egypt to Phoenician and Syrian ports for glass, purple dye, cedar timber, grain, and linen, also facilitating overland connections to Mesopotamia.\"}, {\"sub_section_title\": \"Overland Routes to Nubia and Sinai\", \"content\": \"Crucial for accessing African gold, ivory, slaves, copper, and turquoise, with fortifications protecting trade and territory.\"}]}, {\"section_title\": \"Roman Imperial Trade Dynamics and Infrastructure\", \"sub_sections\": [{\"sub_section_title\": \"Red Sea and Persian Gulf Corridors\", \"content\": \"The Red Sea corridor was preferred due to shorter overland travel and Roman control, facilitating luxury goods trade from India and Arabia.\"}, {\"sub_section_title\": \"Luxury Goods and Economic Significance\", \"content\": \"Luxury goods like cinnamon, myrrh, pepper, silk, and precious metals were highly prized in Rome for cosmetics, clothing, and cuisine.\"}, {\"sub_section_title\": \"Trade Centers and Logistical Hubs\", \"content\": \"Alexandria and Coptos were key hubs, managing grain exports and receiving Roman goods like coins, metals, and textiles.\"}, {\"sub_section_title\": \"Maritime Infrastructure and Naval Supremacy\", \"content\": \"Roman naval power suppressed piracy, enabling the construction of large harbors like Portus, ensuring efficient trade.\"}]}, {\"section_title\": \"Economic and Political Influences on Trade\", \"sub_sections\": [{\"sub_section_title\": \"Taxation, Tariffs, and Treaties\", \"content\": \"Roman government derived significant revenue from trade, with customs taxes on Red Sea frontiers exceeding 250 million sesterces by the 1st century CE.\"}, {\"sub_section_title\": \"Cultural and Technological Exchanges\", \"content\": \"Trade facilitated the adoption of Roman coinage in Egypt and the spread of Egyptian agricultural techniques in Rome.\"}, {\"sub_section_title\": \"Disruptions and Shifts in Trade\", \"content\": \"Wars, piracy, and political changes periodically disrupted trade, shifting economic organization and control.\"}]}, {\"section_title\": \"Patterns and Trends in Commerce\", \"sub_sections\": [{\"sub_section_title\": \"Seasonal and Cyclical Trade\", \"content\": \"Trade patterns were dictated by Nile flooding, monsoon winds, and agricultural cycles, ensuring steady supply chains.\"}, {\"sub_section_title\": \"Informal Trade Networks and Intermediaries\", \"content\": \"Informal networks and intermediaries like Greek, Jewish, and Phoenician merchants facilitated trade despite political tensions.\"}]}, {\"section_title\": \"Historical Newspaper and Archival Insights (17th–19th Centuries)\", \"sub_sections\": [{\"sub_section_title\": \"British Library Newspapers and Burney Collection\", \"content\": \"Provide merchant records and government documents reflecting trade activities and political events.\"}, {\"sub_section_title\": \"Punch Historical Archive\", \"content\": \"Reflects popular perceptions of ancient Egypt and Rome, illustrating cultural fascination through print media.\"}]}, {\"section_title\": \"Modern Analyses and Technological Advancements\", \"sub_sections\": [{\"sub_section_title\": \"GIS and Archaeological Reconstruction\", \"content\": \"21st-century research employs GIS and remote sensing to reconstruct trade routes and centers.\"}, {\"sub_section_title\": \"Network Theory and Economic Modeling\", \"content\": \"Modern analyses apply network theory to model the efficiency and resilience of ancient trade networks.\"}]}, {\"section_title\": \"Summary Table: Key Trade Routes, Goods, and Historical Context\", \"content\": \"| Era                | Route Segment                | Key Goods Traded                             | Logistical Infrastructure                 | Economic/Political Significance                  |\\n|--------------------|------------------------------|--------------------------------------------|-------------------------------------------|------------------------------------------------|\\n| Ptolemaic & Roman   | Nile River                   | Grain, papyrus, linen, luxury goods         | Ports: Alexandria, Memphis, Thebes; canals    | Vital for food supply, tax collection, trade  |\\n|                    | Red Sea Corridor             | Spices, silk, gold, ivory, exotic animals    | Ports: Berenike, Myos Hormos; caravan stops | Preferred route due to shorter overland travel |\\n|                    | Persian Gulf Corridor        | Silk, pepper, luxury goods                   | Ports: Antioch, Palmyra; caravan routes     | Longer overland, subject to tariffs            |\\n|                    | Mediterranean                | Grain, wine, olive oil, manufactured goods   | Ports: Ostia, Puteoli; Roman fleet           | Critical for Rome’s food security and economy  |\\n|                    | Overland to Nubia & Sinai    | Gold, ivory, slaves, copper, turquoise       | Fortifications, caravan stops                | Strategic for military and commercial interests |\\n| 17th–19th Century  | Newspaper & archival records | Historical trade accounts                   | British Library, Burney Collection, Punch     | Reflects early modern perceptions and knowledge |\"}], \"conclusion\": \"The Egypt-Rome trade routes reveal a sophisticated network that evolved from ancient riverine and desert paths to complex maritime and overland corridors. The Nile River and Red Sea corridor were central to this system, enabling the flow of essential goods and luxury items. Roman control and infrastructure ensured the efficiency and security of these routes, while economic policies and cultural exchanges shaped trade patterns. This report synthesizes peer-reviewed research and historical records to provide a comprehensive overview of these dynamics.\"}, \"output_format\": \"markdown\"}"
+{
+  "schemaVersion": "gruff-router-config-v1",
+  "policyVersion": "2026-04-24",
+  "defaultChain": "core_chain",
+  "defaultUnknownActorTier": "practice",
+  "minimumTrustedEventCount": 5,
+  "chains": {
+    "core_chain": [
+      "prince-runtime-intel",
+      "hermes",
+      "caraxes"
+    ],
+    "safe_chain": [
+      "hermes",
+      "caraxes"
+    ]
+  },
+  "toolPolicies": {
+    "route": {
+      "maxTier": "school",
+      "chain": "core_chain"
+    },
+    "actors": {
+      "maxTier": "school",
+      "chain": "core_chain"
+    },
+    "proportion": {
+      "maxTier": "practice",
+      "chain": "safe_chain"
+    },
+    "init": {
+      "maxTier": "practice",
+      "chain": "safe_chain"
+    },
+    "init-automation": {
+      "maxTier": "hold",
+      "chain": "safe_chain"
+    },
+    "*": {
+      "maxTier": "practice",
+      "chain": "safe_chain"
+    }
+  },
+  "overrides": {
+    "bannedActors": [],
+    "promotedActors": []
+  }
+}

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import csv
-from io import StringIO
+import asyncio
 from pathlib import Path
 
 from fastapi import Body, FastAPI, HTTPException, Query, Response, WebSocket, status
@@ -16,8 +15,16 @@ from notebook_engine.service import NotebookService
 
 
 class LiveNotebookHub:
-    def __init__(self) -> None:
+    """Fan-out for notebook runtime events. Each outbound frame gets a monotonic ``evt`` id for client de-duplication."""
+
+    def __init__(self, *, send_timeout_s: float = 5.0) -> None:
         self._connections: set[WebSocket] = set()
+        self.send_timeout_s = send_timeout_s
+        self._evt_seq = 0
+
+    def next_evt_id(self) -> int:
+        self._evt_seq += 1
+        return self._evt_seq
 
     async def connect(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -30,14 +37,15 @@ class LiveNotebookHub:
         if not self._connections:
             return
 
-        message = {'type': event_type, **payload}
+        evt_id = self.next_evt_id()
+        message: dict[str, object] = {'type': event_type, 'evt': evt_id, **payload}
         stale_connections: list[WebSocket] = []
         for websocket in self._connections:
             try:
-                await websocket.send_json(message)
-            except RuntimeError:
+                await asyncio.wait_for(websocket.send_json(message), timeout=self.send_timeout_s)
+            except (WebSocketDisconnect, asyncio.TimeoutError, TimeoutError):
                 stale_connections.append(websocket)
-            except WebSocketDisconnect:
+            except Exception:
                 stale_connections.append(websocket)
         for websocket in stale_connections:
             self.disconnect(websocket)
@@ -45,7 +53,7 @@ class LiveNotebookHub:
 def build_app(*, service: NotebookService) -> FastAPI:
     service.startup_preflight()
     static_dir = Path(__file__).resolve().parent / 'static'
-    hub = LiveNotebookHub()
+    hub = LiveNotebookHub(send_timeout_s=5.0)
     index_html = (static_dir / 'index.html').read_text(encoding='utf-8')
     app = FastAPI(title='notebook-engine', version='0.2.0')
 
@@ -92,25 +100,39 @@ def build_app(*, service: NotebookService) -> FastAPI:
         return service.list_blocks()
 
     @app.post('/api/blocks', response_model=Block, status_code=status.HTTP_201_CREATED)
-    async def api_blocks_create(payload: BlockCreate) -> Block:
+    async def api_blocks_create(
+        payload: BlockCreate,
+        expected_revision_id: str | None = Query(default=None),
+    ) -> Block:
         try:
-            manifest, block = service.create_block(payload)
+            _, block = service.create_block(payload, expected_revision_id=expected_revision_id)
         except BlockValidationError as exc:
             raise RequestValidationError([exc.to_request_error()]) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         await publish_manifest('manifest.updated', extra={'block': block.model_dump(mode='json')})
         return block
 
     @app.delete('/api/blocks/{block_id}', status_code=status.HTTP_204_NO_CONTENT)
-    async def api_blocks_delete(block_id: str) -> Response:
-        manifest, deleted = service.delete_block(block_id)
+    async def api_blocks_delete(
+        block_id: str,
+        expected_revision_id: str | None = Query(default=None),
+    ) -> Response:
+        try:
+            _, deleted = service.delete_block(block_id, expected_revision_id=expected_revision_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         if not deleted:
             raise HTTPException(status_code=404, detail='Block not found')
         await publish_manifest('manifest.updated', extra={'blockId': block_id})
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post('/api/blocks/clear', status_code=status.HTTP_204_NO_CONTENT)
-    async def api_blocks_clear() -> Response:
-        service.clear_blocks()
+    async def api_blocks_clear(expected_revision_id: str | None = Query(default=None)) -> Response:
+        try:
+            service.clear_blocks(expected_revision_id=expected_revision_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         await publish_manifest('manifest.updated', extra={'cleared': True})
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -147,8 +169,20 @@ def build_app(*, service: NotebookService) -> FastAPI:
     async def api_csv_import(
         csv_text: str = Body(..., media_type='text/plain'),
         dry_run: bool = Query(default=False),
+        partial: bool = Query(default=False),
+        expected_revision_id: str | None = Query(default=None),
     ) -> dict[str, object]:
-        payload = service.import_csv(csv_text, dry_run=dry_run)
+        try:
+            payload = service.import_csv(
+                csv_text,
+                dry_run=dry_run,
+                partial=partial,
+                expected_revision_id=expected_revision_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        if payload.get('aborted'):
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=payload)
         if not dry_run:
             await publish_manifest('manifest.updated', extra={'csvImport': payload})
         return payload
@@ -163,6 +197,11 @@ def build_app(*, service: NotebookService) -> FastAPI:
         try:
             payload = service.render_compass(profile=profile)
         except RuntimeError as exc:
+            service.emit_audit_event(
+                tool='compass.render',
+                status='failure',
+                metadata={'kind': 'compass.render.failed', 'profile': profile, 'error': str(exc)},
+            )
             await hub.broadcast('compass.render.failed', {'profile': profile, 'error': str(exc)})
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         await hub.broadcast('compass.render.completed', payload)
@@ -189,13 +228,19 @@ def build_app(*, service: NotebookService) -> FastAPI:
             await websocket.send_json(
                 {
                     'type': 'hello',
+                    'evt': hub.next_evt_id(),
+                    'revisionId': manifest.current_revision_id,
                     'manifest': manifest.model_dump(mode='json'),
                     'blocks': [block.model_dump(mode='json') for block in manifest.blocks],
                     'revisions': [revision.model_dump(mode='json') for revision in service.list_revisions(limit=5)],
                 }
             )
             while True:
-                await websocket.receive_text()
+                try:
+                    await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                except asyncio.TimeoutError:
+                    # Idle heartbeat loop: keep socket open for broadcast-only clients.
+                    continue
         except WebSocketDisconnect:
             pass
         finally:

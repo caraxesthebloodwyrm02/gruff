@@ -25,6 +25,56 @@ let liveSocket = null;
 let reconnectTimer = null;
 let reconnectDelayMs = 800;
 
+/** Server-assigned monotonic ids on WS frames; ignore replays for de-duplication. */
+const EVT_WINDOW = 256;
+const recentEvts = [];
+const recentEvtSet = new Set();
+
+/** If the channel is open but we receive no fresh frames, surface a stale HUD state. */
+const STALE_AFTER_MS = 45000;
+let lastWsActivity = Date.now();
+let staleCheckTimer = null;
+let staleWatchStarted = false;
+
+function isDuplicateEvt(evt) {
+    if (evt == null || typeof evt !== 'number') {
+        return false;
+    }
+    if (recentEvtSet.has(evt)) {
+        return true;
+    }
+    recentEvtSet.add(evt);
+    recentEvts.push(evt);
+    while (recentEvts.length > EVT_WINDOW) {
+        const drop = recentEvts.shift();
+        recentEvtSet.delete(drop);
+    }
+    return false;
+}
+
+function touchWsActivity() {
+    lastWsActivity = Date.now();
+    wsStatus.classList.remove('ws-stale');
+    if (wsStatus.textContent === 'stale') {
+        wsStatus.textContent = 'live';
+    }
+}
+
+function startStaleChecker() {
+    if (staleCheckTimer) {
+        clearInterval(staleCheckTimer);
+    }
+    staleCheckTimer = setInterval(() => {
+        if (!liveSocket || liveSocket.readyState !== WebSocket.OPEN) {
+            return;
+        }
+        if (Date.now() - lastWsActivity > STALE_AFTER_MS) {
+            wsStatus.textContent = 'stale';
+            wsStatus.classList.add('ws-stale');
+        }
+    }, 4000);
+}
+
 const TONES = {
     amber: { border: '#ffb703', fill: 'rgba(255, 183, 3, 0.16)', glow: 'rgba(255, 183, 3, 0.32)', text: '#ffe8a3' },
     mint: { border: '#2ec4b6', fill: 'rgba(46, 196, 182, 0.16)', glow: 'rgba(46, 196, 182, 0.28)', text: '#b8f4ee' },
@@ -100,16 +150,26 @@ function connectLiveChannel() {
     if (liveSocket && liveSocket.readyState <= WebSocket.OPEN) {
         return;
     }
+    if (!staleWatchStarted) {
+        staleWatchStarted = true;
+        startStaleChecker();
+    }
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     liveSocket = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
     liveSocket.addEventListener('open', () => {
         wsStatus.textContent = 'live';
+        wsStatus.classList.remove('ws-stale');
         reconnectDelayMs = 800;
+        touchWsActivity();
     });
 
     liveSocket.addEventListener('message', (event) => {
         const payload = JSON.parse(event.data);
+        if (isDuplicateEvt(payload.evt)) {
+            return;
+        }
+        touchWsActivity();
         if (payload.manifest) {
             setManifest(payload.manifest);
         }
@@ -118,6 +178,7 @@ function connectLiveChannel() {
 
     liveSocket.addEventListener('close', () => {
         wsStatus.textContent = 'reconnecting';
+        wsStatus.classList.remove('ws-stale');
         if (!reconnectTimer) {
             reconnectTimer = setTimeout(() => {
                 reconnectTimer = null;
@@ -129,6 +190,7 @@ function connectLiveChannel() {
 
     liveSocket.addEventListener('error', () => {
         wsStatus.textContent = 'error';
+        wsStatus.classList.remove('ws-stale');
     });
 }
 

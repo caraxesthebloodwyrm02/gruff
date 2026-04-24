@@ -99,6 +99,13 @@ class NotebookManifest(BaseModel):
     revisions: list[NotebookRevision] = Field(default_factory=list)
     events: list[NotebookEvent] = Field(default_factory=list)
     current_revision_id: str | None = None
+    # Monotonic counters — never depend on len(revisions) or len(events)
+    next_revision_number: int = Field(default=0, ge=0)
+    next_event_sequence: int = Field(default=0, ge=0)
+    # Retention policy knobs
+    max_revisions: int = Field(default=100, ge=1)
+    max_events: int = Field(default=200, ge=1)
+    archive_path: str | None = None
     integration: IntegrationMetadata = Field(default_factory=IntegrationMetadata)
 
     def head_revision(self) -> NotebookRevision | None:
@@ -108,6 +115,14 @@ class NotebookManifest(BaseModel):
             if revision.revision_id == self.current_revision_id:
                 return revision
         return None
+
+    def get_next_revision_number(self) -> int:
+        """Return the next revision number based on monotonic counter."""
+        return self.next_revision_number
+
+    def get_next_event_sequence(self) -> int:
+        """Return the next event sequence based on monotonic counter."""
+        return self.next_event_sequence
 
     def snapshot_hash(self) -> str:
         payload = self.model_dump(
@@ -138,5 +153,8 @@ def create_default_manifest(*, grid: GridConfig | None = None, notebook_id: str 
     manifest.events.append(bootstrap_event)
     manifest.revisions.append(bootstrap_revision)
     manifest.current_revision_id = bootstrap_revision.revision_id
+    # Monotonic counters track next available numbers (bootstrap is 0)
+    manifest.next_revision_number = 1
+    manifest.next_event_sequence = 1
     manifest.updated_at = utc_now()
     return manifest

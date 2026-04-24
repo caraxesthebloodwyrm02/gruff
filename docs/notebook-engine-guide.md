@@ -1,6 +1,6 @@
 # Notebook Engine Guide
 
-The canonical LO7 notebook runtime now lives in [`python-prototype`](/home/irfankabir/gruff/workspace/python-prototype). It is manifest-first, revisioned, and bridge-aware.
+The canonical LO7 notebook runtime now lives in `python-prototype/` (at the repo root). It is manifest-first, revisioned, and bridge-aware.
 
 ## Daily Flow
 
@@ -76,23 +76,29 @@ Core endpoints:
 
 - `GET /api/health`
 - `GET /api/manifest`
-- `PUT /api/manifest`
+- `PUT /api/manifest?expected_revision_id=<optional>`
 - `GET /api/grid`
 - `GET /api/blocks`
-- `POST /api/blocks`
-- `DELETE /api/blocks/{id}`
-- `POST /api/blocks/clear`
+- `POST /api/blocks?expected_revision_id=<optional>`
+- `DELETE /api/blocks/{id}?expected_revision_id=<optional>`
+- `POST /api/blocks/clear?expected_revision_id=<optional>`
 - `GET /api/revisions`
 - `GET /api/events`
 - `GET /api/exports/markdown`
-- `POST /api/exports/csv-import?dry_run=true|false`
+- `POST /api/exports/csv-import?dry_run=true|false&partial=true|false&expected_revision_id=<optional>`
 - `GET /api/compass/status`
 - `POST /api/compass/render?profile=default|diagnostic|bridge`
 - `GET /api/bridge/payload`
 - `POST /api/bridge/payload`
 - `WS /ws`
 
-WebSocket event kinds emitted by the server:
+WebSocket protocol notes:
+
+- Every frame includes a monotonic integer **`evt`** (including `hello`) so clients can **de-dupe** replays or double-deliveries.
+- The initial **`hello`** also includes **`revisionId`** (current head), **`manifest`**, **`blocks`**, and a short **`revisions`** tail.
+- Each `send_json` uses a **per-connection timeout** (default 5s); slow or dead peers are dropped from the hub so broadcasts do not wedge.
+
+Event kinds emitted by the server:
 
 - `hello`
 - `manifest.updated`
@@ -134,19 +140,34 @@ This integration also restores the referenced assets that were missing from the 
 - [`PACKAGING.md`](/home/irfankabir/gruff/workspace/docs/PACKAGING.md)
 - [`GRUFF_WALLBOARD_BRIDGE.md`](/home/irfankabir/gruff/workspace/docs/GRUFF_WALLBOARD_BRIDGE.md)
 
+## Concurrency and imports
+
+- **Optimistic concurrency:** Any mutating block endpoint, full manifest replace, and CSV import accept optional `expected_revision_id` (the client’s last seen `current_revision_id`). When it does not match the server head, the API returns **409** so concurrent editors do not silently clobber each other.
+- **CSV import:** Rows are validated (integer bounds, margin rules, allowed tones). Without `partial=true`, a single bad row aborts the import (**422** with a per-row `errors` list). With `partial=true`, well-formed rows are committed and bad rows are reported in `errors` (`skipped_count` reflects invalid rows).
+
+## History size (manifest growth)
+
+- Revisions and events are capped in the primary manifest file (default **500** entries; minimum enforced in code is **2** for sanity). Older pairs are **appended** to a sidecar archive: `notebook.manifest.json.history.jsonl` next to the manifest. Startup and in-process diffs stay bounded; use the archive for long-term audit if needed.
+
 ## Prototype Parity
 
-Python is now the feature-complete runtime.
+Python is the feature-complete runtime. **Go and Rust are intentionally frozen** at their current scope (grid-oriented baselines): they are not chasing Python feature parity until a milestone is explicitly planned. That avoids silent drift and duplicate maintenance.
+
+**Minimal parity roadmap (when you choose to un-freeze):**
+
+1. Shared wire types / JSON schema for `notebook-manifest-v1` and revision events.
+2. Read-only manifest load + block CRUD with the same `expected_revision_id` rules.
+3. Optional: WebSocket event shape alignment with Python’s `/ws` contract.
 
 | Runtime | Status | Notes |
 | --- | --- | --- |
 | Python | Canonical | Manifest, revisions, events, heatmap, craft hook, Gruff bridge |
-| Go | Secondary | Grid and block APIs remain healthy; no manifest or craft integration yet |
-| Rust | Secondary | Grid baseline remains green; no manifest or bridge parity yet |
+| Go | Frozen secondary | Grid baseline; no manifest/craft/bridge parity unless scoped |
+| Rust | Frozen secondary | Grid baseline; no manifest/craft/bridge parity unless scoped |
 
 Reference docs:
 
-- [LO7 notebook prototype](/home/irfankabir/gruff/workspace/docs/LO7_NOTEBOOK_PROTOTYPE.md)
-- [LO7 runbook](/home/irfankabir/gruff/workspace/docs/LO7_RUNBOOK.md)
-- [Packaging](/home/irfankabir/gruff/workspace/docs/PACKAGING.md)
-- [Gruff wallboard bridge](/home/irfankabir/gruff/workspace/docs/GRUFF_WALLBOARD_BRIDGE.md)
+- [LO7 notebook prototype](LO7_NOTEBOOK_PROTOTYPE.md)
+- [LO7 runbook](LO7_RUNBOOK.md)
+- [Packaging](PACKAGING.md)
+- [Gruff wallboard bridge](GRUFF_WALLBOARD_BRIDGE.md)

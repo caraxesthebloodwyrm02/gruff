@@ -1,0 +1,28 @@
+{
+  "name": "@irfankabir002/gruff",
+  "version": "1.0.0",
+  "description": "Local Filesystem Umbrella - Trust infrastructure with real-time actor tracking",
+  "main": "dist/cli.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx --watch src/cli.tsx",
+    "lint": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "bin": {
+    "gruff": "dist/cli.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0",
+    "ink": "^4.0.0",
+    "tsup": "^8.5.0",
+    "tsx": "^4.8.0",
+    "typescript": "^5.0.0"
+  },
+  "types": "dist/cli.d.ts",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0"
+  }
+}

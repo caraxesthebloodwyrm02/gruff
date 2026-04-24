@@ -123,3 +123,30 @@ def run_lo7_compass(argv: list[str] | None = None) -> None:
         return
     if args.command == 'emit-bridge':
         _print_payload(service.emit_bridge_payload(), as_json=True if args.json else True)
+
+
+def run_lo7_compact(argv: list[str] | None = None) -> None:
+    """Compact command: estimate or execute manifest retention policy."""
+    parser = argparse.ArgumentParser(prog='lo7-compact')
+    parser.add_argument('--manifest-path', type=Path, default=default_manifest_path())
+    parser.add_argument('--max-revisions', type=int, default=None, help='Override max_revisions retention knob')
+    parser.add_argument('--max-events', type=int, default=None, help='Override max_events retention knob')
+    parser.add_argument('--archive-path', type=Path, default=None, help='Override archive path')
+    parser.add_argument('--dry-run', action='store_true', default=True, help='Estimate impact (default: true)')
+    parser.add_argument('--execute', action='store_false', dest='dry_run', help='Execute compaction (disables dry-run)')
+    parser.add_argument('--json', action='store_true')
+
+    args = parser.parse_args(argv)
+    service = build_service(args.manifest_path, craft_required=False)
+
+    # Apply retention overrides if provided
+    if args.max_revisions is not None or args.max_events is not None:
+        manifest = service.get_manifest()
+        manifest.max_revisions = args.max_revisions or manifest.max_revisions
+        manifest.max_events = args.max_events or manifest.max_events
+        if args.archive_path:
+            manifest.archive_path = str(args.archive_path)
+        service.replace_manifest(manifest, expected_revision_id=None, actor='compact-cli')
+
+    result = service.compact(dry_run=args.dry_run)
+    _print_payload(result, as_json=args.json)

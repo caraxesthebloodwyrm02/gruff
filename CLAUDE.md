@@ -36,23 +36,20 @@ node scripts/diagnostic-paths.mjs --bugs --format  # all stages
 
 ## workspace/ Architecture
 
-`gruff` is a TypeScript CLI + trust-routing overlay published as `@irfankabir002/gruff` on npm (`next` tag). Node ≥ 22 required; `better-sqlite3` builds a native binding on install.
+`gruff` runtime is currently available as compiled Node artifacts plus Python notebook runtime:
 
 ```
-src/
-├── cli.tsx            — entrypoint; dispatches subcommands (actors, route, init, proportion, init-automation)
-├── trust/
-│   ├── db.ts          — SQLite wrapper (~/.gruff/trust.sqlite); actor_profile, events, routing_decisions tables
-│   ├── ingester.ts    — gruff-ingester binary; tails ~/.echoes/audit.ndjson → trust.sqlite
-│   ├── scorer.ts      — recomputeActor(): score = success_rate×100 − (10×recent_failures); tiers: school/practice/hold
-│   └── schema.sql     — DDL; WAL mode, FK enforcement
-├── commands/          — one module per CLI subcommand
-└── menu/
-    ├── Menu.tsx        — top-level Ink component (4-quadrant TUI)
-    └── panels/         — agency.tsx, horizon.tsx, inference.tsx, mcp.tsx
+dist/
+├── cli.js             — entrypoint; commands (actors, route, route-config, init, proportion, init-automation)
+└── trust/ingester.js  — tails ~/.echoes/audit.ndjson → ~/.gruff/trust.sqlite
+
+src/trust/schema.sql   — SQLite DDL (events, actor_profile, routing_decisions)
+
+python-prototype/
+└── src/notebook_engine — canonical LO7 runtime (manifest + WS + compass + bridge)
 ```
 
-**Data flow**: `gruff-ingester` reads `~/.echoes/audit.ndjson` (append-only NDJSON from the MCP fleet via `emitAudit`), writes rows to `~/.gruff/trust.sqlite`, and recomputes actor scores/tiers. The `gruff` TUI reads only from SQLite. `gruff proportion` validates and POSTs a `gruff-proportion-v1` JSON body to the gruff-echoes bridge (stub at `bridges/gruff-echoes/receiver.py`; real target: Echoes FastAPI).
+**Data flow**: `gruff-ingester` reads `~/.echoes/audit.ndjson` (append-only NDJSON), writes rows to `~/.gruff/trust.sqlite`, and recomputes actor scores/tiers. The `gruff` TUI/commands read from SQLite. `gruff proportion` validates and POSTs a `gruff-proportion-v1` JSON body to the gruff-echoes bridge (stub at `bridges/gruff-echoes/receiver.py`; real target: Echoes FastAPI).
 
 **Published exports** (non-JS, accessible to other packages):
 - `@irfankabir002/gruff/tokens.json` — GRID design-system tokens

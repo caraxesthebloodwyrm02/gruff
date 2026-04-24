@@ -23,7 +23,7 @@ cd python-prototype && source .venv/bin/activate && python -m pytest tests/ -q
 - **dist/** — Compiled output (CLI entrypoint, ingester binary)
 - **python-prototype/** — Notebook engine (LO7 runtime)
 - **bridges/** — Echoes bridge (HTTP stub)
-- **CascadeProjects/** — Not initialized (doc only)
+- **CascadeProjects/** — Symlink → `/mnt/arch_data/home/caraxes/CascadeProjects`
 
 ## Key Entry Points
 
@@ -66,3 +66,25 @@ teardownScenario(ctx, { exitReason: "completed" });
 - `CLAUDE.md` — Workspace guidance
 - `.c8rc.json` — Coverage config
 - `Makefile` — verify-planes, fourfold-snap, submodule-init
+
+## MCP Best Picks (TypeScript)
+
+Inventory from `CascadeProjects/mcp_inventory.manifest.json`:
+
+| Server | Tools | Status | Purpose |
+|--------|-------|--------|---------|
+| **pulse-server** | 8 | ok | Briefings + focus |
+| **grid-server** | 11 | ok | GRID/GATE bridge |
+| **afloat-server** | 7 | ok | Workflow orchestration |
+| **overview-server** | 6 | ok | Checkpoints + health |
+| **lots-server** | 5 | ok | Experiment catalog |
+| **seeds-server** | 5 | ok | Ecosystem snapshots |
+| **echoes-server** | 4 | ok | Audit + telemetry |
+| **eligibility-server** | 4 | ok | Promotion + hierarchy |
+
+Python GRID servers (mcp-setup):
+- `grid-intelligence` — intelligence queries
+- `grid-rag-enhanced` — enhanced RAG
+- `portfolio-safety-lens` — safety analysis
+
+Run any: `npx -y tsx /path/to/server/src/server.ts`

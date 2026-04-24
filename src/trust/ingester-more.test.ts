@@ -126,6 +126,80 @@ describe("ingester.ts - in-process coverage", () => {
     assert.strictEqual(state.malformed_count, 1);
   });
 
+  it("should return unchanged offset when audit log is missing", async () => {
+    const runtime = makeRuntime();
+    tempHomes.push(runtime.tempHome);
+    const { ingesterModule } = await loadModules(runtime);
+
+    const result = await ingesterModule.__testing.ingestFromOffset(17);
+
+    assert.deepStrictEqual(result, { newOffset: 17, malformed: 0 });
+  });
+
+  it("should return unchanged offset when audit log has no new bytes", async () => {
+    const runtime = makeRuntime();
+    tempHomes.push(runtime.tempHome);
+    const { ingesterModule } = await loadModules(runtime);
+
+    writeFileSync(runtime.auditPath, "[]\n", "utf8");
+    const size = readFileSync(runtime.auditPath, "utf8").length;
+
+    const result = await ingesterModule.__testing.ingestFromOffset(size);
+
+    assert.deepStrictEqual(result, { newOffset: size, malformed: 0 });
+  });
+
+  it("should close timed out sessions as non-ok outcomes", async () => {
+    const runtime = makeRuntime();
+    tempHomes.push(runtime.tempHome);
+    const { dbModule, ingesterModule } = await loadModules(runtime);
+
+    writeFileSync(
+      runtime.auditPath,
+      [
+        JSON.stringify({
+          ts: "2026-04-24T00:02:00.000Z",
+          source: "cli-timeout",
+          tool: "start",
+          actor: "timeout-actor",
+          session_id: "timeout-sess",
+          status: "success",
+          metadata: { actor: "timeout-actor", session_id: "timeout-sess" },
+        }),
+        JSON.stringify({
+          ts: "2026-04-24T00:02:02.000Z",
+          source: "cli-timeout",
+          tool: "wait",
+          actor: "timeout-actor",
+          session_id: "timeout-sess",
+          status: "timeout",
+          metadata: { actor: "timeout-actor", session_id: "timeout-sess" },
+        }),
+        "",
+      ].join("\n"),
+      "utf8"
+    );
+
+    await ingesterModule.__testing.runOnce();
+
+    dbModule.resetDb();
+    const db = new Database(runtime.dbPath, { readonly: true });
+    const session = db.prepare(
+      "SELECT active, exit_reason, ok_count, err_count FROM actor_sessions WHERE actor = ? AND session_id = ?"
+    ).get("timeout-actor", "timeout-sess") as {
+      active: number;
+      exit_reason: string;
+      ok_count: number;
+      err_count: number;
+    };
+    db.close();
+
+    assert.strictEqual(session.active, 0);
+    assert.strictEqual(session.exit_reason, "timeout");
+    assert.strictEqual(session.ok_count, 0);
+    assert.ok(session.err_count >= 1);
+  });
+
   it("should process appended events while watching", async () => {
     const runtime = makeRuntime();
     tempHomes.push(runtime.tempHome);
@@ -182,5 +256,33 @@ describe("ingester.ts - in-process coverage", () => {
 
     assert.strictEqual(session.active, 0);
     assert.strictEqual(session.exit_reason, "completed");
+  });
+
+  it("should honor explicit bridge URL override", async () => {
+    const runtime = makeRuntime();
+    tempHomes.push(runtime.tempHome);
+    const { ingesterModule } = await loadModules(runtime);
+    const originalFetch = globalThis.fetch;
+    const originalBridgeUrl = process.env.GRUFF_ECHOES_BRIDGE_URL;
+    let seenUrl = "";
+
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      seenUrl = String(input);
+      return { status: 202, statusText: "Accepted" } as Response;
+    }) as typeof fetch;
+    process.env.GRUFF_ECHOES_BRIDGE_URL = "https://echoes.example.test/gruff-proportion";
+
+    try {
+      await ingesterModule.sendProportion({ schemaVersion: "gruff-proportion-v1" });
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalBridgeUrl === undefined) {
+        delete process.env.GRUFF_ECHOES_BRIDGE_URL;
+      } else {
+        process.env.GRUFF_ECHOES_BRIDGE_URL = originalBridgeUrl;
+      }
+    }
+
+    assert.strictEqual(seenUrl, "https://echoes.example.test/gruff-proportion");
   });
 });

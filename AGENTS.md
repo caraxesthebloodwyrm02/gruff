@@ -153,3 +153,95 @@ Output artifacts:
 - `~/.ori/runs/{runId}.json` — structured result
 
 Signal persistence: Only lines matching ≥1 pattern are logged.
+
+## Transformation Schema (Biochem-Inspired)
+
+Inspired by Mystique's shapeshifting + biochemistry Hox genes:
+
+### File Extension Transformations
+
+| From | To | Method |
+|------|-----|--------|
+| `.ts` | `.js` | `tsc` / `esbuild` |
+| `.tsx` | `.jsx` | `swc` |
+| `.py` | `.pyc` | `compile` |
+| `.md` | `.html` | `marked` / `pandoc` |
+| `.json` | `.ts` | `json2ts` |
+| `.yaml` | `.json` | `js-yaml` |
+| `.sql` | `.duckdb` | `duckdb` |
+| `.pdf` | `.txt` | `pdftotext` |
+| `.png` | `.txt` | `tesseract` (OCR) |
+| `.wav` | `.txt` | `whisper` (STT) |
+
+### Multimodal Transfigurations
+
+| Mode | Source | Target | Tool |
+|------|--------|--------|------|
+| code↔doc | `.ts` | `.md` | `typedoc` |
+| image↔text | `.png` | `.txt` | `tesseract` |
+| audio↔text | `.mp3` | `.txt` | `whisper` |
+| video↔frames | `.mp4` | `.jpg` | `ffmpeg` |
+| pdf↔html | `.pdf` | `.html` | `pdf2html` |
+| db↔sql | `.duckdb` | `.sql` | `.duckdump` |
+
+### Dimensional Cross-References
+
+Cross-dimension mapping (inspired by Hox gene colinearity):
+
+```typescript
+// Dimensional axes: syntax ↔ semantics ↔ runtime
+type Dimension = "syntax" | "semantics" | "runtime";
+
+// Colinear mapping: index position maps to body region
+// File path position maps to transformation tier
+const TRANSFORM_TIER = {
+  tier0: "parsing",    // index 0: raw input
+  tier1: "parsing",   // index 1: AST
+  tier2: "semantics",  // index 2: typed AST
+  tier3: "codegen",   // index 3: output
+} as const;
+```
+
+### Baseline Transformer Rules (Thumbs)
+
+Based on Mystique's limits + Hox gene regulation:
+
+| Rule | Description |
+|------|-------------|
+| **Mass conservation** | Input ≈ output (no data expansion) |
+| **No power mimicry** | Transform structure, not behavior |
+| **Concentration required** | Mental effort for complex transforms |
+| **Time limit** | Extreme transforms ≤2min hold |
+| **Colinearity** | Order maps to order (index preservation) |
+| **Selector→Realizator** | Parse → Emit pipeline |
+
+### Hook Architecture
+
+```typescript
+// Hook: pre-transform & post-transform
+interface TransformHook<TIn, TOut> {
+  before?: (input: TIn) => TIn;
+  after?: (output: TOut) => TOut;
+  // Inspired by: Mystique's psionic control
+}
+
+// Registry-based transformation
+const transformerRegistry = {
+  ".ts": { to: ".js", tool: "esbuild", tier: "codegen" },
+  ".md": { to: ".html", tool: "marked", tier: "emit" },
+  // Colinear: tier index maps to transform stage
+};
+```
+
+Pure programming definition:
+
+```typescript
+type Transform<TIn, TOut> = (input: TIn) => TOut;
+
+interface Transformer<T> {
+  readonly sourceExt: string;
+  readonly targetExt: string;
+  readonly transform: Transform<T, T>;
+  readonly tier: 0 | 1 | 2 | 3;  // Hox colinearity
+}
+```

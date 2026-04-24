@@ -245,3 +245,44 @@ interface Transformer<T> {
   readonly tier: 0 | 1 | 2 | 3;  // Hox colinearity
 }
 ```
+
+## Architecture/Attention Matrix (Transformation Feature)
+
+Deeply embedded in notebook.ts + ori-server:
+
+### Feature Matrix
+
+| Feature | Location | Status |
+|---------|----------|--------|
+| TransformRegistry | notebook.ts:250 | ✅ |
+| TransformationEntry type | notebook.ts:55 | ✅ |
+| logTransformation() | notebook.ts:282 | ✅ |
+| getTransformationHistory() | notebook.ts:305 | ✅ |
+| getTransformStats() | notebook.ts:318 | ✅ |
+| Category: "transformation" | notebook.ts:43 | ✅ |
+
+### Attention Weights (Tier Mapping)
+
+| Tier | Layer | Attention | Function |
+|------|-------|-----------|-----------|
+| 0 | parsing | low | Input→raw |
+| 1 | AST | medium | Parse tree |
+| 2 | semantics | high | Type checking |
+| 3 | codegen | critical | Output emit |
+
+### Hook Wiring
+
+```typescript
+// Notebook transform hook (pre/post)
+interface TransformHook<TIn, TOut> {
+  before?: (input: TIn) => TIn;  // Mystique: concentration
+  after?: (output: TOut) => TOut; // Hox: realizator
+  tier: 0 | 1 | 2 | 3;
+}
+```
+
+### Phenomenon References
+
+- **Mystique**: psionic cell control, mass conservation, time limits
+- **Hox genes**: colinearity, selector→realizator
+- **Biochem**: dedifferentiation, transdifferentiation

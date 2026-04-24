@@ -10,7 +10,7 @@ import pytest
 from notebook_engine.api import build_app
 from notebook_engine.blocks import BlockCreate
 
-from service_doubles import make_notebook_service
+from notebook_engine.test_doubles import make_notebook_service
 
 
 @pytest.fixture

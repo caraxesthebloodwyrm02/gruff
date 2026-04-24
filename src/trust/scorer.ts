@@ -68,6 +68,9 @@ export function recomputeActor(
     WHERE actor = ?
   `).get(recentCutoff, actor) as ScoreCounts;
 
+  // No events for actor = no-op (nothing to recompute)
+  if (!counts || (counts as any).event_count === 0) return;
+
   const score = computeScore(counts);
   const firstSeen = (
     stmt(db, "SELECT MIN(ts) as f FROM events WHERE actor = ?").get(actor) as { f: string | null }

@@ -97,9 +97,13 @@ class NotebookService:
                 **(metadata or {}),
             },
         }
-        self._audit_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._audit_path.open('a', encoding='utf-8') as handle:
-            handle.write(json.dumps(event, separators=(',', ':')) + '\n')
+        try:
+            self._audit_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._audit_path.open('a', encoding='utf-8') as handle:
+                handle.write(json.dumps(event, separators=(',', ':')) + '\n')
+        except OSError:
+            # Audit emission should never break notebook mutations in constrained envs.
+            return
 
     def _load_manifest(self) -> NotebookManifest:
         if not self.manifest_path.exists():

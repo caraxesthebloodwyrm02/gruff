@@ -13,6 +13,9 @@ const PKG_ROOT = existsSync(join(__dirname, "../package.json"))
   ? resolve(__dirname, "..")
   : resolve(__dirname, "../..");
 
+
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
 export const TIER_ORDER = ["hold", "practice", "school"] as const;
 export type Tier = (typeof TIER_ORDER)[number];
 
@@ -67,6 +70,17 @@ export function trustDbPath(): string {
 // ─── Connection factory ────────────────────────────────────────────────────────
 
 let _primaryDb: Database.Database | null = null;
+
+// ─── DB Reset (for testing) ───────────────────────────────────────────
+
+export function resetDb(): void {
+  if (_primaryDb) {
+    try { _primaryDb.close(); } catch {}
+    _primaryDb = null;
+  }
+  _stmtCache.clear();
+}
+
 const _readReplicas: Database.Database[] = [];
 const _stmtCache = new Map<string, Database.Statement>();
 

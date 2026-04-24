@@ -1,0 +1,15 @@
+{
+  "all": true,
+  "src": ["src"],
+  "include": ["**/*.{ts,tsx}"],
+  "exclude": ["dist", "node_modules", "**/*.test.ts", "**/test-*.ts", "cli.tsx"],
+  "reporter": ["text", "html", "lcov"],
+  "reports-dir": "./coverage",
+  "check-coverage": true,
+  "lines": 65,
+  "branches": 70,
+  "functions": 70,
+  "statements": 65,
+  "skip-full": true,
+  "extension": [".ts", ".tsx"]
+}

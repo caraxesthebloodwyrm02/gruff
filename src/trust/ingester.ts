@@ -4,13 +4,14 @@
 //   node ingester.js            — single pass, exit
 //   node ingester.js --watch     — tail-and-watch mode
 
-import { createReadStream, statSync, watchFile, createWriteStream } from "fs";
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync } from "fs";
+import { createReadStream, statSync, watchFile } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { createHash } from "crypto";
 import { homedir } from "os";
 import { join } from "path";
 import { createInterface } from "readline";
-import { getDb, stmt, getActorProfile, startSession, heartbeatSession, closeSession, recordSessionOutcome } from "./db.js";
+import { pathToFileURL } from "url";
+import { getDb, stmt, startSession, heartbeatSession, closeSession, recordSessionOutcome } from "./db.js";
 import { recomputeActor } from "./scorer.js";
 
 // ─── Paths ──────────────────────────────────────────────────────────────────
@@ -54,21 +55,6 @@ function fingerprintForEvent(event: Record<string, unknown>): string {
     payload_json: event.payload_json ?? null,
   });
   return createHash("sha256").update(canonical).digest("hex");
-}
-
-function isDuplicate(fingerprint: string): boolean {
-  const db = getDb();
-  const row = stmt(db,
-    "SELECT 1 FROM event_fingerprints WHERE fingerprint = ?"
-  ).get(fingerprint);
-  return row !== undefined;
-}
-
-function markFingerprint(fingerprint: string): void {
-  const db = getDb();
-  stmt(db,
-    "INSERT OR IGNORE INTO event_fingerprints (fingerprint, seen_at) VALUES (?, ?)"
-  ).run(fingerprint, new Date().toISOString());
 }
 
 // ─── Event ingestion ─────────────────────────────────────────────────────────
@@ -119,6 +105,7 @@ export function deriveActor(event: Record<string, unknown>): string {
   const candidates = [
     m?.entity_id,
     m?.server_id,
+    m?.client_id,
     m?.client,
     m?.actor,
     m?.subject,
@@ -326,17 +313,38 @@ async function runWatch(): Promise<void> {
 
 // ─── CLI entry ───────────────────────────────────────────────────────────────
 
-const watch = process.argv.includes("--watch");
-if (watch) {
-  runWatch().catch(e => {
-    process.stderr.write(`[gruff-ingester] fatal: ${e}\n`);
-    process.exit(1);
-  });
-} else {
-  runOnce()
-    .then(() => process.exit(0))
-    .catch(e => {
+function isCliEntrypoint(): boolean {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  return import.meta.url === pathToFileURL(argv1).href;
+}
+
+export const __testing = {
+  paths: {
+    AUDIT_PATH,
+    GRUFF_DIR,
+    STATE_PATH,
+    SESSION_ALIVE_PATH,
+  },
+  ingestFromOffset,
+  runOnce,
+  runWatch,
+  isCliEntrypoint,
+};
+
+if (isCliEntrypoint()) {
+  const watch = process.argv.includes("--watch");
+  if (watch) {
+    runWatch().catch(e => {
       process.stderr.write(`[gruff-ingester] fatal: ${e}\n`);
       process.exit(1);
     });
+  } else {
+    runOnce()
+      .then(() => process.exit(0))
+      .catch(e => {
+        process.stderr.write(`[gruff-ingester] fatal: ${e}\n`);
+        process.exit(1);
+      });
+  }
 }

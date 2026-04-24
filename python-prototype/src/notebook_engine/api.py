@@ -236,11 +236,9 @@ def build_app(*, service: NotebookService) -> FastAPI:
                 }
             )
             while True:
-                try:
-                    await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
-                except asyncio.TimeoutError:
-                    # Idle heartbeat loop: keep socket open for broadcast-only clients.
-                    continue
+                message = await websocket.receive()
+                if message.get('type') == 'websocket.disconnect':
+                    break
         except WebSocketDisconnect:
             pass
         finally:

@@ -125,3 +125,31 @@ Most interacted patterns from `patterns.ts`:
 | `test_skip` | Skipped test | `/skip(ped)?\|todo\|pending\|disabled\s+test/i` | info |
 
 Run classifier: `classifyLine(line)` → `{severity, matchedPatterns[]}`
+
+## Post-Hook Action Exercises (ori-server executor)
+
+Post-run actions from `executor.ts`:
+
+| Action | Description |
+|--------|-------------|
+| `runTestSuite(projectId)` | Execute single project test suite |
+| `runAllTests(projectIds?)` | Execute multi-project sequentially |
+| `getRunResult(runId)` | Retrieve past run by ID |
+| `listRuns({limit?, offset?})` | List past runs (default 20) |
+
+Post-run status values:
+
+| Status | Meaning | Health |
+|--------|---------|--------|
+| `passed` | All tests pass | healthy |
+| `failed` | Tests failed | failing |
+| `error` | Execution error | failing |
+| `timeout` | Timed out | degraded |
+
+Output artifacts:
+
+- `~/.ori/runs/{runId}.stdout` — raw stdout
+- `~/.ori/runs/{runId}.stderr` — raw stderr
+- `~/.ori/runs/{runId}.json` — structured result
+
+Signal persistence: Only lines matching ≥1 pattern are logged.

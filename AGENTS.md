@@ -105,3 +105,23 @@ Project registry from `registry-data.ts` — 28 projects tracked:
 Seed: `~/.ori/registry/registry.json` (auto-created on first run)
 
 Run discovery: `listProjects()`, `discoverTestSuites(id)`
+
+## Regex Pattern Board (ori-server)
+
+Most interacted patterns from `patterns.ts`:
+
+| Pattern ID | Label | Regex | Severity |
+|-----------|-------|-------|----------|
+| `assertion_error` | Assertion failure | `/AssertionError\|assert\s+failed\|expect.*to\s+be/i` | critical |
+| `timeout` | Timeout detected | `/TimeoutError\|timed?\s*out\|Exceeded\s+timeout\|ETIMEDOUT/i` | critical |
+| `unhandled_rejection` | Unhandled promise rejection | `/UnhandledPromiseRejection\|unhandled\s+rejection\|promise.*reject/i` | critical |
+| `race_condition` | Race condition signal | `/race\s+condition\|concurrent\s+modif\|deadlock\|lock\s+contention/i` | critical |
+| `type_error` | Type mismatch | `/TypeError\|Cannot\s+read\s+propert\|undefined\s+is\s+not/i` | warning |
+| `network_error` | Network failure | `/ECONNREFUSED\|ENOTFOUND\|fetch\s+failed\|network\s+error/i` | warning |
+| `deprecation` | Deprecation warning | `/deprecat(ed\|ion)\|will\s+be\s+removed\|no\s+longer\s+supported/i` | warning |
+| `memory_leak` | Memory concern | `/memory\s+leak\|heap\s+(out\|exhausted)\|MaxListenersExceeded/i` | warning |
+| `flaky_test` | Flaky test signal | `/flaky?\s+test\|intermittent\s+(fail\|error)\|non-determin/i` | warning |
+| `console_warn` | Console warning | `/console\.warn\|WARN\s*[:\]]/i` | info |
+| `test_skip` | Skipped test | `/skip(ped)?\|todo\|pending\|disabled\s+test/i` | info |
+
+Run classifier: `classifyLine(line)` → `{severity, matchedPatterns[]}`

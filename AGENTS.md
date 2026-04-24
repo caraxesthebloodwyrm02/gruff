@@ -126,6 +126,43 @@ Most interacted patterns from `patterns.ts`:
 
 Run classifier: `classifyLine(line)` → `{severity, matchedPatterns[]}`
 
+## Transformation Feature (ori-server notebook)
+
+Biochem-inspired (Mystique + Hox genes):
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| TRANSFORM_REGISTRY | notebook.ts:250 | ✅ |
+| TransformationEntry | notebook.ts:55 | ✅ |
+| logTransformation() | notebook.ts:282 | ✅ |
+| getTransformationHistory() | notebook.ts:305 | ✅ |
+| getTransformStats() | notebook.ts:318 | ✅ |
+| Category: "transformation" | notebook.ts:43 | ✅ |
+
+MCP Tools (+4):
+
+| Tool | Purpose |
+|------|--------|
+| transform_log | Log extension transformation |
+| transform_history | Query past transforms |
+| transform_stats | Get statistics by tier/tool |
+
+Registry (10 mappings):
+
+| From | To | Tool | Tier |
+|------|-----|------|------|
+| .ts | .js | esbuild | 3 |
+| .md | .html | marked | 3 |
+| .json | .ts | json2ts | 2 |
+| .yaml | .json | js-yaml | 2 |
+| .pdf | .txt | pdftotext | 3 |
+| .png | .txt | tesseract | 3 |
+| .mp3 | .txt | whisper | 3 |
+
+Demo: `Tools/MCPServers/ori-server/docs/TRANSFORMATION-DEMO.md`
+
+## Post-Hook Action Exercises (ori-server executor)
+
 ## Post-Hook Action Exercises (ori-server executor)
 
 Post-run actions from `executor.ts`:

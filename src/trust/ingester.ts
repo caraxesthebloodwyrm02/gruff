@@ -292,6 +292,23 @@ async function runOnce(): Promise<void> {
   );
 }
 
+// ─── Send proportion to Echoes bridge ───────────────────────────────────
+
+export async function sendProportion(
+  payload: Record<string, unknown>,
+): Promise<Response> {
+  const bridgeUrl =
+    process.env.GRUFF_ECHOES_BRIDGE_URL?.trim() ??
+    "http://localhost:8000/api/gruff-proportion";
+
+  const body = JSON.stringify(payload);
+  return fetch(bridgeUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+}
+
 // ─── Watch mode ───────────────────────────────────────────────────────────────
 
 async function runWatch(): Promise<void> {

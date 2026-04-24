@@ -3,7 +3,7 @@
 // Called by the ingester after each batch of events is written.
 
 import type { Tier } from "./db.js";
-import { getDb, stmt } from "./db.js";
+import { getDb, stmt, getActorProfile } from "./db.js";
 
 // ─── Thresholds ───────────────────────────────────────────────────────────────
 
@@ -126,6 +126,19 @@ export function recomputeActor(
     tierChangedAt,
     JSON.stringify(notes),
   );
+}
+
+// ─── Route policy resolution ────────────────────────────────────────────────
+
+export function resolveRoutePolicy(
+  _tool: string,
+  actor: string,
+): { actor: string; tier: Tier; score: number } {
+  const profile = getActorProfile(actor);
+  if (!profile) {
+    return { actor, tier: "hold" as Tier, score: 0 };
+  }
+  return { actor, tier: profile.tier, score: profile.score };
 }
 
 // ─── Bulk recompute (called on startup or schema migration) ──────────────────

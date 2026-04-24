@@ -22,7 +22,7 @@ program
   .description('Route a tool call to the appropriate actor tier')
   .argument('<tool>')
   .argument('<actor>')
-  .action(async (tool, actor) => {
+  .action(async (tool: string, actor: string) => {
     const { resolveRoutePolicy } = await import('./trust/scorer.js');
     const result = resolveRoutePolicy(tool, actor);
     console.log(JSON.stringify(result, null, 2));
@@ -40,9 +40,10 @@ program
   .command('proportion')
   .description('POST gruff-proportion-v1 payload to Echoes bridge')
   .argument('<payload>')
-  .action(async (payload) => {
+  .action(async (payload: string) => {
     const { sendProportion } = await import('./trust/ingester.js');
-    await sendProportion(JSON.parse(payload));
+    const result = await sendProportion(JSON.parse(payload));
+    console.log(`Sent: ${result.status} ${result.statusText}`);
   });
 
-program.parse();
+program.parse(process.argv as any);

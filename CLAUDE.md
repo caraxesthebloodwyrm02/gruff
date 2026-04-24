@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Directory | Mode | Git? | Purpose |
 |-----------|------|------|---------|
 | `workspace/` | Practice / Write | ✅ Yes | The actual `gruff` git repo — all dev work happens here |
-| `school/` | Learning / Read | ❌ No | Sandbox; a symlink to `workspace/CascadeProjects/Tools/MCPServers/school-server` |
+| `school/` | Learning / Read | ❌ No | Sandbox; symlink to external MCPServer (not initialized) |
 
 **Always `cd workspace/` before doing any development.** The `workspace/` directory has its own `CLAUDE.md` with all build commands, architecture, and constraints — that file is authoritative.
 
@@ -56,7 +56,7 @@ python-prototype/
 - `@irfankabir002/gruff/schemas/gruff-proportion-v1` — JSON Schema for wall-board control snapshots
 - `@irfankabir002/gruff/schemas/trust-event-v1` — JSON Schema for trust events
 
-**CascadeProjects submodule**: `workspace/CascadeProjects/` → hogsmade monorepo (14+ MCP servers, shared-types, GRID-main nested submodule). TypeScript compilation explicitly excludes it (`tsconfig.json`). Follow workspace CLAUDE.md GRID rules when touching submodule content.
+**CascadeProjects submodule**: Not currently initialized. Use `git submodule add <url> CascadeProjects` if needed. TypeScript compilation explicitly excludes any submodule (`tsconfig.json`). Follow GRID rules when touching submodule content.
 
 ## Root-Level Files
 

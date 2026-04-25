@@ -97,6 +97,7 @@ def service(tmp_dir: Path) -> NotebookService:
         manifest_schema_path=tmp_dir / 'schemas' / 'notebook-manifest-v1.schema.json',
         craft_required=False,
         max_inline_history=9999,  # Disable auto-compaction
+        audit_enabled=False,
     )
     # Override retention knobs to aggressive values for testing
     service._manifest.max_revisions = 5

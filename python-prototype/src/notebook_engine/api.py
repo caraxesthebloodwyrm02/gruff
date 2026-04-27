@@ -6,8 +6,8 @@ from pathlib import Path
 from fastapi import Body, FastAPI, HTTPException, Query, Response, WebSocket, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, PlainTextResponse
-from fastapi.websockets import WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
+from fastapi.websockets import WebSocketDisconnect
 
 from notebook_engine.blocks import Block, BlockCreate, BlockValidationError
 from notebook_engine.manifest import NotebookManifest
@@ -43,7 +43,7 @@ class LiveNotebookHub:
         for websocket in self._connections:
             try:
                 await asyncio.wait_for(websocket.send_json(message), timeout=self.send_timeout_s)
-            except (WebSocketDisconnect, asyncio.TimeoutError, TimeoutError):
+            except (WebSocketDisconnect, TimeoutError):
                 stale_connections.append(websocket)
             except Exception:
                 stale_connections.append(websocket)
@@ -142,7 +142,7 @@ def build_app(*, service: NotebookService) -> FastAPI:
 
     @app.put('/api/manifest')
     async def api_manifest_put(
-        manifest_payload: dict[str, object] = Body(...),
+        manifest_payload: dict[str, object] = Body(...),  # noqa: B008
         expected_revision_id: str | None = Query(default=None),
     ) -> dict[str, object]:
         try:

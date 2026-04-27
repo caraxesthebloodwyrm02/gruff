@@ -15,7 +15,6 @@ from notebook_engine.blocks import (
     ALLOWED_TONES,
     Block,
     BlockCreate,
-    BlockValidationError,
     normalize_block_create,
     utc_now,
 )
@@ -23,7 +22,6 @@ from notebook_engine.bridge import GruffCompassPayload, build_gruff_payload, per
 from notebook_engine.craft import CraftRenderer
 from notebook_engine.grid import BlockBounds, GridConfig, UniversalGrid
 from notebook_engine.manifest import (
-    ArtifactRef,
     CompassMetrics,
     NotebookEvent,
     NotebookManifest,
@@ -778,7 +776,7 @@ class NotebookService:
             ).encode('utf-8')
         ).hexdigest()
         event_id = f'evt-{sha256(json.dumps({"kind": kind, "data": data, "revision": revision_number}, sort_keys=True).encode("utf-8")).hexdigest()[:16]}'
-        revision_id = f'rev-{sha256(f"{revision_number}:{parent}:{snapshot_hash}".encode("utf-8")).hexdigest()[:16]}'
+        revision_id = f'rev-{sha256(f"{revision_number}:{parent}:{snapshot_hash}".encode()).hexdigest()[:16]}'
         event = NotebookEvent(
             event_id=event_id,
             revision_id=revision_id,

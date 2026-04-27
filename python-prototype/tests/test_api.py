@@ -322,3 +322,134 @@ async def test_audit_emission_can_be_disabled(tmp_path: Path) -> None:
         )
         assert response.status_code == 201
     assert not audit_path.exists()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Gap-fill tests — targets api.py uncovered lines
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.anyio
+async def test_index_returns_html(client: httpx.AsyncClient) -> None:
+    res = await client.get('/')
+    assert res.status_code == 200
+    assert '<html' in res.text or '<!DOCTYPE' in res.text
+
+
+@pytest.mark.anyio
+async def test_grid_endpoint(client: httpx.AsyncClient) -> None:
+    res = await client.get('/api/grid')
+    assert res.status_code == 200
+    body = res.json()
+    assert 'cell_px' in body
+    assert 'cols' in body
+    assert 'rows' in body
+    assert body['cell_px'] == 24
+
+
+@pytest.mark.anyio
+async def test_blocks_list_initially_empty(client: httpx.AsyncClient) -> None:
+    res = await client.get('/api/blocks')
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+@pytest.mark.anyio
+async def test_block_create_validation_error_returns_422(client: httpx.AsyncClient) -> None:
+    res = await client.post(
+        '/api/blocks',
+        json={'min_col': 0, 'max_col': 3, 'min_row': 0, 'max_row': 2, 'label': 'X', 'tone': 'amber'},
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_block_create_invalid_tone_returns_422(client: httpx.AsyncClient) -> None:
+    res = await client.post(
+        '/api/blocks',
+        json={'min_col': 2, 'max_col': 4, 'min_row': 0, 'max_row': 2, 'label': 'X', 'tone': 'neon'},
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_block_delete_nonexistent_returns_404(client: httpx.AsyncClient) -> None:
+    res = await client.delete('/api/blocks/does-not-exist')
+    assert res.status_code == 404
+    assert 'not found' in res.json()['detail'].lower()
+
+
+@pytest.mark.anyio
+async def test_block_delete_with_stale_revision_returns_409(client: httpx.AsyncClient) -> None:
+    head = (await client.get('/api/manifest')).json()['current_revision_id']
+    created = await client.post(
+        '/api/blocks',
+        json={'min_col': 2, 'max_col': 4, 'min_row': 1, 'max_row': 2, 'label': 'D', 'tone': 'amber'},
+    )
+    block_id = created.json()['id']
+    res = await client.delete(f'/api/blocks/{block_id}?expected_revision_id={head}')
+    assert res.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_clear_blocks_with_stale_revision_returns_409(client: httpx.AsyncClient) -> None:
+    head = (await client.get('/api/manifest')).json()['current_revision_id']
+    await client.post(
+        '/api/blocks',
+        json={'min_col': 2, 'max_col': 4, 'min_row': 1, 'max_row': 2, 'label': 'C', 'tone': 'mint'},
+    )
+    res = await client.post(f'/api/blocks/clear?expected_revision_id={head}')
+    assert res.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_manifest_put_replaces_manifest(client: httpx.AsyncClient) -> None:
+    current = (await client.get('/api/manifest')).json()
+    current['board_title'] = 'Updated Board'
+    res = await client.put('/api/manifest', json=current)
+    assert res.status_code == 200
+    assert res.json()['board_title'] == 'Updated Board'
+
+
+@pytest.mark.anyio
+async def test_manifest_put_stale_revision_returns_409(client: httpx.AsyncClient) -> None:
+    head = (await client.get('/api/manifest')).json()['current_revision_id']
+    await client.post(
+        '/api/blocks',
+        json={'min_col': 2, 'max_col': 4, 'min_row': 1, 'max_row': 2, 'label': 'S', 'tone': 'amber'},
+    )
+    current = (await client.get('/api/manifest')).json()
+    res = await client.put(f'/api/manifest?expected_revision_id={head}', json=current)
+    assert res.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_compass_status_endpoint(client: httpx.AsyncClient) -> None:
+    res = await client.get('/api/compass/status')
+    assert res.status_code == 200
+    body = res.json()
+    assert 'renderer' in body
+    assert 'last_profile' in body
+
+
+@pytest.mark.anyio
+async def test_bridge_payload_get_before_emit_returns_404(client: httpx.AsyncClient) -> None:
+    res = await client.get('/api/bridge/payload')
+    assert res.status_code == 404
+    assert 'No bridge payload' in res.json()['detail']
+
+
+@pytest.mark.anyio
+async def test_csv_import_stale_revision_returns_409(client: httpx.AsyncClient) -> None:
+    head = (await client.get('/api/manifest')).json()['current_revision_id']
+    await client.post(
+        '/api/blocks',
+        json={'min_col': 2, 'max_col': 4, 'min_row': 1, 'max_row': 2, 'label': 'Pre', 'tone': 'mint'},
+    )
+    csv_text = 'min_col,max_col,min_row,max_row\n2,4,1,2\n'
+    res = await client.post(
+        f'/api/exports/csv-import?expected_revision_id={head}',
+        content=csv_text,
+        headers={'content-type': 'text/plain'},
+    )
+    assert res.status_code == 409

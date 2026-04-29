@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: prince-signature-layer-registry
         name: prince-signature-layer-registry
-        entry: python3 /home/irfankabir/validate_project_registry.py
+        entry: python3 scripts/validate_project_registry.py
         language: system
         pass_filenames: false
         always_run: true

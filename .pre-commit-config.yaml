@@ -12,3 +12,12 @@ repos:
       - id: double-quote-string-fixer
       - id: name-tests-test
         args: ['--pytest-test-first']
+  - repo: local
+    hooks:
+      - id: prince-signature-layer-registry
+        name: prince-signature-layer-registry
+        entry: python3 /home/irfankabir/validate_project_registry.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit, pre-push, manual]

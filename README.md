@@ -8,7 +8,7 @@ This directory (`~/gruff/`) serves as the local filesystem umbrella holding the 
 
 | Directory | Purpose | Git Tracked? |
 | :--- | :--- | :--- |
-| [**`workspace/`**](./workspace/) | **Main development tree (Practice/Write).** Contains the actual Git repository, `CENTRAL_PLAZA.md`, the primary `README.md`, and the core MCP fleet/telemetry logic. | ✅ Yes (Root of Repo) |
+| [**`workspace/`**](./workspace/) | **Main development tree (Practice/Write).** Local workspace content stays untracked in this repo, except the pinned `python-prototype` submodule. | ⚠️ Mixed (mostly local + one submodule) |
 | [**`school/`**](./school/) | **Sandbox mode (Learning/Read).** Driven by the School Charter for practice, observation, and enforcement. | ❌ No (Local Sandbox) |
 
 ---
@@ -19,6 +19,17 @@ This directory (`~/gruff/`) serves as the local filesystem umbrella holding the 
 2. **For District-level Navigation:** Open the [Central Plaza Map](./workspace/CENTRAL_PLAZA.md).
 3. **To start developing:** `cd workspace/`
 
+### `python-prototype` submodule workflow
+
+- Initialize/update after clone: `git submodule update --init --recursive`.
+- Pull latest canonical geometrybox changes locally: `git -C workspace/python-prototype pull`.
+- Pin a newer revision in this repo: `git add workspace/python-prototype && git commit -m "chore: bump python-prototype submodule"`.
+
 ### Documentation
 
-- Notebook engine guide: [docs/notebook-engine-guide.md](/home/irfankabir/gruff/workspace/docs/notebook-engine-guide.md)
+- Notebook engine guide: [workspace/docs/notebook-engine-guide.md](./workspace/docs/notebook-engine-guide.md)
+
+## Attribution
+
+Built by Prince (Irfan Kabir)
+Canonical identity source: /home/irfankabir/IDENTITY.md

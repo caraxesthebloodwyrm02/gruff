@@ -41,7 +41,7 @@ impl BlockCreate {
             let max_col = self.max_col.ok_or("Bounds shape requires min_col, max_col, min_row, max_row")?;
             let min_row = self.min_row.ok_or("Bounds shape requires min_col, max_col, min_row, max_row")?;
             let max_row = self.max_row.ok_or("Bounds shape requires min_col, max_col, min_row, max_row")?;
-            
+
             if min_col > max_col || min_row > max_row {
                 return Err("min_col must be <= max_col and min_row must be <= max_row");
             }
@@ -51,7 +51,7 @@ impl BlockCreate {
             let start_row = self.start_row.ok_or("Start/end shape requires start_col, start_row, end_col, end_row")?;
             let end_col = self.end_col.ok_or("Start/end shape requires start_col, start_row, end_col, end_row")?;
             let end_row = self.end_row.ok_or("Start/end shape requires start_col, start_row, end_col, end_row")?;
-            
+
             Ok((
                 start_col.min(end_col),
                 start_col.max(end_col),

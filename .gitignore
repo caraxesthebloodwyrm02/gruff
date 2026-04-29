@@ -1,3 +1,18 @@
+# Workspace remains local by default; track python-prototype submodule
+workspace/**
+!workspace/python-prototype
+
+# Symlinks into the workspace tree
+school/
+school
+
+# Agent / local tooling (not product source)
+.claude-progress.md
+.codex
+.codex/
+corpus/
+*-local-command-*.txt
+
 # Build / cache / runtime artifacts
 node_modules/
 __pycache__/

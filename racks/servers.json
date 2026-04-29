@@ -1,0 +1,33 @@
+{
+  "$comment": "MCP server registry for gruff routine runner. Maps server names to start commands.",
+  "echoes-server": {
+    "command": "npx",
+    "args": ["-y", "tsx", "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/echoes-server/src/server.ts"],
+    "cwd": "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/echoes-server",
+    "env": {}
+  },
+  "ori-server": {
+    "command": "npx",
+    "args": ["-y", "tsx", "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/ori-server/src/server.ts"],
+    "cwd": "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/ori-server",
+    "env": {}
+  },
+  "pulse-server": {
+    "command": "npx",
+    "args": ["-y", "tsx", "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/pulse-server/src/server.ts"],
+    "cwd": "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/pulse-server",
+    "env": {}
+  },
+  "grid-server": {
+    "command": "npx",
+    "args": ["-y", "tsx", "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/grid-server/src/server.ts"],
+    "cwd": "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/grid-server",
+    "env": {}
+  },
+  "overview-server": {
+    "command": "npx",
+    "args": ["-y", "tsx", "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/overview-server/src/server.ts"],
+    "cwd": "/mnt/arch_data/home/caraxes/CascadeProjects/Tools/MCPServers/overview-server",
+    "env": {}
+  }
+}

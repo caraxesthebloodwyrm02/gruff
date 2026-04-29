@@ -11,10 +11,15 @@ program
 program
   .command('actors')
   .description('List actor profiles and trust scores')
-  .action(async () => {
+  .option('--json', 'Output as JSON array')
+  .action(async (opts: { json?: boolean }) => {
     const { listActors } = await import('./trust/db.js');
     const actors = listActors();
-    console.table(actors);
+    if (opts.json) {
+      console.log(JSON.stringify(actors, null, 2));
+    } else {
+      console.table(actors);
+    }
   });
 
 program
@@ -104,6 +109,64 @@ program
         console.log(`  ${pad} ${r.status.padEnd(10)} ${d} dispatch${d !== 1 ? 'es' : ''}  [${r.trigger}]`);
       }
     }
+  });
+
+program
+  .command('snapshot')
+  .description('Generate a master JSON snapshot of all gruff state')
+  .option('--output <path>', 'Output file path', 'data/gruff-snapshot.json')
+  .action(async (opts: { output: string }) => {
+    const { listActors, trustDbPath } = await import('./trust/db.js');
+    const { resolveRoutePolicy } = await import('./trust/scorer.js');
+    const { listRoutines, loadRoutine, runRoutine } = await import('./routine-runner.js');
+    const { writeFileSync, mkdirSync } = await import('fs');
+    const { dirname } = await import('path');
+
+    const ts = new Date().toISOString();
+    const actors = listActors();
+
+    const sampleActors = ['echoes-server', 'grid-server-merit-guard', 'overview-server', 'eligibility-server', 'pulse-server'];
+    const routeSamples = sampleActors.map(a => {
+      try { return resolveRoutePolicy('record_audit', a); }
+      catch { return { actor: a, error: 'not found' }; }
+    });
+
+    const routineNames = listRoutines();
+    const routineInventory = routineNames.map(n => {
+      const r = loadRoutine(n);
+      return { name: r.name, status: r.status, trigger: r.trigger, timeout: r.timeout, dispatches: r.dispatches.length, produces: r.produces };
+    });
+
+    const dryRuns: Record<string, unknown> = {};
+    for (const n of routineNames) {
+      dryRuns[n] = await runRoutine(n, { dryRun: true });
+    }
+
+    const master = {
+      snapshotVersion: 'gruff-snapshot-v1',
+      generatedAt: ts,
+      gruffVersion: '1.0.0',
+      trustDb: { path: trustDbPath(), actorCount: actors.length, actors },
+      routeSamples,
+      routines: {
+        total: routineInventory.length,
+        active: routineInventory.filter(r => r.status === 'active').length,
+        draft: routineInventory.filter(r => r.status === 'draft').length,
+        completed: routineInventory.filter(r => r.status === 'completed').length,
+        inventory: routineInventory,
+      },
+      dryRuns,
+    };
+
+    mkdirSync(dirname(opts.output), { recursive: true });
+    writeFileSync(opts.output, JSON.stringify(master, null, 2));
+    console.log(JSON.stringify({
+      written: opts.output,
+      generatedAt: ts,
+      actors: actors.length,
+      routines: routineInventory.length,
+      sizeBytes: Buffer.byteLength(JSON.stringify(master)),
+    }, null, 2));
   });
 
 program.parse(process.argv as any);

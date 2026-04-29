@@ -63,6 +63,29 @@ node dist/trust/ingester.js
 systemctl --user start gruff-ingester.timer
 ```
 
+## Runtime Gate
+
+Ingestion is paused by default. The process exits immediately with an
+informational message unless the gate is enabled:
+
+```bash
+GRUFF_TRUST_SCORES_ENABLED=true node dist/trust/ingester.js
+```
+
+To enable persistently via systemd:
+
+```bash
+systemctl --user edit gruff-ingester.service
+# Add under [Service]:
+# Environment=GRUFF_TRUST_SCORES_ENABLED=true
+```
+
+When the gate is off, `node dist/trust/ingester.js` exits 0 and writes:
+
+```
+[gruff-ingester] paused: set GRUFF_TRUST_SCORES_ENABLED=true to enable ingestion
+```
+
 ## Troubleshooting
 
 - `MALFORMED_AUDIT_LINE` warnings: verify NDJSON source is newline-delimited valid JSON.

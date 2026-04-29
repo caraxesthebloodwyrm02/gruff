@@ -333,6 +333,13 @@ export const __testing = {
 };
 
 if (isCliEntrypoint()) {
+  if (process.env.GRUFF_TRUST_SCORES_ENABLED !== "true") {
+    process.stderr.write(
+      "[gruff-ingester] paused: set GRUFF_TRUST_SCORES_ENABLED=true to enable ingestion\n"
+    );
+    process.exit(0);
+  }
+
   const watch = process.argv.includes("--watch");
   if (watch) {
     runWatch().catch(e => {

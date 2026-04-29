@@ -1,13 +1,9 @@
 # Gruff Wallboard Bridge
 
-The LO7 notebook emits `gruff-proportion-v1` payloads for the existing Gruff proportion flow.
+The gruff Python runtime emits `gruff-proportion-v1` payloads for the existing Gruff proportion flow.
 
-- Receiver stub: `bridges/gruff-echoes/receiver.py`
 - Schema: `schemas/gruff-proportion-v1.schema.json`
-- Local default endpoint: `http://127.0.0.1:8765/gruff/proportion`
+- MCP tool: `record_gruff_proportion` (echoes-server)
+- Payload builder: `python-prototype/src/gruff/bridge.py`
 
-Run the stub:
-
-```bash
-python3 bridges/gruff-echoes/receiver.py
-```
+The tool persists payloads to `~/.echoes/gruff-proportions.ndjson` and writes a corresponding audit entry.

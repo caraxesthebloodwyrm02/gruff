@@ -11,10 +11,18 @@ retry_policy:
   initial_delay_ms: 500
 owner: prince
 lock_key: routine:gruff-bridge
-dispatches: []
-produces: []
-status: draft
+dispatches:
+  - tool: record_gruff_proportion
+    server: echoes-server
+    description: >
+      Post a gruff-proportion-v1 payload to echoes-server via the MCP tool
+      record_gruff_proportion. Payload is persisted to gruff-proportions.ndjson
+      and a corresponding audit entry is written to audit.ndjson.
+produces:
+  - "gruff-proportions.ndjson (echoes DATA_DIR)"
+  - "audit entry (source: gruff, tool: proportion)"
+status: active
 references:
   - ../../../schemas/gruff-proportion-v1.schema.json
-  - ../../../bridges/gruff-echoes/receiver.py
   - ../../../docs/GRUFF_WALLBOARD_BRIDGE.md
+  - ../../../python-prototype/src/gruff/bridge.py

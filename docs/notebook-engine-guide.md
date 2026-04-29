@@ -133,7 +133,6 @@ This integration also restores the referenced assets that were missing from the 
 - [`gruff-proportion-v1.schema.json`](/home/irfankabir/gruff/workspace/schemas/gruff-proportion-v1.schema.json)
 - [`trust-event-v1.schema.json`](/home/irfankabir/gruff/workspace/schemas/trust-event-v1.schema.json)
 - [`notebook-manifest-v1.schema.json`](/home/irfankabir/gruff/workspace/schemas/notebook-manifest-v1.schema.json)
-- [`receiver.py`](/home/irfankabir/gruff/workspace/bridges/gruff-echoes/receiver.py)
 - [`schema.sql`](/home/irfankabir/gruff/workspace/src/trust/schema.sql)
 - [`LO7_NOTEBOOK_PROTOTYPE.md`](/home/irfankabir/gruff/workspace/docs/LO7_NOTEBOOK_PROTOTYPE.md)
 - [`LO7_RUNBOOK.md`](/home/irfankabir/gruff/workspace/docs/LO7_RUNBOOK.md)

@@ -49,7 +49,7 @@ python-prototype/
 └── src/notebook_engine — canonical LO7 runtime (manifest + WS + compass + bridge)
 ```
 
-**Data flow**: `gruff-ingester` reads `~/.echoes/audit.ndjson` (append-only NDJSON), writes rows to `~/.gruff/trust.sqlite`, and recomputes actor scores/tiers. The `gruff` TUI/commands read from SQLite. `gruff proportion` validates and POSTs a `gruff-proportion-v1` JSON body to the gruff-echoes bridge (stub at `bridges/gruff-echoes/receiver.py`; real target: Echoes FastAPI).
+**Data flow**: `gruff-ingester` reads `~/.echoes/audit.ndjson` (append-only NDJSON), writes rows to `~/.gruff/trust.sqlite`, and recomputes actor scores/tiers. The `gruff` TUI/commands read from SQLite. `gruff proportion` validates and emits a `gruff-proportion-v1` JSON payload (via MCP tool `record_gruff_proportion` in echoes-server).
 
 **Published exports** (non-JS, accessible to other packages):
 - `@irfankabir002/gruff/tokens.json` — GRID design-system tokens

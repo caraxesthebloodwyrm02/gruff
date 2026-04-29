@@ -1,5 +1,6 @@
-# Workspace — remains local; track only specific subdirectories
-workspace/
+# Workspace remains local by default; track python-prototype submodule
+workspace/**
+!workspace/python-prototype
 
 # Symlinks into the workspace tree
 school/

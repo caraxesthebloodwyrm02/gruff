@@ -1,0 +1,3 @@
+[submodule "workspace/python-prototype"]
+	path = workspace/python-prototype
+	url = git@github.com:caraxesthebloodwyrm02/geometrybox.git

@@ -35,6 +35,7 @@ __pycache__/
 
 # python-prototype is a nested git repo managed as a submodule by the parent gruff repo
 python-prototype/
+CascadeProjects
 CascadeProjects/
 data/
 scratch/

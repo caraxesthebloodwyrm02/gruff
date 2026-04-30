@@ -8,4 +8,5 @@ export default defineConfig({
   platform: 'node',
   format: ['cjs'],
   sourcemap: true,
+  shims: true,
 });

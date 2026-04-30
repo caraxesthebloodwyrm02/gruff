@@ -1,6 +1,6 @@
 # Workspace — remains local; track only specific subdirectories (like python-prototype)
 workspace/**
-!workspace/python-prototype/
+!workspace/# python-prototype/
 
 # Symlinks into the workspace tree
 school/
@@ -34,7 +34,7 @@ __pycache__/
 *.save
 
 # python-prototype is a nested git repo managed as a submodule by the parent gruff repo
-python-prototype/
+# python-prototype/
 CascadeProjects
 CascadeProjects/
 data/

@@ -20,6 +20,7 @@ const AUDIT_PATH = join(homedir(), ".echoes", "audit.ndjson");
 const GRUFF_DIR = join(homedir(), ".gruff");
 const STATE_PATH = join(GRUFF_DIR, "ingester.state");
 const SESSION_ALIVE_PATH = join(GRUFF_DIR, "sessions");
+const TRUST_SCORES_ENABLED_ENV = "GRUFF_TRUST_SCORES_ENABLED";
 
 // ─── State ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,17 @@ interface IngestState {
   offset: number;
   last_ts: string;
   malformed_count: number;
+}
+
+function trustScoresEnabled(): boolean {
+  const raw = (process.env[TRUST_SCORES_ENABLED_ENV] ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
+function warnTrustScoresPaused(): void {
+  process.stderr.write(
+    `[gruff-ingester] paused: trust-score ingestion disabled by default. Set ${TRUST_SCORES_ENABLED_ENV}=true to enable.\n`
+  );
 }
 
 function loadState(): IngestState {
@@ -263,6 +275,11 @@ async function ingestFromOffset(offset: number): Promise<{ newOffset: number; ma
 // ─── Single pass ─────────────────────────────────────────────────────────────
 
 async function runOnce(): Promise<void> {
+  if (!trustScoresEnabled()) {
+    warnTrustScoresPaused();
+    return;
+  }
+
   mkdirSync(GRUFF_DIR, { recursive: true });
   const state = loadState();
   const { newOffset, malformed } = await ingestFromOffset(state.offset);
@@ -299,6 +316,11 @@ export async function sendProportion(
 // ─── Watch mode ───────────────────────────────────────────────────────────────
 
 async function runWatch(): Promise<void> {
+  if (!trustScoresEnabled()) {
+    warnTrustScoresPaused();
+    return;
+  }
+
   await runOnce();
   process.stderr.write(`[gruff-ingester] watching ${AUDIT_PATH} (5s poll)\n`);
 

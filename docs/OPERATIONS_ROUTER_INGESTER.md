@@ -29,6 +29,7 @@ State and data paths:
 - Audit log: `~/.echoes/audit.ndjson`
 - Ingester state: `~/.gruff/ingester.state`
 - Trust DB: `~/.gruff/trust.sqlite`
+- Runtime gate: ingestion is paused by default unless `GRUFF_TRUST_SCORES_ENABLED=true`
 
 1. Stop timer/service if running:
 

@@ -1,17 +1,17 @@
 {
   "folders": [
     { "name": "plaza · root documents",          "path": "." },
-    { "name": "campus · Documentation",          "path": "CascadeProjects/Documentation" },
+    { "name": "campus · Documentation",          "path": "workspace/CascadeProjects/Documentation" },
     { "name": "campus · racks (learning)",       "path": "racks" },
     { "name": "campus · design-system",          "path": "design-system" },
     { "name": "campus · hogsmade-design",        "path": "hogsmade-design" },
-    { "name": "explore · experiments",           "path": "CascadeProjects/experiments" }
+    { "name": "explore · experiments",           "path": "workspace/CascadeProjects/experiments" }
   ],
   "settings": {
     "files.readonlyInclude": {
       "design-system/**": true,
       "hogsmade-design/**": true,
-      "CascadeProjects/Documentation/**": true
+      "workspace/CascadeProjects/Documentation/**": true
     },
     "files.exclude": {
       "**/node_modules": true,

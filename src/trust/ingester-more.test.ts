@@ -29,6 +29,7 @@ function makeRuntime(): RuntimePaths {
 async function loadModules(runtime: RuntimePaths) {
   process.env.HOME = runtime.tempHome;
   process.env.GRUFF_TRUST_SQLITE = runtime.dbPath;
+  process.env.GRUFF_TRUST_SCORES_ENABLED = "true";
   const dbModule = await import("./db.js");
   dbModule.resetDb();
   const ingesterModule = await import(`./ingester.ts?case=${Date.now()}-${Math.random()}`);
@@ -52,6 +53,7 @@ describe("ingester.ts - in-process coverage", () => {
     const dbModule = await import("./db.js");
     dbModule.resetDb();
     delete process.env.GRUFF_TRUST_SQLITE;
+    delete process.env.GRUFF_TRUST_SCORES_ENABLED;
     while (tempHomes.length > 0) {
       const tempHome = tempHomes.pop();
       if (tempHome && existsSync(tempHome)) {
